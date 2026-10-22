@@ -6,8 +6,13 @@ from typing import Any
 
 import pytest
 from freezegun.api import FrozenDateTimeFactory
+from homeassistant.components.lovelace import LovelaceData
+from homeassistant.components.lovelace.const import LOVELACE_DATA, MODE_STORAGE
+from homeassistant.components.lovelace.dashboard import LovelaceStorage
+from homeassistant.components.lovelace.resources import ResourceStorageCollection
 from homeassistant.const import CONF_ICON
 from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.daily_challenge.const import (
@@ -39,11 +44,22 @@ def auto_enable_custom_integrations(
 async def setup_environment(
     hass: HomeAssistant, freezer: FrozenDateTimeFactory
 ) -> None:
-    """Use the Swiss time zone and a fixed time; skip the frontend."""
+    """Use the Swiss time zone, a fixed time and a minimal frontend.
+
+    The real frontend needs the `home-assistant-frontend` package, so it is
+    marked as loaded and Lovelace gets an empty resource collection in storage
+    mode. HTTP is set up for real (the test plugin never binds a port).
+    """
     await hass.config.async_set_time_zone(TIME_ZONE)
     freezer.move_to(NOW)
-    # The frontend is only needed for the card (phase 2).
-    hass.config.components.update({"frontend", "http"})
+    hass.config.components.add("frontend")
+    assert await async_setup_component(hass, "http", {})
+    hass.data[LOVELACE_DATA] = LovelaceData(
+        resource_mode=MODE_STORAGE,
+        dashboards={},
+        resources=ResourceStorageCollection(hass, LovelaceStorage(hass, None)),
+        yaml_dashboards={},
+    )
 
 
 def make_options(**overrides: Any) -> dict[str, Any]:

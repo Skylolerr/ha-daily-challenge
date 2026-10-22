@@ -13,6 +13,11 @@ from .coordinator import (
     ChallengeStore,
     DailyChallengeConfigEntry,
 )
+from .frontend import (
+    async_register_card,
+    async_register_static_path,
+    async_unregister_card,
+)
 from .services import async_setup_services
 
 PLATFORMS: list[Platform] = [
@@ -26,15 +31,36 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the Daily Challenge actions."""
+    """Set up actions and the card (once per start)."""
     async_setup_services(hass)
+    await async_register_static_path(hass)
+    await async_register_card(hass)
     return True
+
+
+def _other_entries(
+    hass: HomeAssistant,
+    entry: DailyChallengeConfigEntry,
+    *,
+    include_disabled: bool,
+) -> list[DailyChallengeConfigEntry]:
+    return [
+        other
+        for other in hass.config_entries.async_entries(
+            DOMAIN, include_disabled=include_disabled
+        )
+        if other.entry_id != entry.entry_id
+    ]
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: DailyChallengeConfigEntry
 ) -> bool:
     """Set up a challenge from a config entry."""
+    if not _other_entries(hass, entry, include_disabled=False):
+        # The first challenge after the last one was removed: the card
+        # resource was deleted with it and has to come back.
+        await async_register_card(hass)
     coordinator = ChallengeCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
@@ -55,5 +81,7 @@ async def async_unload_entry(
 async def async_remove_entry(
     hass: HomeAssistant, entry: DailyChallengeConfigEntry
 ) -> None:
-    """Delete the store file when a challenge is removed."""
+    """Delete the store file; drop the card with the last challenge."""
     await ChallengeStore(hass, entry.entry_id).async_remove()
+    if not _other_entries(hass, entry, include_disabled=True):
+        await async_unregister_card(hass)
