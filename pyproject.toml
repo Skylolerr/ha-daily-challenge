@@ -23,11 +23,14 @@ ignore = [
     "D203",    # incompatible with D211
     "D213",    # incompatible with D212
     "PLR2004", # magic values
+    "TC001",   # runtime imports used only in annotations are fine
+    "TC002",
+    "TC003",
     "TRY003",  # long messages in exceptions
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "SLF001", "PLR0913", "FBT001", "D103", "INP001"]
+"tests/**" = ["S101", "SLF001", "PLR0913", "PLR0917", "FBT001", "D103", "INP001"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
