@@ -1,0 +1,53 @@
+add:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: daily_challenge
+    amount:
+      required: true
+      example: 5
+      selector:
+        number:
+          min: -100000
+          max: 100000
+          step: 1
+          mode: box
+    date:
+      selector:
+        date:
+
+set:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: daily_challenge
+    value:
+      required: true
+      example: 20
+      selector:
+        number:
+          min: 0
+          max: 100000
+          step: 1
+          mode: box
+    date:
+      selector:
+        date:
+
+get_history:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: daily_challenge
+    start:
+      selector:
+        date:
+    end:
+      selector:
+        date:
