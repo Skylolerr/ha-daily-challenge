@@ -54,7 +54,7 @@ GET_HISTORY_SCHEMA = vol.Schema(
 )
 
 
-def _get_coordinator(hass: HomeAssistant, entry_id: str) -> ChallengeCoordinator:
+def get_coordinator(hass: HomeAssistant, entry_id: str) -> ChallengeCoordinator:
     """Return the coordinator of a loaded challenge or raise."""
     entry: DailyChallengeConfigEntry | None = hass.config_entries.async_get_entry(
         entry_id
@@ -104,15 +104,15 @@ def async_setup_services(hass: HomeAssistant) -> None:
     """Register the actions."""
 
     async def async_add(call: ServiceCall) -> None:
-        coordinator = _get_coordinator(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        coordinator = get_coordinator(hass, call.data[ATTR_CONFIG_ENTRY_ID])
         coordinator.async_add(call.data[ATTR_AMOUNT], call.data.get(ATTR_DATE))
 
     async def async_set(call: ServiceCall) -> None:
-        coordinator = _get_coordinator(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        coordinator = get_coordinator(hass, call.data[ATTR_CONFIG_ENTRY_ID])
         coordinator.async_set_value(call.data[ATTR_VALUE], call.data.get(ATTR_DATE))
 
     async def async_get_history(call: ServiceCall) -> ServiceResponse:
-        coordinator = _get_coordinator(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        coordinator = get_coordinator(hass, call.data[ATTR_CONFIG_ENTRY_ID])
         return history_response(
             coordinator, call.data.get(ATTR_START), call.data.get(ATTR_END)
         )

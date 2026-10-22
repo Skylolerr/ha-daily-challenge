@@ -19,6 +19,7 @@ from .frontend import (
     async_unregister_card,
 )
 from .services import async_setup_services
+from .websocket import async_setup_websocket
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -31,8 +32,9 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up actions and the card (once per start)."""
+    """Set up actions, WebSocket commands and the card (once per start)."""
     async_setup_services(hass)
+    async_setup_websocket(hass)
     await async_register_static_path(hass)
     await async_register_card(hass)
     return True
