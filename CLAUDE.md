@@ -54,6 +54,9 @@ pytest
 ruff check . && ruff format --check .
 mypy custom_components/daily_challenge
 
+# Card (Node version in card/.nvmrc); always commit the rebuilt bundle
+cd card && npm ci && npm run typecheck && npm test && npm run build
+
 # Deploy to your own HA instance (values from .env, see .env.example)
 scripts/deploy.sh
 ```
