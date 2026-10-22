@@ -379,6 +379,49 @@ Ziel: **früh öffentlich gehen**, sobald die Basisfunktionen stabil laufen. Dan
 
 **Versionierung:** SemVer. Vor 1.0 dürfen Minor-Releases Breaking Changes enthalten. Diese werden im CHANGELOG klar markiert. Store-Format-Änderungen laufen immer über eine Store-Migration, Nutzerdaten gehen nie verloren.
 
+### Unterschritte (optional)
+
+Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur Haltepunkte für den Fall, dass eine Session bewusst nur einen Teil einer Phase umsetzt (z. B. aus Zeitgründen, «mach nur 2.a–2.c»). Jeder Unterschritt endet in einem prüfbaren Zustand. **(M)** = Aufgabe des Maintainers.
+
+**Phase 1 – Integration-Kern**
+- 1.a Berechnungen mit Tests, Store, Tageswechsel
+- 1.b Config/Options Flow, Entities, Actions, Übersetzungen EN/DE, Diagnostics, CI, `deploy.sh`
+- 1.c **(M)** Test auf der eigenen HA-Instanz mit Standard-Karten, Feedback
+- 1.d Bugfixes aus 1.c; Test-Pin auf HA 2026.11 anheben, sobald verfügbar
+- 1.e **(M)** Freigabe Phase 1
+
+**Phase 2 – Card MVP**
+- 2.a Gerüst: `card/` (TypeScript, Lit, Rollup), leere Card rendert, Bundle committet, CI-Check Bundle == Quellcode
+- 2.b Auslieferung (`frontend.py`): Static Path, Lovelace-Ressource mit `?v=` ohne Duplikate, YAML-Fallback, Entfernen beim letzten Entry; Tests
+- 2.c WebSocket-API `daily_challenge/list`, `/history`, `/set_day`; Tests
+- 2.d Kernansicht: Kopfzeile (Icon, Name, Streak), Tageswert mit Fortschrittsring, Buttons −/+n, langer Druck für direkte Eingabe
+- 2.e Soll/Ist-Zeile, Rest bis Ziel, Catch-up-Markierung, Historie neu laden bei Änderung von `total`
+- 2.f Visueller Editor, `getStubConfig`, Card-Picker (`window.customCards`), Light/Dark-Theme
+- 2.g Card-i18n EN/DE, Zahlenformat nach `hass.locale`
+- 2.h **(M)** Test auf der eigenen HA-Instanz, Freigabe
+
+**Phase 3 – Erster öffentlicher Release v0.1.0**
+- 3.a Übersetzungen FR/IT (Integration und Card)
+- 3.b Brand-Icons in `brand/`, `quality_scale.yaml`
+- 3.c README komplett, CHANGELOG.md
+- 3.d Repo-Beschreibung, Topics, Issue-Templates; `hacs/action`-Job in `validate.yml` wieder aktivieren (ohne Ignores), muss grün sein
+- 3.e **(M)** Repo öffentlich schalten, GitHub-Release v0.1.0 als Pre-Release
+- 3.f **(M)** Installation über HACS «Custom Repository» verifizieren
+
+**Phase 4 – v0.2.0**
+- 4.a Heatmap (Wochen als Spalten, Montag oben, Intensität value/target, erfüllt/unerfüllt unterscheidbar, ausserhalb der Laufzeit grau)
+- 4.b Tag antippen → Dialog, Wert ändern via `set_day`
+- 4.c Statistik-Zeile (Total, Ø/Tag, bester Tag, bester Streak)
+- 4.d Editor-Optionen `show_heatmap`/`heatmap_range`, i18n in allen vier Sprachen
+- 4.e Release v0.2.0 mit Changelog
+
+**Phase 5 – v1.0.0**
+- 5.a Feedback/Issues abarbeiten (Beta-Releases 0.2.x/0.3.x)
+- 5.b Quality-Scale-Review: Silver vollständig, Gold soweit sinnvoll
+- 5.c Stabilisierung: offene Breaking Changes bereinigen, Store-Migrationen prüfen, danach Entities/API eingefroren
+- 5.d Release v1.0.0
+- 5.e **(M)** PR an `hacs/default` vom Account `Skylolerr`
+
 ### Später (nicht Teil von v1.0)
 
 - Rückwirkend korrekte Long-Term-Statistics via `async_add_external_statistics` (mit `mean_type` und `unit_class`)

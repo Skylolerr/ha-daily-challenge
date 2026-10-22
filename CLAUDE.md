@@ -60,7 +60,8 @@ scripts/deploy.sh
 
 ## Phases
 
-See SPEC.md §16. Phase 1 = integration core. Phase 2 (card) only starts after the
+See SPEC.md §16. By default a phase is done as a whole; the optional sub-steps
+(1.a, 2.b, …) are only used when the maintainer asks for part of a phase. Phase 1 = integration core. Phase 2 (card) only starts after the
 maintainer has tested and approved Phase 1 on their own HA instance.
 
 The `hacs/action` job is paused in `.github/workflows/validate.yml` until Phase 3
