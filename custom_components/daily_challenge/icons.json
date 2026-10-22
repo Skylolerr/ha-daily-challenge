@@ -1,0 +1,77 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "goal_reached_today": {
+        "default": "mdi:trophy-outline",
+        "state": {
+          "on": "mdi:trophy"
+        }
+      }
+    },
+    "button": {
+      "add": {
+        "default": "mdi:plus"
+      },
+      "subtract": {
+        "default": "mdi:minus"
+      }
+    },
+    "number": {
+      "today": {
+        "default": "mdi:counter"
+      }
+    },
+    "sensor": {
+      "today_target": {
+        "default": "mdi:bullseye-arrow"
+      },
+      "progress": {
+        "default": "mdi:progress-check"
+      },
+      "total": {
+        "default": "mdi:sigma"
+      },
+      "current_streak": {
+        "default": "mdi:fire"
+      },
+      "best_streak": {
+        "default": "mdi:medal"
+      },
+      "target_to_date": {
+        "default": "mdi:calendar-check"
+      },
+      "delta": {
+        "default": "mdi:plus-minus-variant"
+      },
+      "remaining": {
+        "default": "mdi:flag-checkered"
+      },
+      "average": {
+        "default": "mdi:chart-line"
+      },
+      "best_day": {
+        "default": "mdi:star"
+      },
+      "this_week": {
+        "default": "mdi:calendar-week"
+      },
+      "this_month": {
+        "default": "mdi:calendar-month"
+      },
+      "this_year": {
+        "default": "mdi:calendar"
+      }
+    }
+  },
+  "services": {
+    "add": {
+      "service": "mdi:plus-circle"
+    },
+    "set": {
+      "service": "mdi:pencil"
+    },
+    "get_history": {
+      "service": "mdi:history"
+    }
+  }
+}
