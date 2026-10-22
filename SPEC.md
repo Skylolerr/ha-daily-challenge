@@ -4,7 +4,7 @@ Home-Assistant-Custom-Integration (HACS / HA Marketplace) zum Tracken von tägli
 
 - **Name:** Daily Challenge
 - **Domain:** `daily_challenge`
-- **Repo:** `skylolerlp/ha-daily-challenge` (privat während Phase 1–2, öffentlich ab dem ersten Beta-Release v0.1.0)
+- **Repo:** `Skylolerr/ha-daily-challenge` (privat während Phase 1–2, öffentlich ab dem ersten Beta-Release v0.1.0)
 - **Lizenz:** MIT, Copyright skylolerlp
 - **Mindestversion:** Home Assistant 2026.11.0
 - **Sprachen:** EN (Basis), DE, FR, IT
@@ -88,14 +88,14 @@ Das Card-Bundle wird **committet**, weil HACS/Marketplace keinen Build-Schritt a
 {
   "domain": "daily_challenge",
   "name": "Daily Challenge",
-  "codeowners": ["@skylolerlp"],
+  "codeowners": ["@Skylolerr"],
   "config_flow": true,
   "dependencies": ["http", "frontend"],
   "after_dependencies": ["lovelace"],
-  "documentation": "https://github.com/skylolerlp/ha-daily-challenge",
+  "documentation": "https://github.com/Skylolerr/ha-daily-challenge",
   "integration_type": "service",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/skylolerlp/ha-daily-challenge/issues",
+  "issue_tracker": "https://github.com/Skylolerr/ha-daily-challenge/issues",
   "requirements": [],
   "version": "0.1.0"
 }
@@ -375,7 +375,7 @@ Ziel: **früh öffentlich gehen**, sobald die Basisfunktionen stabil laufen. Dan
    - Repo öffentlich schalten, GitHub-Release v0.1.0 als Pre-Release
    - Installation über HACS «Custom Repository» auf der eigenen Instanz verifizieren
 4. **Phase 4 – v0.2.0:** Heatmap, Dialog zum Bearbeiten vergangener Tage, Statistik-Zeile.
-5. **Phase 5 – v1.0.0:** Stabilisierung auf Basis von Feedback/Issues, keine Breaking Changes mehr ab hier, danach PR an `hacs/default` (vom Account `skylolerlp`, PR-Template vollständig).
+5. **Phase 5 – v1.0.0:** Stabilisierung auf Basis von Feedback/Issues, keine Breaking Changes mehr ab hier, danach PR an `hacs/default` (vom Account `Skylolerr`, PR-Template vollständig).
 
 **Versionierung:** SemVer. Vor 1.0 dürfen Minor-Releases Breaking Changes enthalten. Diese werden im CHANGELOG klar markiert. Store-Format-Änderungen laufen immer über eine Store-Migration, Nutzerdaten gehen nie verloren.
 
