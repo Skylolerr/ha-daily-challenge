@@ -37,3 +37,34 @@ jobs:
         run: ruff format --check .
       - name: mypy
         run: mypy custom_components/daily_challenge
+
+  card:
+    name: Card
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: card
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: card/.nvmrc
+          cache: npm
+          cache-dependency-path: card/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Committed bundle matches the source
+        run: |
+          bundle=../custom_components/daily_challenge/frontend
+          if [ -n "$(git status --porcelain -- "$bundle")" ]; then
+            git status --porcelain -- "$bundle"
+            git diff -- "$bundle" | head -50
+            echo "::error::The committed card bundle is outdated. Run 'npm run build' in card/ and commit the result."
+            exit 1
+          fi
