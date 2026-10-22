@@ -62,3 +62,7 @@ scripts/deploy.sh
 
 See SPEC.md §16. Phase 1 = integration core. Phase 2 (card) only starts after the
 maintainer has tested and approved Phase 1 on their own HA instance.
+
+The `hacs/action` job is paused in `.github/workflows/validate.yml` until Phase 3
+(it needs brand icons, repo description and topics). Phase 3 must re-enable it with
+`category: integration` and **no ignores**.

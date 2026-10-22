@@ -8,15 +8,10 @@ on:
 permissions:
   contents: read
 
-jobs:
-  hacs:
-    name: HACS
-    runs-on: ubuntu-latest
-    steps:
-      - uses: hacs/action@main
-        with:
-          category: integration
+# The hacs/action job (category: integration, no ignores) is paused until
+# phase 3, which adds brand icons, repo description and topics. Re-enable it then.
 
+jobs:
   hassfest:
     name: Hassfest
     runs-on: ubuntu-latest
