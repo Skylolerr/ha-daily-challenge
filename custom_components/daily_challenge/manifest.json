@@ -1,0 +1,14 @@
+{
+  "domain": "daily_challenge",
+  "name": "Daily Challenge",
+  "after_dependencies": ["lovelace"],
+  "codeowners": ["@skylolerlp"],
+  "config_flow": true,
+  "dependencies": ["frontend", "http"],
+  "documentation": "https://github.com/skylolerlp/ha-daily-challenge",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/skylolerlp/ha-daily-challenge/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
