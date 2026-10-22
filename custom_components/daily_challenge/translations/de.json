@@ -1,0 +1,252 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Neue tägliche Challenge",
+        "description": "Verfolge eine tägliche Menge, zum Beispiel 20 Liegestütze pro Tag.",
+        "data": {
+          "name": "Name",
+          "icon": "Symbol",
+          "unit": "Einheit",
+          "daily_target": "Tagesziel",
+          "start_date": "Startdatum",
+          "end_date": "Enddatum",
+          "steps": "Schritte",
+          "streak_rule": "Streak-Regel",
+          "deficit_mode": "Umgang mit Rückstand"
+        },
+        "data_description": {
+          "name": "Muss unter deinen Challenges eindeutig sein.",
+          "unit": "Wähle einen Vorschlag oder gib eine eigene Einheit ein.",
+          "daily_target": "Menge, die du jeden Tag erreichen willst.",
+          "start_date": "Erster Tag der Challenge. Darf nicht in der Zukunft liegen.",
+          "end_date": "Optionaler letzter Tag der Challenge.",
+          "steps": "Bis zu 3 Mengen in aufsteigender Reihenfolge. Jede erhält einen +-Button; die kleinste wird auch für den −-Button verwendet.",
+          "streak_rule": "Wann ein Tag für deinen Streak zählt.",
+          "deficit_mode": "Was passiert, wenn du in Rückstand gerätst."
+        }
+      }
+    },
+    "error": {
+      "name_required": "Bitte gib einen Namen ein.",
+      "name_exists": "Es gibt bereits eine Challenge mit diesem Namen.",
+      "unit_required": "Bitte gib eine Einheit ein.",
+      "invalid_target": "Das Tagesziel muss eine ganze Zahl grösser als 0 sein.",
+      "start_in_future": "Das Startdatum darf nicht in der Zukunft liegen.",
+      "end_before_start": "Das Enddatum muss nach dem Startdatum liegen.",
+      "invalid_steps": "Gib 1 bis 3 ganze Zahlen grösser als 0 ein.",
+      "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Challenge bearbeiten",
+        "description": "Ein geändertes Tagesziel gilt ab heute; vergangene Tage behalten ihr Ziel.",
+        "data": {
+          "name": "Name",
+          "icon": "Symbol",
+          "unit": "Einheit",
+          "daily_target": "Tagesziel",
+          "start_date": "Startdatum",
+          "end_date": "Enddatum",
+          "steps": "Schritte",
+          "streak_rule": "Streak-Regel",
+          "deficit_mode": "Umgang mit Rückstand"
+        },
+        "data_description": {
+          "name": "Muss unter deinen Challenges eindeutig sein.",
+          "unit": "Wähle einen Vorschlag oder gib eine eigene Einheit ein.",
+          "daily_target": "Menge, die du jeden Tag erreichen willst. Änderungen gelten ab heute.",
+          "start_date": "Erster Tag der Challenge. Tage vor einem späteren Startdatum werden ignoriert, aber nicht gelöscht.",
+          "end_date": "Optionaler letzter Tag der Challenge.",
+          "steps": "Bis zu 3 Mengen in aufsteigender Reihenfolge. Jede erhält einen +-Button; die kleinste wird auch für den −-Button verwendet.",
+          "streak_rule": "Wann ein Tag für deinen Streak zählt.",
+          "deficit_mode": "Was passiert, wenn du in Rückstand gerätst."
+        }
+      }
+    },
+    "error": {
+      "name_required": "Bitte gib einen Namen ein.",
+      "name_exists": "Es gibt bereits eine Challenge mit diesem Namen.",
+      "unit_required": "Bitte gib eine Einheit ein.",
+      "invalid_target": "Das Tagesziel muss eine ganze Zahl grösser als 0 sein.",
+      "start_in_future": "Das Startdatum darf nicht in der Zukunft liegen.",
+      "end_before_start": "Das Enddatum muss nach dem Startdatum liegen.",
+      "invalid_steps": "Gib 1 bis 3 ganze Zahlen grösser als 0 ein.",
+      "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein."
+    }
+  },
+  "selector": {
+    "streak_rule": {
+      "options": {
+        "target": "Tagesziel erreicht",
+        "any": "Beliebige Menge über 0"
+      }
+    },
+    "deficit_mode": {
+      "options": {
+        "display": "Rückstand nur anzeigen",
+        "catch_up": "Aufholen: Rückstand erhöht das heutige Ziel"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "goal_reached_today": {
+        "name": "Tagesziel erreicht"
+      }
+    },
+    "button": {
+      "add": {
+        "name": "+{amount}"
+      },
+      "subtract": {
+        "name": "−{amount}"
+      }
+    },
+    "number": {
+      "today": {
+        "name": "Heute"
+      }
+    },
+    "sensor": {
+      "today_target": {
+        "name": "Ziel heute",
+        "state_attributes": {
+          "daily_target": {
+            "name": "Tagesziel"
+          },
+          "deficit": {
+            "name": "Rückstand"
+          }
+        }
+      },
+      "progress": {
+        "name": "Fortschritt"
+      },
+      "total": {
+        "name": "Gesamt"
+      },
+      "current_streak": {
+        "name": "Aktueller Streak"
+      },
+      "best_streak": {
+        "name": "Bester Streak",
+        "state_attributes": {
+          "start": {
+            "name": "Beginn"
+          },
+          "end": {
+            "name": "Ende"
+          }
+        }
+      },
+      "target_to_date": {
+        "name": "Soll bis heute"
+      },
+      "delta": {
+        "name": "Vorsprung / Rückstand"
+      },
+      "remaining": {
+        "name": "Rest bis Ziel"
+      },
+      "average": {
+        "name": "Durchschnitt pro Tag"
+      },
+      "best_day": {
+        "name": "Bester Tag",
+        "state_attributes": {
+          "date": {
+            "name": "Datum"
+          }
+        }
+      },
+      "this_week": {
+        "name": "Diese Woche"
+      },
+      "this_month": {
+        "name": "Dieser Monat"
+      },
+      "this_year": {
+        "name": "Dieses Jahr"
+      }
+    }
+  },
+  "exceptions": {
+    "date_in_future": {
+      "message": "{date} liegt in der Zukunft."
+    },
+    "date_before_start": {
+      "message": "{date} liegt vor dem Startdatum der Challenge ({start_date})."
+    },
+    "date_after_end": {
+      "message": "{date} liegt nach dem Enddatum der Challenge ({end_date})."
+    },
+    "entry_not_found": {
+      "message": "Keine Challenge mit der ID {entry_id} gefunden."
+    },
+    "entry_not_loaded": {
+      "message": "Die Challenge {name} ist nicht geladen."
+    },
+    "invalid_range": {
+      "message": "Der Beginn {start} liegt nach dem Ende {end}."
+    }
+  },
+  "services": {
+    "add": {
+      "name": "Menge hinzufügen",
+      "description": "Addiert eine Menge zu einem Tag einer Challenge. Das Ergebnis wird nie kleiner als 0.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Challenge",
+          "description": "Die Challenge, die aktualisiert wird."
+        },
+        "amount": {
+          "name": "Menge",
+          "description": "Zu addierende Menge. Negative Werte ziehen ab."
+        },
+        "date": {
+          "name": "Datum",
+          "description": "Zu ändernder Tag. Standard ist heute."
+        }
+      }
+    },
+    "set": {
+      "name": "Wert setzen",
+      "description": "Setzt den Wert eines Tages einer Challenge. 0 entfernt den Eintrag.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Challenge",
+          "description": "Die Challenge, die aktualisiert wird."
+        },
+        "value": {
+          "name": "Wert",
+          "description": "Neuer Wert des Tages."
+        },
+        "date": {
+          "name": "Datum",
+          "description": "Zu ändernder Tag. Standard ist heute."
+        }
+      }
+    },
+    "get_history": {
+      "name": "Verlauf abrufen",
+      "description": "Liefert die Tageswerte, Ziele und Streak-Erfüllung einer Challenge.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Challenge",
+          "description": "Die Challenge, die gelesen wird."
+        },
+        "start": {
+          "name": "Beginn",
+          "description": "Erster gelieferter Tag. Standard ist das Startdatum der Challenge."
+        },
+        "end": {
+          "name": "Ende",
+          "description": "Letzter gelieferter Tag. Standard ist heute."
+        }
+      }
+    }
+  }
+}

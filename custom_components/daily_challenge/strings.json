@@ -1,0 +1,252 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "New daily challenge",
+        "description": "Track a daily amount, for example 20 push-ups per day.",
+        "data": {
+          "name": "Name",
+          "icon": "Icon",
+          "unit": "Unit",
+          "daily_target": "Daily target",
+          "start_date": "Start date",
+          "end_date": "End date",
+          "steps": "Steps",
+          "streak_rule": "Streak rule",
+          "deficit_mode": "Deficit handling"
+        },
+        "data_description": {
+          "name": "Must be unique among your challenges.",
+          "unit": "Pick a suggestion or type your own unit.",
+          "daily_target": "Amount you want to reach every day.",
+          "start_date": "First day of the challenge. Cannot be in the future.",
+          "end_date": "Optional last day of the challenge.",
+          "steps": "Up to 3 amounts in ascending order. Each one gets a + button; the smallest one is also used for the − button.",
+          "streak_rule": "When a day counts towards your streak.",
+          "deficit_mode": "What happens when you fall behind."
+        }
+      }
+    },
+    "error": {
+      "name_required": "Please enter a name.",
+      "name_exists": "A challenge with this name already exists.",
+      "unit_required": "Please enter a unit.",
+      "invalid_target": "The daily target must be a whole number greater than 0.",
+      "start_in_future": "The start date cannot be in the future.",
+      "end_before_start": "The end date must be after the start date.",
+      "invalid_steps": "Enter 1 to 3 whole numbers greater than 0.",
+      "steps_not_ascending": "Steps must be unique and in ascending order."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edit challenge",
+        "description": "A changed daily target applies from today on; past days keep their target.",
+        "data": {
+          "name": "Name",
+          "icon": "Icon",
+          "unit": "Unit",
+          "daily_target": "Daily target",
+          "start_date": "Start date",
+          "end_date": "End date",
+          "steps": "Steps",
+          "streak_rule": "Streak rule",
+          "deficit_mode": "Deficit handling"
+        },
+        "data_description": {
+          "name": "Must be unique among your challenges.",
+          "unit": "Pick a suggestion or type your own unit.",
+          "daily_target": "Amount you want to reach every day. Changes apply from today on.",
+          "start_date": "First day of the challenge. Days before a later start date are ignored but not deleted.",
+          "end_date": "Optional last day of the challenge.",
+          "steps": "Up to 3 amounts in ascending order. Each one gets a + button; the smallest one is also used for the − button.",
+          "streak_rule": "When a day counts towards your streak.",
+          "deficit_mode": "What happens when you fall behind."
+        }
+      }
+    },
+    "error": {
+      "name_required": "Please enter a name.",
+      "name_exists": "A challenge with this name already exists.",
+      "unit_required": "Please enter a unit.",
+      "invalid_target": "The daily target must be a whole number greater than 0.",
+      "start_in_future": "The start date cannot be in the future.",
+      "end_before_start": "The end date must be after the start date.",
+      "invalid_steps": "Enter 1 to 3 whole numbers greater than 0.",
+      "steps_not_ascending": "Steps must be unique and in ascending order."
+    }
+  },
+  "selector": {
+    "streak_rule": {
+      "options": {
+        "target": "Daily target reached",
+        "any": "Any amount above 0"
+      }
+    },
+    "deficit_mode": {
+      "options": {
+        "display": "Only show the deficit",
+        "catch_up": "Catch up: a deficit raises today's target"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "goal_reached_today": {
+        "name": "Goal reached today"
+      }
+    },
+    "button": {
+      "add": {
+        "name": "+{amount}"
+      },
+      "subtract": {
+        "name": "−{amount}"
+      }
+    },
+    "number": {
+      "today": {
+        "name": "Today"
+      }
+    },
+    "sensor": {
+      "today_target": {
+        "name": "Today's target",
+        "state_attributes": {
+          "daily_target": {
+            "name": "Daily target"
+          },
+          "deficit": {
+            "name": "Deficit"
+          }
+        }
+      },
+      "progress": {
+        "name": "Progress"
+      },
+      "total": {
+        "name": "Total"
+      },
+      "current_streak": {
+        "name": "Current streak"
+      },
+      "best_streak": {
+        "name": "Best streak",
+        "state_attributes": {
+          "start": {
+            "name": "Start"
+          },
+          "end": {
+            "name": "End"
+          }
+        }
+      },
+      "target_to_date": {
+        "name": "Target to date"
+      },
+      "delta": {
+        "name": "Ahead / behind"
+      },
+      "remaining": {
+        "name": "Remaining"
+      },
+      "average": {
+        "name": "Daily average"
+      },
+      "best_day": {
+        "name": "Best day",
+        "state_attributes": {
+          "date": {
+            "name": "Date"
+          }
+        }
+      },
+      "this_week": {
+        "name": "This week"
+      },
+      "this_month": {
+        "name": "This month"
+      },
+      "this_year": {
+        "name": "This year"
+      }
+    }
+  },
+  "exceptions": {
+    "date_in_future": {
+      "message": "{date} is in the future."
+    },
+    "date_before_start": {
+      "message": "{date} is before the start date of the challenge ({start_date})."
+    },
+    "date_after_end": {
+      "message": "{date} is after the end date of the challenge ({end_date})."
+    },
+    "entry_not_found": {
+      "message": "No challenge found with ID {entry_id}."
+    },
+    "entry_not_loaded": {
+      "message": "The challenge {name} is not loaded."
+    },
+    "invalid_range": {
+      "message": "The start {start} is after the end {end}."
+    }
+  },
+  "services": {
+    "add": {
+      "name": "Add amount",
+      "description": "Adds an amount to a day of a challenge. The result never drops below 0.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Challenge",
+          "description": "The challenge to update."
+        },
+        "amount": {
+          "name": "Amount",
+          "description": "Amount to add. Negative values subtract."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Day to update. Defaults to today."
+        }
+      }
+    },
+    "set": {
+      "name": "Set value",
+      "description": "Sets the value of a day of a challenge. 0 removes the entry.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Challenge",
+          "description": "The challenge to update."
+        },
+        "value": {
+          "name": "Value",
+          "description": "New value of the day."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Day to update. Defaults to today."
+        }
+      }
+    },
+    "get_history": {
+      "name": "Get history",
+      "description": "Returns the daily values, targets and streak fulfilment of a challenge.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Challenge",
+          "description": "The challenge to read."
+        },
+        "start": {
+          "name": "Start",
+          "description": "First day to return. Defaults to the start date of the challenge."
+        },
+        "end": {
+          "name": "End",
+          "description": "Last day to return. Defaults to today."
+        }
+      }
+    }
+  }
+}
