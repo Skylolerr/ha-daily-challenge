@@ -34,6 +34,7 @@ First public beta.
 - WebSocket commands `daily_challenge/list`, `daily_challenge/history` and
   `daily_challenge/set_day` for the card.
 - Diagnostics.
+- Reminder blueprint: a notification at a chosen time while today's goal is still open.
 - Translations: English, German, French and Italian (French and Italian open for
   community review).
 

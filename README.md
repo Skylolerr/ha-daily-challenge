@@ -221,7 +221,17 @@ fulfilled:
   "2026-11-03": true
 ```
 
-## Example: evening reminder
+## Reminder blueprint
+
+[![Open your Home Assistant instance and import the reminder blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FSkylolerr%2Fha-daily-challenge%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fdaily_challenge%2Freminder.yaml)
+
+The blueprint reminds you at a chosen time (default 20:00) when today's goal of a
+challenge is not reached yet. Pick the challenge's "Goal reached today" sensor, the time
+and what should happen – by default a notification in Home Assistant. In your own
+notification you can use `{{ challenge }}`, `{{ done }}`, `{{ target }}`,
+`{{ remaining }}` and `{{ unit }}`, e.g. *"Still {{ remaining }} {{ unit }} to go today"*.
+
+## Example: evening reminder (YAML)
 
 ```yaml
 automation:
