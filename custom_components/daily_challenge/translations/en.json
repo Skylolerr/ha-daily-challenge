@@ -31,10 +31,10 @@
       "name_required": "Please enter a name.",
       "name_exists": "A challenge with this name already exists.",
       "unit_required": "Please enter a unit.",
-      "invalid_target": "The daily target must be a whole number greater than 0.",
+      "invalid_target": "The daily target must be a whole number from 1 to 100000.",
       "start_in_future": "The start date cannot be in the future.",
       "end_before_start": "The end date must be after the start date.",
-      "invalid_steps": "Enter 1 to 3 whole numbers greater than 0.",
+      "invalid_steps": "Enter 1 to 3 whole numbers from 1 to 100000.",
       "steps_not_ascending": "Steps must be unique and in ascending order."
     }
   },
@@ -70,10 +70,10 @@
       "name_required": "Please enter a name.",
       "name_exists": "A challenge with this name already exists.",
       "unit_required": "Please enter a unit.",
-      "invalid_target": "The daily target must be a whole number greater than 0.",
+      "invalid_target": "The daily target must be a whole number from 1 to 100000.",
       "start_in_future": "The start date cannot be in the future.",
       "end_before_start": "The end date must be after the start date.",
-      "invalid_steps": "Enter 1 to 3 whole numbers greater than 0.",
+      "invalid_steps": "Enter 1 to 3 whole numbers from 1 to 100000.",
       "steps_not_ascending": "Steps must be unique and in ascending order."
     }
   },

@@ -166,3 +166,22 @@ async def test_yaml_mode_uses_extra_module_url(
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done()
     assert urls.urls == set()
+
+
+async def test_yaml_mode_replaces_an_older_card_url(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """Re-registering in YAML mode leaves exactly one card URL."""
+    hass.data[LOVELACE_DATA] = LovelaceData(
+        resource_mode=MODE_YAML,
+        dashboards={},
+        resources=ResourceYAMLCollection([]),
+        yaml_dashboards={},
+    )
+    urls = UrlManager(lambda *_: None, [f"{CARD_URL}?v=0.0.9-deadbeef", "/local/x.js"])
+    hass.data[DATA_EXTRA_MODULE_URL] = urls
+
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert urls.urls == {VERSIONED_URL, "/local/x.js"}

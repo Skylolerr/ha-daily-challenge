@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.daily_challenge.const import DOMAIN
@@ -204,3 +204,37 @@ async def test_options_flow_target_change_while_not_loaded(
         "days": {"2026-11-02": 5},
         "target_history": {START: 20, TODAY: 25},
     }
+
+
+async def test_cleared_end_date_stays_cleared_after_an_error(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """A removed end date must not come back when the form is shown again."""
+    config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        config_entry, options={**config_entry.options, "end_date": "2026-12-31"}
+    )
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    # The cleared optional field is missing from the input.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {**USER_INPUT, "steps": ["5", "1"]}
+    )
+    assert result["errors"] == {"steps": "steps_not_ascending"}
+    end_key = next(k for k in result["data_schema"].schema if str(k) == "end_date")
+    assert end_key.description["suggested_value"] is None
+
+
+async def test_upper_limits(hass: HomeAssistant) -> None:
+    """Targets and steps stay within the maximum day value."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    # The target field itself refuses larger values.
+    with pytest.raises(InvalidData):
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"], {**USER_INPUT, "daily_target": 100001}
+        )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, "steps": ["100001"]}
+    )
+    assert result["errors"] == {"steps": "invalid_steps"}

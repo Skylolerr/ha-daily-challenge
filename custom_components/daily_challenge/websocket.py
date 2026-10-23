@@ -14,7 +14,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
 from .const import ATTR_DATE, ATTR_END, ATTR_START, ATTR_VALUE, CONF_UNIT, DOMAIN
-from .services import get_coordinator, history_response
+from .services import DAY_VALUE, get_coordinator, history_response
 
 ATTR_ENTRY_ID = "entry_id"
 
@@ -83,7 +83,7 @@ def websocket_history(
         vol.Required("type"): f"{DOMAIN}/set_day",
         vol.Required(ATTR_ENTRY_ID): str,
         vol.Required(ATTR_DATE): cv.date,
-        vol.Required(ATTR_VALUE): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Required(ATTR_VALUE): DAY_VALUE,
     }
 )
 @callback

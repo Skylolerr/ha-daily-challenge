@@ -11,7 +11,7 @@ from homeassistant.config_entries import (
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlowWithReload,
+    OptionsFlow,
 )
 from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.core import HomeAssistant, callback
@@ -43,6 +43,7 @@ from .const import (
     DEFAULT_ICON,
     DEFAULT_STEPS,
     DOMAIN,
+    MAX_DAY_VALUE,
     MAX_STEPS,
     UNIT_SUGGESTIONS,
 )
@@ -71,7 +72,9 @@ def _schema(hass: HomeAssistant, defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_DAILY_TARGET, default=defaults[CONF_DAILY_TARGET]
             ): NumberSelector(
-                NumberSelectorConfig(min=1, step=1, mode=NumberSelectorMode.BOX)
+                NumberSelectorConfig(
+                    min=1, max=MAX_DAY_VALUE, step=1, mode=NumberSelectorMode.BOX
+                )
             ),
             vol.Required(
                 CONF_START_DATE, default=defaults[CONF_START_DATE]
@@ -118,7 +121,7 @@ def _parse_steps(raw: Any) -> list[int] | None:
             number = float(value)
         except TypeError, ValueError:
             return None
-        if not number.is_integer() or number <= 0:
+        if not number.is_integer() or not 0 < number <= MAX_DAY_VALUE:
             return None
         steps.append(int(number))
     if not 1 <= len(steps) <= MAX_STEPS:
@@ -146,7 +149,7 @@ def _validate(
         errors[CONF_UNIT] = "unit_required"
 
     daily_target = float(user_input[CONF_DAILY_TARGET])
-    if not daily_target.is_integer() or daily_target <= 0:
+    if not daily_target.is_integer() or not 0 < daily_target <= MAX_DAY_VALUE:
         errors[CONF_DAILY_TARGET] = "invalid_target"
 
     start_date = date.fromisoformat(user_input[CONF_START_DATE])
@@ -208,7 +211,9 @@ class DailyChallengeConfigFlow(ConfigFlow, domain=DOMAIN):
         }
         schema = _schema(self.hass, defaults)
         if user_input is not None:
-            schema = self.add_suggested_values_to_schema(schema, user_input)
+            schema = self.add_suggested_values_to_schema(
+                schema, {CONF_END_DATE: None, **user_input}
+            )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
     @staticmethod
@@ -220,7 +225,7 @@ class DailyChallengeConfigFlow(ConfigFlow, domain=DOMAIN):
         return DailyChallengeOptionsFlow()
 
 
-class DailyChallengeOptionsFlow(OptionsFlowWithReload):
+class DailyChallengeOptionsFlow(OptionsFlow):
     """Change an existing challenge; the entry reloads afterwards."""
 
     config_entry: DailyChallengeConfigEntry
@@ -237,13 +242,17 @@ class DailyChallengeOptionsFlow(OptionsFlowWithReload):
                 name = options.pop(CONF_NAME)
                 if options[CONF_DAILY_TARGET] != entry.options[CONF_DAILY_TARGET]:
                     await self._async_record_target_change(options[CONF_DAILY_TARGET])
-                if name != entry.title:
-                    self.hass.config_entries.async_update_entry(entry, title=name)
+                # Title and options in one update, so the entry reloads once.
+                self.hass.config_entries.async_update_entry(
+                    entry, title=name, options=options
+                )
                 return self.async_create_entry(data=options)
 
         schema = _schema(self.hass, {CONF_NAME: entry.title, **entry.options})
         if user_input is not None:
-            schema = self.add_suggested_values_to_schema(schema, user_input)
+            schema = self.add_suggested_values_to_schema(
+                schema, {CONF_END_DATE: None, **user_input}
+            )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
 
     async def _async_record_target_change(self, target: int) -> None:

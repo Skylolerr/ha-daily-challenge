@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -16,6 +18,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.daily_challenge.const import DOMAIN, SAVE_DELAY
+from custom_components.daily_challenge.coordinator import ChallengeStore
 
 from .conftest import START, TODAY, make_options
 
@@ -214,3 +217,103 @@ async def test_rollover_around_dst_change(
     assert hass.states.get("sensor.push_ups_current_streak").state == "2"
     assert hass.states.get("sensor.push_ups_target_to_date").state == "80"
     assert hass.states.get("sensor.push_ups_total").state == "40"
+
+
+async def test_rollover_when_midnight_does_not_exist(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    hass_storage: dict[str, Any],
+) -> None:
+    """In Chile DST starts at midnight: the day begins at 01:00 and still rolls."""
+    await hass.config.async_set_time_zone("America/Santiago")
+    freezer.move_to("2026-09-05 22:00:00-04:00")
+    hass_storage[STORE_KEY] = store_payload({}, {"2026-09-04": 20})
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Push-ups",
+        entry_id="push_ups",
+        options=make_options(start_date="2026-09-04"),
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await press(hass, "button.push_ups_add_10")
+
+    # 23:59:59 is followed by 01:00:00 on Sep 6.
+    freezer.move_to("2026-09-06 01:00:00-03:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert dt_util.now().date().isoformat() == "2026-09-06"
+    assert hass.states.get("number.push_ups_today").state == "0"
+    assert hass.states.get("sensor.push_ups_total").state == "10"
+
+    # The following midnight exists again and is scheduled as well.
+    freezer.move_to("2026-09-07 00:00:00-03:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.push_ups_target_to_date").state == "80"
+
+
+async def test_midnight_timer_stops_on_unload(
+    hass: HomeAssistant,
+    loaded_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """No timer is left behind after unloading."""
+    assert await hass.config_entries.async_unload(loaded_entry.entry_id)
+    await hass.async_block_till_done()
+    freezer.move_to("2026-11-05 00:00:00+01:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+
+async def test_rename_updates_device_and_entity_names(
+    hass: HomeAssistant,
+    loaded_entry: MockConfigEntry,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """Renaming the challenge alone (no option change) renames the device."""
+    hass.config_entries.async_update_entry(loaded_entry, title="Squats")
+    await hass.async_block_till_done()
+
+    device = device_registry.async_get_device_by_identifier(
+        (DOMAIN, "push_ups"), "push_ups"
+    )
+    assert device.name == "Squats"
+    assert (
+        hass.states.get("sensor.push_ups_total").attributes["friendly_name"]
+        == "Squats Total"
+    )
+
+
+async def test_option_change_reloads_once(
+    hass: HomeAssistant, loaded_entry: MockConfigEntry
+) -> None:
+    """Changing options reloads the entry exactly once."""
+    with patch.object(hass.config_entries, "async_schedule_reload") as schedule_reload:
+        hass.config_entries.async_update_entry(
+            loaded_entry, options={**loaded_entry.options, "icon": "mdi:run"}
+        )
+        await hass.async_block_till_done()
+    schedule_reload.assert_called_once_with("push_ups")
+
+
+async def test_remove_after_failed_unload_uses_the_loaded_store(
+    hass: HomeAssistant, loaded_entry: MockConfigEntry
+) -> None:
+    """The loaded store is removed, which also cancels its pending delayed save.
+
+    A second, fresh store would delete the file while the loaded one could
+    still write it again afterwards.
+    """
+    await press(hass, "button.push_ups_add_5")
+    loaded_store = loaded_entry.runtime_data.store
+    with (
+        patch.object(hass.config_entries, "async_unload_platforms", return_value=False),
+        patch.object(ChallengeStore, "async_remove", autospec=True) as remove,
+    ):
+        assert await hass.config_entries.async_remove(loaded_entry.entry_id)
+        await hass.async_block_till_done()
+    remove.assert_called_once_with(loaded_store)
+    # The failed unload kept the midnight timer; stop it for the test.
+    loaded_entry.runtime_data._cancel_midnight()

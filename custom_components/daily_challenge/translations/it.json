@@ -31,10 +31,10 @@
       "name_required": "Inserisci un nome.",
       "name_exists": "Esiste già una sfida con questo nome.",
       "unit_required": "Inserisci un'unità.",
-      "invalid_target": "L'obiettivo giornaliero deve essere un numero intero maggiore di 0.",
+      "invalid_target": "L'obiettivo giornaliero deve essere un numero intero da 1 a 100000.",
       "start_in_future": "La data di inizio non può essere nel futuro.",
       "end_before_start": "La data di fine deve essere successiva alla data di inizio.",
-      "invalid_steps": "Inserisci da 1 a 3 numeri interi maggiori di 0.",
+      "invalid_steps": "Inserisci da 1 a 3 numeri interi da 1 a 100000.",
       "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente."
     }
   },
@@ -70,10 +70,10 @@
       "name_required": "Inserisci un nome.",
       "name_exists": "Esiste già una sfida con questo nome.",
       "unit_required": "Inserisci un'unità.",
-      "invalid_target": "L'obiettivo giornaliero deve essere un numero intero maggiore di 0.",
+      "invalid_target": "L'obiettivo giornaliero deve essere un numero intero da 1 a 100000.",
       "start_in_future": "La data di inizio non può essere nel futuro.",
       "end_before_start": "La data di fine deve essere successiva alla data di inizio.",
-      "invalid_steps": "Inserisci da 1 a 3 numeri interi maggiori di 0.",
+      "invalid_steps": "Inserisci da 1 a 3 numeri interi da 1 a 100000.",
       "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente."
     }
   },

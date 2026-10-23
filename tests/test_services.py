@@ -148,3 +148,32 @@ async def test_negative_value_is_rejected(hass: HomeAssistant) -> None:
     """The set action only accepts values >= 0."""
     with pytest.raises(probatio.Invalid):
         await call(hass, "set", value=-1)
+
+
+@pytest.mark.usefixtures("loaded_entry")
+@pytest.mark.parametrize(
+    ("service", "data"),
+    [
+        ("set", {"value": 100001}),
+        ("set", {"value": 2.5}),
+        ("add", {"amount": 2.5}),
+        ("add", {"amount": "abc"}),
+        ("add", {"amount": 100001}),
+    ],
+)
+async def test_invalid_numbers_are_rejected(
+    hass: HomeAssistant, service: str, data: dict[str, Any]
+) -> None:
+    """Values must be whole numbers within the limits; nothing is cut off."""
+    with pytest.raises(probatio.Invalid):
+        await call(hass, service, **data)
+
+
+@pytest.mark.usefixtures("loaded_entry")
+async def test_add_stops_at_the_maximum(hass: HomeAssistant) -> None:
+    """Adding never goes beyond the maximum day value."""
+    await call(hass, "set", value=99995)
+    await call(hass, "add", amount=10)
+    assert today_value(hass) == "100000"
+    await call(hass, "add", amount="3.0")
+    assert today_value(hass) == "100000"

@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from collections.abc import Callable
+from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
@@ -30,6 +31,7 @@ from .const import (
     CONF_STREAK_RULE,
     DOMAIN,
     LOGGER,
+    MAX_DAY_VALUE,
     SAVE_DELAY,
     STORAGE_VERSION,
 )
@@ -124,6 +126,7 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
             update_interval=None,
         )
         self.store = ChallengeStore(hass, entry.entry_id)
+        self._unsub_midnight: Callable[[], None] | None = None
 
     @property
     def today(self) -> date:
@@ -144,11 +147,26 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
                 int(self.config_entry.options[CONF_DAILY_TARGET]),
             )
             await self.store.async_save()
-        self.config_entry.async_on_unload(
-            async_track_time_change(
-                self.hass, self._async_midnight, hour=0, minute=0, second=0
-            )
+        self._schedule_midnight()
+        self.config_entry.async_on_unload(self._cancel_midnight)
+
+    def _schedule_midnight(self) -> None:
+        """Wake up at the start of the next local day.
+
+        A fixed point in time instead of a "00:00:00" pattern: on days where
+        daylight saving time starts at midnight, 00:00 does not exist and a
+        time pattern would skip the whole day.
+        """
+        start_of_tomorrow = dt_util.start_of_local_day(self.today + timedelta(days=1))
+        self._unsub_midnight = async_track_point_in_utc_time(
+            self.hass, self._async_midnight, dt_util.as_utc(start_of_tomorrow)
         )
+
+    @callback
+    def _cancel_midnight(self) -> None:
+        if self._unsub_midnight is not None:
+            self._unsub_midnight()
+            self._unsub_midnight = None
 
     async def _async_update_data(self) -> ChallengeStats:
         """Recalculate all figures for the current date."""
@@ -162,6 +180,7 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
     @callback
     def _async_midnight(self, _now: datetime) -> None:
         """Start a new day: nothing is reset, only a new date key is read."""
+        self._schedule_midnight()
         self.async_set_updated_data(self._calculate())
 
     def _validate_day(self, day: date) -> None:
@@ -195,6 +214,7 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         """Set the value of a day; 0 removes the entry."""
         day = day or self.today
         self._validate_day(day)
+        value = min(value, MAX_DAY_VALUE)
         if value > 0:
             self.store.days[day] = value
         else:
@@ -204,7 +224,7 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
 
     @callback
     def async_add(self, amount: int, day: date | None = None) -> None:
-        """Add `amount` (may be negative) to a day; never below 0."""
+        """Add `amount` (may be negative) to a day; kept within 0 and the maximum."""
         day = day or self.today
         self.async_set_value(max(0, self.value_on(day) + amount), day)
 

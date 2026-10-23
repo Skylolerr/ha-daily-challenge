@@ -49,3 +49,12 @@ async def test_diagnostics_without_data(
     assert result["recorded_days"] == 0
     assert result["first_date"] is None
     assert result["last_date"] is None
+
+
+async def test_diagnostics_for_an_unloaded_challenge(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """A disabled or failed challenge still returns its options."""
+    config_entry.add_to_hass(hass)
+    result = await async_get_config_entry_diagnostics(hass, config_entry)
+    assert result == {"options": dict(config_entry.options), "state": "not_loaded"}

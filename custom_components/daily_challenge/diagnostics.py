@@ -6,9 +6,10 @@ from dataclasses import asdict
 from datetime import date
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 
-from .coordinator import DailyChallengeConfigEntry
+from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
 
 
 def _serialize(value: Any) -> Any:
@@ -25,7 +26,10 @@ async def async_get_config_entry_diagnostics(
     entry: DailyChallengeConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a challenge."""
-    coordinator = entry.runtime_data
+    coordinator: ChallengeCoordinator | None = getattr(entry, "runtime_data", None)
+    if entry.state is not ConfigEntryState.LOADED or coordinator is None:
+        # Disabled or failed to set up: there is no data to show.
+        return {"options": dict(entry.options), "state": entry.state.value}
     days = sorted(coordinator.store.days)
     return {
         "options": dict(entry.options),

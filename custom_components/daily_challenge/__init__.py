@@ -67,7 +67,15 @@ async def async_setup_entry(
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
+
+
+async def _async_entry_updated(
+    hass: HomeAssistant, entry: DailyChallengeConfigEntry
+) -> None:
+    """Reload after changed options or a new name ("Rename" in the UI too)."""
+    hass.config_entries.async_schedule_reload(entry.entry_id)
 
 
 async def async_unload_entry(
@@ -84,6 +92,10 @@ async def async_remove_entry(
     hass: HomeAssistant, entry: DailyChallengeConfigEntry
 ) -> None:
     """Delete the store file; drop the card with the last challenge."""
-    await ChallengeStore(hass, entry.entry_id).async_remove()
+    # Use the loaded store if there is one, so a pending delayed save is
+    # cancelled and cannot write the file again after it was deleted.
+    coordinator: ChallengeCoordinator | None = getattr(entry, "runtime_data", None)
+    store = coordinator.store if coordinator else ChallengeStore(hass, entry.entry_id)
+    await store.async_remove()
     if not _other_entries(hass, entry, include_disabled=True):
         await async_unregister_card(hass)

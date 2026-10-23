@@ -31,10 +31,10 @@
       "name_required": "Bitte gib einen Namen ein.",
       "name_exists": "Es gibt bereits eine Challenge mit diesem Namen.",
       "unit_required": "Bitte gib eine Einheit ein.",
-      "invalid_target": "Das Tagesziel muss eine ganze Zahl grösser als 0 sein.",
+      "invalid_target": "Das Tagesziel muss eine ganze Zahl von 1 bis 100000 sein.",
       "start_in_future": "Das Startdatum darf nicht in der Zukunft liegen.",
       "end_before_start": "Das Enddatum muss nach dem Startdatum liegen.",
-      "invalid_steps": "Gib 1 bis 3 ganze Zahlen grösser als 0 ein.",
+      "invalid_steps": "Gib 1 bis 3 ganze Zahlen von 1 bis 100000 ein.",
       "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein."
     }
   },
@@ -70,10 +70,10 @@
       "name_required": "Bitte gib einen Namen ein.",
       "name_exists": "Es gibt bereits eine Challenge mit diesem Namen.",
       "unit_required": "Bitte gib eine Einheit ein.",
-      "invalid_target": "Das Tagesziel muss eine ganze Zahl grösser als 0 sein.",
+      "invalid_target": "Das Tagesziel muss eine ganze Zahl von 1 bis 100000 sein.",
       "start_in_future": "Das Startdatum darf nicht in der Zukunft liegen.",
       "end_before_start": "Das Enddatum muss nach dem Startdatum liegen.",
-      "invalid_steps": "Gib 1 bis 3 ganze Zahlen grösser als 0 ein.",
+      "invalid_steps": "Gib 1 bis 3 ganze Zahlen von 1 bis 100000 ein.",
       "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein."
     }
   },

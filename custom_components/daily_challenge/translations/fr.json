@@ -31,10 +31,10 @@
       "name_required": "Veuillez saisir un nom.",
       "name_exists": "Un défi portant ce nom existe déjà.",
       "unit_required": "Veuillez saisir une unité.",
-      "invalid_target": "L'objectif quotidien doit être un nombre entier supérieur à 0.",
+      "invalid_target": "L'objectif quotidien doit être un nombre entier de 1 à 100000.",
       "start_in_future": "La date de début ne peut pas être dans le futur.",
       "end_before_start": "La date de fin doit être postérieure à la date de début.",
-      "invalid_steps": "Saisissez 1 à 3 nombres entiers supérieurs à 0.",
+      "invalid_steps": "Saisissez 1 à 3 nombres entiers de 1 à 100000.",
       "steps_not_ascending": "Les paliers doivent être uniques et croissants."
     }
   },
@@ -70,10 +70,10 @@
       "name_required": "Veuillez saisir un nom.",
       "name_exists": "Un défi portant ce nom existe déjà.",
       "unit_required": "Veuillez saisir une unité.",
-      "invalid_target": "L'objectif quotidien doit être un nombre entier supérieur à 0.",
+      "invalid_target": "L'objectif quotidien doit être un nombre entier de 1 à 100000.",
       "start_in_future": "La date de début ne peut pas être dans le futur.",
       "end_before_start": "La date de fin doit être postérieure à la date de début.",
-      "invalid_steps": "Saisissez 1 à 3 nombres entiers supérieurs à 0.",
+      "invalid_steps": "Saisissez 1 à 3 nombres entiers de 1 à 100000.",
       "steps_not_ascending": "Les paliers doivent être uniques et croissants."
     }
   },

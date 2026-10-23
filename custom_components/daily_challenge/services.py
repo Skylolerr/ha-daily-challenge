@@ -25,23 +25,40 @@ from .const import (
     ATTR_START,
     ATTR_VALUE,
     DOMAIN,
+    MAX_DAY_VALUE,
     SERVICE_ADD,
     SERVICE_GET_HISTORY,
     SERVICE_SET,
 )
 from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
 
+
+def whole_number(value: Any) -> int:
+    """Accept whole numbers only; 2.5 is rejected instead of cut to 2."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as err:
+        raise vol.Invalid("expected a whole number") from err
+    if not number.is_integer():
+        raise vol.Invalid("expected a whole number")
+    return int(number)
+
+
+DAY_VALUE = vol.All(whole_number, vol.Range(min=0, max=MAX_DAY_VALUE))
+
 ADD_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
-        vol.Required(ATTR_AMOUNT): vol.Coerce(int),
+        vol.Required(ATTR_AMOUNT): vol.All(
+            whole_number, vol.Range(min=-MAX_DAY_VALUE, max=MAX_DAY_VALUE)
+        ),
         vol.Optional(ATTR_DATE): cv.date,
     }
 )
 SET_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
-        vol.Required(ATTR_VALUE): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Required(ATTR_VALUE): DAY_VALUE,
         vol.Optional(ATTR_DATE): cv.date,
     }
 )

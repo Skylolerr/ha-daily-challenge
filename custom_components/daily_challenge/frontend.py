@@ -5,7 +5,11 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
+from homeassistant.components.frontend import (
+    DATA_EXTRA_MODULE_URL,
+    add_extra_js_url,
+    remove_extra_js_url,
+)
 from homeassistant.components.http.server import StaticPathConfig
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.components.lovelace.resources import ResourceStorageCollection
@@ -39,6 +43,14 @@ async def _versioned_url(hass: HomeAssistant) -> str:
     return f"{CARD_URL}?v={integration.version}-{content}"
 
 
+def _remove_extra_card_urls(hass: HomeAssistant) -> None:
+    """Remove every card URL added in YAML mode, whatever its version."""
+    urls = hass.data.get(DATA_EXTRA_MODULE_URL)
+    for url in list(urls.urls) if urls else []:
+        if _is_card_url(url):
+            remove_extra_js_url(hass, url)
+
+
 def _storage_resources(hass: HomeAssistant) -> ResourceStorageCollection | None:
     """Return the Lovelace resources if they are managed in storage mode."""
     lovelace = hass.data.get(LOVELACE_DATA)
@@ -66,6 +78,7 @@ async def async_register_card(hass: HomeAssistant) -> None:
     url = await _versioned_url(hass)
     resources = _storage_resources(hass)
     if resources is None:
+        _remove_extra_card_urls(hass)
         add_extra_js_url(hass, url)
         return
 
@@ -87,8 +100,7 @@ async def async_unregister_card(hass: HomeAssistant) -> None:
     """Remove the card resource after the last challenge was removed."""
     resources = _storage_resources(hass)
     if resources is None:
-        url = await _versioned_url(hass)
-        remove_extra_js_url(hass, url)
+        _remove_extra_card_urls(hass)
         return
 
     await resources.async_get_info()
