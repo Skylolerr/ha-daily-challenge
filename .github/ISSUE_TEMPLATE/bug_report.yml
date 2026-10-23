@@ -1,0 +1,74 @@
+name: Bug report
+description: Something does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [open issues](https://github.com/Skylolerr/ha-daily-challenge/issues) first.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a challenge with …
+        2. Press …
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected part
+      multiple: true
+      options:
+        - Setup / options
+        - Entities / statistics
+        - Streak / catch-up calculation
+        - Day rollover
+        - Actions
+        - Card
+        - Translations
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Daily Challenge version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      description: Settings → About.
+      placeholder: "2026.11.0"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser / app (for card issues)
+      placeholder: "Chrome 155 on Windows, Companion app on Android"
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: >
+        Settings → Devices & services → Daily Challenge → ⋮ → Download diagnostics.
+        Drag the file here. It contains the settings and figures of the challenge.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log entries
+      description: Settings → System → Logs, filtered for "daily_challenge".
+      render: text
