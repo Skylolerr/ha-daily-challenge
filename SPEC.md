@@ -403,6 +403,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 **Phase 3 – Erster öffentlicher Release v0.1.0**
 - 3.a Übersetzungen FR/IT (Integration und Card)
 - 3.b Brand-Icons in `brand/`, `quality_scale.yaml`
+  - Erster Logo-Entwurf vorhanden (Fortschrittsring mit Farbverlauf um eine Flamme, erzeugt mit `scripts/make_brand_icons.py`). **Offen:** Logo gemeinsam mit dem Maintainer überarbeiten, bevor v0.1.0 veröffentlicht wird. `quality_scale.yaml` fehlt noch.
 - 3.c README komplett, CHANGELOG.md
 - 3.d Repo-Beschreibung, Topics, Issue-Templates; `hacs/action`-Job in `validate.yml` wieder aktivieren (ohne Ignores), muss grün sein
 - 3.e **(M)** Repo öffentlich schalten, GitHub-Release v0.1.0 als Pre-Release
