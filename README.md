@@ -1,7 +1,7 @@
 # Daily Challenge
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
-[![GitHub Release](https://img.shields.io/github/v/release/Skylolerr/ha-daily-challenge?include_prereleases)](https://github.com/Skylolerr/ha-daily-challenge/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/Skylolerr/ha-daily-challenge)](https://github.com/Skylolerr/ha-daily-challenge/releases)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.10%2B-41BDF5.svg)](https://www.home-assistant.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

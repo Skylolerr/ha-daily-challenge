@@ -18,12 +18,14 @@ attaches `daily_challenge.zip`.
 3. In `CHANGELOG.md`, replace `unreleased` with the date (`YYYY-MM-DD`) and add the
    compare link at the bottom. Mark breaking changes under **Breaking changes**.
 4. Commit (`Release vX.Y.Z`) and push.
-5. Create the release with the changelog section as notes (add `--prerelease` before 1.0):
+5. Create the release with the changelog section as notes. Releases are normal releases,
+   not pre-releases, so HACS shows them without the beta switch; the README says the
+   integration is in beta before 1.0.
 
    ```bash
    VERSION=0.1.0
    awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{found=0} found && !/^\[/" CHANGELOG.md > notes.md
-   gh release create "v${VERSION}" --title "v${VERSION}" --notes-file notes.md --prerelease
+   gh release create "v${VERSION}" --title "v${VERSION}" --notes-file notes.md
    rm notes.md
    ```
 
@@ -47,8 +49,16 @@ Before step 5 above:
    private. Run the workflow once (`gh workflow run Validate`) and make sure the HACS job
    is green.
 
-5. Create the release (steps 5–6 above) as a **pre-release**.
+5. Create the release (steps 5–6 above).
 6. Install through HACS as a custom repository on your own instance. HACS replaces the
    copy made by `scripts/deploy.sh` in `custom_components/daily_challenge/`; your
    challenges and their data stay. Restart and check that the card and all challenges
    still work.
+7. Submit to the HACS default repositories (only after the maintainer's go-ahead):
+   - Requirements: public repo, HACS action and hassfest green without ignores, a full
+     release, `brand/icon.png`, description, topics, issues enabled, OSI license.
+   - The PR must come from the owner's personal account (`Skylolerr`) and stay editable.
+   - Fork `hacs/default`, add `Skylolerr/ha-daily-challenge` alphabetically to the
+     `integration` file on a new branch from `master`, and fill in the PR template
+     completely.
+   - Review takes months; until then users install via "Custom repositories".

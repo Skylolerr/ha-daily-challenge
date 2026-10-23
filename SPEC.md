@@ -383,10 +383,11 @@ Ziel: **früh öffentlich gehen**, sobald die Basisfunktionen stabil laufen. Dan
    - README: Features, Screenshots, Installation via HACS Custom Repository bzw. Marketplace, My-HA-Badges, Konfiguration, Entities, Actions, Entfernen, Hinweis «Beta – breaking changes possible before 1.0»
    - CHANGELOG.md
    - Repo-Beschreibung, Topics (`home-assistant`, `hacs`, `integration`, `habit-tracker`, `challenge`), Issues aktiviert, Issue-Templates (Bug/Feature)
-   - Repo öffentlich schalten, GitHub-Release v0.1.0 als Pre-Release
+   - Repo öffentlich schalten, GitHub-Release v0.1.0 als **normaler Release** (kein Pre-Release, damit HACS ihn ohne Beta-Schalter anzeigt; der Beta-Hinweis steht im README)
+   - Direkt danach PR an `hacs/default` vom Account `Skylolerr` (die Prüfung dort dauert laut HACS Monate)
    - Installation über HACS «Custom Repository» auf der eigenen Instanz verifizieren
 4. **Phase 4 – v0.2.0:** Heatmap, Dialog zum Bearbeiten vergangener Tage, Statistik-Zeile.
-5. **Phase 5 – v1.0.0:** Stabilisierung auf Basis von Feedback/Issues, keine Breaking Changes mehr ab hier, danach PR an `hacs/default` (vom Account `Skylolerr`, PR-Template vollständig).
+5. **Phase 5 – v1.0.0:** Stabilisierung auf Basis von Feedback/Issues, keine Breaking Changes mehr ab hier. (Der PR an `hacs/default` ist auf Phase 3 vorgezogen, Entscheid des Maintainers vom 2026-10-23.)
 
 **Versionierung:** SemVer. Vor 1.0 dürfen Minor-Releases Breaking Changes enthalten. Diese werden im CHANGELOG klar markiert. Store-Format-Änderungen laufen immer über eine Store-Migration, Nutzerdaten gehen nie verloren.
 
@@ -417,7 +418,8 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
   - Erster Logo-Entwurf vorhanden (Fortschrittsring mit Farbverlauf um eine Flamme, erzeugt mit `scripts/make_brand_icons.py`). Vom Maintainer abgenommen und leicht verfeinert (2026-10-23). `quality_scale.yaml` ist erledigt (alle Regeln von HA 2026.10 bewertet).
 - 3.c README komplett, CHANGELOG.md
 - 3.d Repo-Beschreibung, Topics, Issue-Templates; `hacs/action`-Job in `validate.yml` wieder aktivieren (ohne Ignores), muss grün sein
-- 3.e **(M)** Repo öffentlich schalten, GitHub-Release v0.1.0 als Pre-Release
+- 3.e **(M)** Repo öffentlich schalten, GitHub-Release v0.1.0 als normaler Release
+- 3.e2 **(M)** PR an `hacs/default` vom Account `Skylolerr`, sobald HACS-Check und Release grün sind
 - 3.f **(M)** Installation über HACS «Custom Repository» verifizieren
 
 **Offene Zuarbeit des Maintainers bis v0.1.0** (Stand 2026-10-23; README, CHANGELOG und Issue-Templates sind fertig)
@@ -431,7 +433,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |
 | 6 | ~~Entscheidung Catch-up-Regel~~ – erledigt 2026-10-23: nur der Vortag kann aufgeholt werden, kein Vorarbeiten (§6) | – |
 | 7 | ~~GitHub-Einstellungen: Beschreibung, Topics, Issues~~ – erledigt 2026-10-23 per `gh` | `hacs/action`-Job wird beim Öffentlich-Schalten wieder eingeschaltet (er prüft nur öffentliche Repos) |
-| 8 | Repo öffentlich schalten, Release `v0.1.0` als Pre-Release mit dem CHANGELOG-Text erstellen | 3.e; Tag-Check und ZIP laufen automatisch |
+| 8 | Repo öffentlich schalten, Release `v0.1.0` als normaler Release mit dem CHANGELOG-Text erstellen, danach PR an `hacs/default` | 3.e/3.e2; Tag-Check und ZIP laufen automatisch; PR nur nach ausdrücklichem OK |
 | 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |
 
 **Phase 4 – v0.2.0**
@@ -447,7 +449,6 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - 5.b Quality-Scale-Review: Silver vollständig, Gold soweit sinnvoll
 - 5.c Stabilisierung: offene Breaking Changes bereinigen, Store-Migrationen prüfen, danach Entities/API eingefroren
 - 5.d Release v1.0.0
-- 5.e **(M)** PR an `hacs/default` vom Account `Skylolerr`
 
 ### Später (nicht Teil von v1.0)
 
