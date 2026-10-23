@@ -16,10 +16,11 @@ from PIL import Image, ImageDraw
 BRAND = Path(__file__).parent.parent / "custom_components" / "daily_challenge" / "brand"
 SUPERSAMPLE = 2048
 
-# Gradient along the ring and up the flame: amber -> orange -> pink.
+# Gradient along the ring and up the flame: amber -> orange -> coral -> pink.
 STOPS = [
     (0.0, (255, 193, 7)),
-    (0.5, (255, 109, 0)),
+    (0.35, (255, 138, 0)),
+    (0.7, (255, 84, 62)),
     (1.0, (255, 45, 122)),
 ]
 PROGRESS = 0.78  # share of the ring that is filled
@@ -29,7 +30,8 @@ RING_WIDTH = 0.127
 FLAME_SCALE, FLAME_OFFSET = 0.55, 0.0165
 INNER_FLAME_SCALE, INNER_FLAME_OFFSET = 0.242, 0.125
 TRACK = {"light": (0, 0, 0, 34), "dark": (255, 255, 255, 46)}
-INNER_FLAME = (255, 236, 179)
+# Inner flame: warm yellow at the top, almost white at the bottom.
+INNER_FLAME_TOP, INNER_FLAME_BOTTOM = (255, 214, 92), (255, 248, 222)
 
 
 def gradient(t: np.ndarray) -> np.ndarray:
@@ -88,8 +90,8 @@ def bezier(
 # Flame outline in a unit box (x right, y down), bottom centre at (0, 0.5).
 FLAME = [
     [(0.0, 0.5), (0.36, 0.5), (0.44, 0.18), (0.32, -0.04)],
-    [(0.32, -0.04), (0.24, -0.2), (0.12, -0.26), (0.06, -0.56)],
-    [(0.06, -0.56), (-0.04, -0.36), (-0.2, -0.3), (-0.3, -0.1)],
+    [(0.32, -0.04), (0.24, -0.2), (0.1, -0.28), (0.08, -0.57)],
+    [(0.08, -0.57), (-0.06, -0.38), (-0.22, -0.3), (-0.3, -0.1)],
     [(-0.3, -0.1), (-0.42, 0.12), (-0.36, 0.5), (0.0, 0.5)],
 ]
 
@@ -125,14 +127,23 @@ def render(variant: str) -> Image.Image:
     outer_flame = flame_mask(size, FLAME_SCALE, (0.0, FLAME_OFFSET))
     inner_flame = flame_mask(size, INNER_FLAME_SCALE, (0.0, INNER_FLAME_OFFSET))
     # Vertical gradient up the flame: amber at the bottom, pink at the tip.
-    top = 0.5 + FLAME_OFFSET - 0.56 * FLAME_SCALE
+    top = 0.5 + FLAME_OFFSET - 0.57 * FLAME_SCALE
     bottom = 0.5 + FLAME_OFFSET + 0.5 * FLAME_SCALE
     rows = np.linspace(0, 1, size)[:, None].repeat(size, axis=1)
     flame_t = np.clip((bottom - rows) / (bottom - top), 0, 1)
     flame_color = gradient(flame_t)
     rgba[outer_flame, :3] = flame_color[outer_flame]
     rgba[outer_flame, 3] = 255
-    rgba[inner_flame, :3] = INNER_FLAME
+    inner_top = 0.5 + INNER_FLAME_OFFSET - 0.57 * INNER_FLAME_SCALE
+    inner_bottom = 0.5 + INNER_FLAME_OFFSET + 0.5 * INNER_FLAME_SCALE
+    inner_t = np.clip((inner_bottom - rows) / (inner_bottom - inner_top), 0, 1)[
+        ..., None
+    ]
+    inner_color = (
+        np.array(INNER_FLAME_BOTTOM) * (1 - inner_t)
+        + np.array(INNER_FLAME_TOP) * inner_t
+    )
+    rgba[inner_flame, :3] = inner_color[inner_flame]
     rgba[inner_flame, 3] = 255
 
     return Image.fromarray(rgba.astype(np.uint8), "RGBA")
