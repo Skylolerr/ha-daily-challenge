@@ -436,6 +436,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 
 **Phase 4 – v0.2.0**
 - 4.a Heatmap (Wochen als Spalten, Montag oben, Intensität value/target, erfüllt/unerfüllt unterscheidbar, ausserhalb der Laufzeit grau)
+  - Hinweis aus dem Review: `fulfilled` in der Historie kennt noch keinen Zustand «gestern noch rettbar» (Catch-up); für die Heatmap ergänzen. Gerundet wird mit Python-`round()` (2,25 → 2,2).
 - 4.b Tag antippen → Dialog, Wert ändern via `set_day`
 - 4.c Statistik-Zeile (Total, Ø/Tag, bester Tag, bester Streak)
 - 4.d Editor-Optionen `show_heatmap`/`heatmap_range`, i18n in allen vier Sprachen
