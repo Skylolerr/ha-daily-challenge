@@ -419,7 +419,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 4 | Feedback zum Logo-Entwurf | 3.b, gemeinsame Überarbeitung |
 | 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |
 | 6 | Bestätigung der Catch-up-Regel: Vorsprung früherer Tage deckt spätere leere Tage ab | ggf. Anpassung in `calculations.py` |
-| 7 | GitHub-Einstellungen: Beschreibung, Topics (`home-assistant`, `hacs`, `integration`, `habit-tracker`, `challenge`), Issues aktiviert | danach wird der `hacs/action`-Job wieder eingeschaltet (3.d) |
+| 7 | ~~GitHub-Einstellungen: Beschreibung, Topics, Issues~~ – erledigt 2026-10-23 per `gh` | `hacs/action`-Job wird beim Öffentlich-Schalten wieder eingeschaltet (er prüft nur öffentliche Repos) |
 | 8 | Repo öffentlich schalten, Release `v0.1.0` als Pre-Release mit dem CHANGELOG-Text erstellen | 3.e; Tag-Check und ZIP laufen automatisch |
 | 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |
 
