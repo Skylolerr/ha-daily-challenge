@@ -21,7 +21,7 @@
           "daily_target": "Menge, die du jeden Tag erreichen willst.",
           "start_date": "Erster Tag der Challenge. Darf nicht in der Zukunft liegen.",
           "end_date": "Optionaler letzter Tag der Challenge.",
-          "steps": "Bis zu 3 Mengen in aufsteigender Reihenfolge. Jede erhält einen +-Button; die kleinste wird auch für den −-Button verwendet.",
+          "steps": "Bis zu 3 Mengen in aufsteigender Reihenfolge. Jede erhält einen Plus-Button; die kleinste wird auch für den Minus-Button verwendet.",
           "streak_rule": "Wann ein Tag für deinen Streak zählt.",
           "deficit_mode": "Was passiert, wenn du in Rückstand gerätst."
         }
@@ -60,7 +60,7 @@
           "daily_target": "Menge, die du jeden Tag erreichen willst. Änderungen gelten ab heute.",
           "start_date": "Erster Tag der Challenge. Tage vor einem späteren Startdatum werden ignoriert, aber nicht gelöscht.",
           "end_date": "Optionaler letzter Tag der Challenge.",
-          "steps": "Bis zu 3 Mengen in aufsteigender Reihenfolge. Jede erhält einen +-Button; die kleinste wird auch für den −-Button verwendet.",
+          "steps": "Bis zu 3 Mengen in aufsteigender Reihenfolge. Jede erhält einen Plus-Button; die kleinste wird auch für den Minus-Button verwendet.",
           "streak_rule": "Wann ein Tag für deinen Streak zählt.",
           "deficit_mode": "Was passiert, wenn du in Rückstand gerätst."
         }
