@@ -10,6 +10,8 @@ export const de: Translations = {
   edit_value: "Heutigen Wert eingeben",
   entity_not_found: "Entität nicht gefunden: {entity}",
   left_to_goal: "Noch {remaining} bis zum Ziel",
+  left_to_goal_in_days: "Noch {remaining} in {days} Tagen · Ø {per_day}/Tag",
+  left_to_goal_last_day: "Noch {remaining} am letzten Tag",
   missing_entity: "Bitte gib eine Entität einer Daily Challenge an.",
   no_challenges: "Noch keine Daily Challenge eingerichtet.",
   not_a_challenge: "{entity} gehört zu keiner Daily Challenge.",

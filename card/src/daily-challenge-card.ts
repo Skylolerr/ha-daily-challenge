@@ -377,11 +377,7 @@ export class DailyChallengeCard extends LitElement {
         : nothing}
       ${remaining === undefined
         ? nothing
-        : html`<div class="remaining">
-            ${localize(hass, "left_to_goal", {
-              remaining: formatNumber(hass, remaining),
-            })}
-          </div>`}
+        : html`<div class="remaining">${this._remainingText(remaining)}</div>`}
       ${catchUp
         ? html`<div class="catch-up">
             ${localize(hass, "catch_up", {
@@ -391,6 +387,25 @@ export class DailyChallengeCard extends LitElement {
           </div>`
         : nothing}
     </div>`;
+  }
+
+  /** "3'100 left in 60 days · Ø 51.7/day" – or shorter if figures are missing. */
+  private _remainingText(remaining: number): string {
+    const hass = this.hass;
+    const days = this._number("days_left");
+    const perDay = this._number("required_per_day");
+    const amount = formatNumber(hass, remaining);
+    if (days === 1) {
+      return localize(hass, "left_to_goal_last_day", { remaining: amount });
+    }
+    if (days !== undefined && days > 1 && perDay !== undefined) {
+      return localize(hass, "left_to_goal_in_days", {
+        remaining: amount,
+        days: formatNumber(hass, days),
+        per_day: formatNumber(hass, perDay),
+      });
+    }
+    return localize(hass, "left_to_goal", { remaining: amount });
   }
 
   private _renderButtons(challenge: ChallengeInfo) {

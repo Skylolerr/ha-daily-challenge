@@ -424,6 +424,8 @@ describe("summary", () => {
     target_to_date: "sensor.push_ups_target_to_date",
     delta: "sensor.push_ups_ahead_behind",
     remaining: "sensor.push_ups_remaining",
+    days_left: "sensor.push_ups_days_left",
+    required_per_day: "sensor.push_ups_required_per_day",
   };
   const SUMMARY_CHALLENGE = { ...CHALLENGE, entities: SUMMARY_ENTITIES };
 
@@ -503,6 +505,48 @@ describe("summary", () => {
     );
     expect(text(root(card).querySelector(".remaining"))).toBe(
       "3,100 left to goal",
+    );
+  });
+
+  it("shows days left and the required average with an end date", async () => {
+    const card = await createCard(
+      summaryHass({ remaining: "3100", days_left: "60", required_per_day: "51.7" }),
+    );
+    expect(text(root(card).querySelector(".remaining"))).toBe(
+      "3,100 left in 60 days · Ø 51.7/day",
+    );
+  });
+
+  it("names the last day", async () => {
+    const card = await createCard(
+      summaryHass(
+        { remaining: "20", days_left: "1", required_per_day: "20.0" },
+        undefined,
+        "de",
+      ),
+    );
+    expect(text(root(card).querySelector(".remaining"))).toBe(
+      "Noch 20 am letzten Tag",
+    );
+  });
+
+  it("falls back to the plain remaining amount after the end", async () => {
+    const card = await createCard(
+      summaryHass({ remaining: "40", days_left: "0", required_per_day: "unknown" }),
+    );
+    expect(text(root(card).querySelector(".remaining"))).toBe("40 left to goal");
+  });
+
+  it("shows the average in German with decimals", async () => {
+    const card = await createCard(
+      summaryHass(
+        { remaining: "1380", days_left: "69", required_per_day: "20" },
+        undefined,
+        "de",
+      ),
+    );
+    expect(text(root(card).querySelector(".remaining"))).toBe(
+      "Noch 1.380 in 69 Tagen · Ø 20/Tag",
     );
   });
 
