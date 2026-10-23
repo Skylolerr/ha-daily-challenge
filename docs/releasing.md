@@ -43,18 +43,9 @@ Before step 5 above:
    gh repo edit Skylolerr/ha-daily-challenge --visibility public --accept-visibility-change-consequences
    ```
 
-4. Re-enable the HACS job in `.github/workflows/validate.yml` (it only works for public
-   repositories) and make sure it is green:
-
-   ```yaml
-   hacs:
-     name: HACS
-     runs-on: ubuntu-latest
-     steps:
-       - uses: hacs/action@main
-         with:
-           category: integration
-   ```
+4. The HACS job in `.github/workflows/validate.yml` was skipped while the repository was
+   private. Run the workflow once (`gh workflow run Validate`) and make sure the HACS job
+   is green.
 
 5. Create the release (steps 5–6 above) as a **pre-release**.
 6. Install through HACS as a custom repository on your own instance. HACS replaces the

@@ -67,6 +67,7 @@ See SPEC.md §16. By default a phase is done as a whole; the optional sub-steps
 (1.a, 2.b, …) are only used when the maintainer asks for part of a phase. Phase 1 = integration core. Phase 2 (card) only starts after the
 maintainer has tested and approved Phase 1 on their own HA instance.
 
-The `hacs/action` job is paused in `.github/workflows/validate.yml` until Phase 3
-(it needs brand icons, repo description and topics). Phase 3 must re-enable it with
-`category: integration` and **no ignores**.
+The `hacs/action` job in `.github/workflows/validate.yml` runs with
+`category: integration` and **no ignores**. It is skipped while the repository is
+private (hacs/action only validates public repositories) and runs automatically once it
+is public.
