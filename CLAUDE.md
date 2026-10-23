@@ -10,7 +10,7 @@ maintainer instead of deviating.
 ## Project facts
 
 - Domain: `daily_challenge` – integration code lives in `custom_components/daily_challenge/`
-- Repo: `Skylolerr/ha-daily-challenge`, license MIT (Copyright skylolerlp)
+- Repo: `Skylolerr/ha-daily-challenge`, license MIT (Copyright Skylolerr)
 - Minimum Home Assistant version: **2026.10.0** (`hacs.json`), Python as required by that HA release
 - `integration_type: service`, one config entry and one device per challenge
 - Source of truth: one `helpers.storage.Store` per challenge (`.storage/daily_challenge.<entry_id>`)

@@ -311,4 +311,4 @@ committed. Deploy to your own Home Assistant instance with `scripts/deploy.sh`
 
 ## License
 
-[MIT](LICENSE) © skylolerlp
+[MIT](LICENSE) © Skylolerr

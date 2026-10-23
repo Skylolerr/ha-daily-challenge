@@ -5,7 +5,7 @@ Home-Assistant-Custom-Integration (HACS / HA Marketplace) zum Tracken von tägli
 - **Name:** Daily Challenge
 - **Domain:** `daily_challenge`
 - **Repo:** `Skylolerr/ha-daily-challenge` (privat während Phase 1–2, öffentlich ab dem ersten Beta-Release v0.1.0)
-- **Lizenz:** MIT, Copyright skylolerlp
+- **Lizenz:** MIT, Copyright Skylolerr
 - **Mindestversion:** Home Assistant 2026.10.0 (vom Maintainer am 2026-10-23 von 2026.11.0 gesenkt, damit v0.1.0 nicht auf 2026.11 warten muss)
 - **Sprachen:** EN (Basis), DE, FR, IT
 - **Code, Kommentare, README, Commit-Messages:** Englisch
