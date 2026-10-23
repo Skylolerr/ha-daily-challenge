@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
@@ -22,9 +23,20 @@ def _is_card_url(url: str) -> bool:
     return url.split("?", 1)[0] == CARD_URL
 
 
+def card_hash() -> str:
+    """Return a short hash of the bundle (blocking: run in the executor)."""
+    return hashlib.sha256(CARD_PATH.read_bytes()).hexdigest()[:8]
+
+
 async def _versioned_url(hass: HomeAssistant) -> str:
+    """Return the card URL with version and content hash.
+
+    The bundle is cached by browsers for a long time; the hash gives every
+    changed bundle a new URL, also between releases.
+    """
     integration = await async_get_integration(hass, DOMAIN)
-    return f"{CARD_URL}?v={integration.version}"
+    content = await hass.async_add_executor_job(card_hash)
+    return f"{CARD_URL}?v={integration.version}-{content}"
 
 
 def _storage_resources(hass: HomeAssistant) -> ResourceStorageCollection | None:

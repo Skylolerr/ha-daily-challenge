@@ -14,11 +14,13 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.daily_challenge.const import DOMAIN
+from custom_components.daily_challenge.frontend import card_hash
 
 from .conftest import make_options
 
 CARD_URL = "/daily_challenge/daily-challenge-card.js"
-VERSIONED_URL = f"{CARD_URL}?v=0.1.0"
+# Version from the manifest plus a hash of the bundle content.
+VERSIONED_URL = f"{CARD_URL}?v=0.1.0-{card_hash()}"
 OTHER_RESOURCE = {"id": "other", "type": "module", "url": "/local/other-card.js"}
 
 
@@ -88,6 +90,29 @@ async def test_existing_resource_is_updated(
         OTHER_RESOURCE,
         {"id": "old", "type": "module", "url": VERSIONED_URL},
     ]
+
+
+async def test_same_version_with_other_content_is_updated(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    hass_storage: dict[str, Any],
+) -> None:
+    """A changed bundle gets a new URL even without a new version."""
+    hass_storage["lovelace_resources"] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": "lovelace_resources",
+        "data": {
+            "items": [{"id": "card", "type": "module", "url": f"{CARD_URL}?v=0.1.0"}]
+        },
+    }
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert resources(hass) == [{"id": "card", "type": "module", "url": VERSIONED_URL}]
+    assert VERSIONED_URL.startswith(f"{CARD_URL}?v=0.1.0-")
+    assert len(VERSIONED_URL.rsplit("-", 1)[1]) == 8
 
 
 async def test_one_resource_for_several_challenges(

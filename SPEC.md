@@ -267,7 +267,7 @@ Die Card holt die Historie neu, sobald sich der State von `sensor.<challenge>_to
 ## 11. Frontend-Auslieferung
 
 - Static Path `/daily_challenge/daily-challenge-card.js` via `hass.http.async_register_static_paths([StaticPathConfig(...)])`, mit Cache.
-- **Lovelace im Storage-Modus:** Die Ressource wird als Modul mit `?v=<manifest-version>` registriert. Eine bestehende Ressource mit anderer Version wird aktualisiert, sodass nie Duplikate entstehen.
+- **Lovelace im Storage-Modus:** Die Ressource wird als Modul mit `?v=<manifest-version>-<hash>` registriert; `<hash>` sind die ersten 8 Zeichen des SHA-256 des Bundles. So bekommt jedes geänderte Bundle eine neue URL, auch zwischen zwei Releases (der Browser cacht das Bundle sonst bis zu 31 Tage). Eine bestehende Ressource mit anderer URL wird aktualisiert, sodass nie Duplikate entstehen.
 - **YAML-Modus:** Fallback mit `frontend.add_extra_js_url`.
 - Die Registrierung passiert genau einmal pro HA-Start, nicht pro Config Entry.
 - Wird der letzte Config Entry entfernt, wird auch die Lovelace-Ressource entfernt.
