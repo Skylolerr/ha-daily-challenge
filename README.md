@@ -104,7 +104,8 @@ All options can be changed later via **Configure**:
 ## Entities
 
 One device per challenge with these entities (example IDs for a challenge named
-"Push-ups"):
+"Push-ups"). Home Assistant creates the entity IDs in its system language, so with German
+they look like `number.push_ups_heute` or `sensor.push_ups_notig_pro_tag`.
 
 | Entity | Example ID | Description |
 |---|---|---|
