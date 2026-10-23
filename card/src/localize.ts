@@ -1,28 +1,24 @@
+import { de } from "./translations/de";
+import { en } from "./translations/en";
 import type { HomeAssistant } from "./types";
 
-// English base strings. More languages are added in phase 2.g.
-const en = {
-  best: "Best",
-  card_description: "Track today's progress of a daily challenge.",
-  card_name: "Daily Challenge",
-  catch_up: "Today: {target} + {deficit} deficit",
-  challenge: "Challenge",
-  current_streak: "Current streak",
-  edit_value: "Enter today's value",
-  entity_not_found: "Entity not found: {entity}",
-  left_to_goal: "{remaining} left to goal",
-  missing_entity: "Please define an entity of a Daily Challenge.",
-  no_challenges: "No Daily Challenge set up yet.",
-  not_a_challenge: "{entity} does not belong to a Daily Challenge.",
-  target_vs_actual: "Actual {total} / Target {target}",
-} as const;
-
 export type StringKey = keyof typeof en;
+export type Translations = Record<StringKey, string>;
 
-const languages: Record<string, Partial<Record<StringKey, string>>> = { en };
+const languages: Record<string, Translations> = { de, en };
 
+/** The user's language: from Home Assistant, else from the page. */
 function language(hass: HomeAssistant | undefined): string {
-  return hass?.locale.language ?? "en";
+  return (
+    hass?.locale.language ||
+    (typeof document === "undefined" ? "" : document.documentElement.lang) ||
+    "en"
+  );
+}
+
+/** Translations for a language tag ("de-CH" falls back to "de", then English). */
+function translations(tag: string): Translations {
+  return languages[tag] ?? languages[tag.split("-")[0]] ?? en;
 }
 
 export function localize(
@@ -30,16 +26,32 @@ export function localize(
   key: StringKey,
   placeholders: Record<string, string> = {},
 ): string {
-  const text = languages[language(hass).split("-")[0]]?.[key] ?? en[key];
-  return text.replace(/\{(\w+)\}/g, (match, name: string) =>
-    name in placeholders ? placeholders[name] : match,
+  return translations(language(hass))[key].replace(
+    /\{(\w+)\}/g,
+    (match, name: string) => (name in placeholders ? placeholders[name] : match),
   );
 }
 
-/** Format a number in the user's locale (e.g. 1'240 for de-CH). */
+/** Locales for the number formats of the user profile (as the HA frontend does). */
+const NUMBER_FORMAT_LOCALES: Record<string, string[] | undefined> = {
+  comma_decimal: ["en-US", "en"],
+  decimal_comma: ["de", "es", "it"],
+  quote_decimal: ["de-CH"],
+  space_comma: ["fr", "sv", "cs"],
+  system: undefined,
+};
+
+/** Format a number following the number format of the user's HA profile. */
 export function formatNumber(hass: HomeAssistant | undefined, value: number): string {
+  const numberFormat = hass?.locale.number_format ?? "language";
+  const locales =
+    numberFormat in NUMBER_FORMAT_LOCALES
+      ? NUMBER_FORMAT_LOCALES[numberFormat]
+      : [language(hass)];
   try {
-    return new Intl.NumberFormat(language(hass)).format(value);
+    return new Intl.NumberFormat(locales, {
+      useGrouping: numberFormat !== "none",
+    }).format(value);
   } catch {
     return String(value);
   }

@@ -472,20 +472,24 @@ describe("summary", () => {
     expect(summary(card)).toBe("Actual 60 / Target 60 · ±0");
   });
 
-  it("formats numbers in the user's locale", async () => {
+  it("speaks the user's language and formats numbers", async () => {
     const card = await createCard(
       summaryHass(
-        { total: "1240", target_to_date: "1200", delta: "40" },
-        undefined,
+        { total: "1240", target_to_date: "1200", delta: "40", remaining: "3100" },
+        { daily_target: 20, deficit: 10 },
         "de-CH",
       ),
     );
     // The Swiss group separator is an apostrophe (exact glyph depends on CLDR).
     const swiss = new Intl.NumberFormat("de-CH");
-    expect(summary(card)).toBe(
-      `Actual ${swiss.format(1240)} / Target ${swiss.format(1200)} · +40`,
+    expect(text(root(card).querySelector(".target-vs-actual"))).toBe(
+      `Ist ${swiss.format(1240)} / Soll ${swiss.format(1200)} · +40`,
     );
     expect(swiss.format(1240)).toMatch(/^1['’]240$/);
+    expect(text(root(card).querySelector(".remaining"))).toBe(
+      `Noch ${swiss.format(3100)} bis zum Ziel`,
+    );
+    expect(text(root(card).querySelector(".streak"))).toBe("🔥 3 · Rekord 7");
   });
 
   it("shows what is left with an end date", async () => {

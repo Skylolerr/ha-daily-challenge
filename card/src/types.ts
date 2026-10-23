@@ -21,7 +21,11 @@ export interface HomeAssistant {
   states: Record<string, HassEntity>;
   // Replaced by the frontend whenever the entity registry changes.
   entities?: Record<string, EntityRegistryDisplayEntry>;
-  locale: { language: string };
+  locale: {
+    language: string;
+    /** Number format of the user profile, e.g. "language" or "quote_decimal". */
+    number_format?: string;
+  };
   callWS<T>(msg: { type: string; [key: string]: unknown }): Promise<T>;
   callService(
     domain: string,
