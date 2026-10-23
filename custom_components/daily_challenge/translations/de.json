@@ -87,7 +87,7 @@
     "deficit_mode": {
       "options": {
         "display": "Rückstand nur anzeigen",
-        "catch_up": "Aufholen: Rückstand erhöht das heutige Ziel"
+        "catch_up": "Aufholen: der gestrige Rückstand erhöht das heutige Ziel"
       }
     }
   },

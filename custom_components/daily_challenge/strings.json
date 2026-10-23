@@ -87,7 +87,7 @@
     "deficit_mode": {
       "options": {
         "display": "Only show the deficit",
-        "catch_up": "Catch up: a deficit raises today's target"
+        "catch_up": "Catch up: yesterday's deficit raises today's target"
       }
     }
   },

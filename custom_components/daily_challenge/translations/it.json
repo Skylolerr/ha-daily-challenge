@@ -87,7 +87,7 @@
     "deficit_mode": {
       "options": {
         "display": "Mostra solo il ritardo",
-        "catch_up": "Recupero: il ritardo aumenta l'obiettivo di oggi"
+        "catch_up": "Recupero: il ritardo di ieri aumenta l'obiettivo di oggi"
       }
     }
   },
