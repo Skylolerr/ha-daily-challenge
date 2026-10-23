@@ -1,0 +1,252 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nouveau défi quotidien",
+        "description": "Suivez une quantité quotidienne, par exemple 20 pompes par jour.",
+        "data": {
+          "name": "Nom",
+          "icon": "Icône",
+          "unit": "Unité",
+          "daily_target": "Objectif quotidien",
+          "start_date": "Date de début",
+          "end_date": "Date de fin",
+          "steps": "Paliers",
+          "streak_rule": "Règle de série",
+          "deficit_mode": "Gestion du retard"
+        },
+        "data_description": {
+          "name": "Doit être unique parmi vos défis.",
+          "unit": "Choisissez une suggestion ou saisissez votre propre unité.",
+          "daily_target": "Quantité que vous voulez atteindre chaque jour.",
+          "start_date": "Premier jour du défi. Ne peut pas être dans le futur.",
+          "end_date": "Dernier jour du défi (facultatif).",
+          "steps": "Jusqu'à 3 quantités par ordre croissant. Chacune obtient un bouton + ; la plus petite sert aussi pour le bouton −.",
+          "streak_rule": "Quand un jour compte pour votre série.",
+          "deficit_mode": "Ce qui se passe quand vous prenez du retard."
+        }
+      }
+    },
+    "error": {
+      "name_required": "Veuillez saisir un nom.",
+      "name_exists": "Un défi portant ce nom existe déjà.",
+      "unit_required": "Veuillez saisir une unité.",
+      "invalid_target": "L'objectif quotidien doit être un nombre entier supérieur à 0.",
+      "start_in_future": "La date de début ne peut pas être dans le futur.",
+      "end_before_start": "La date de fin doit être postérieure à la date de début.",
+      "invalid_steps": "Saisissez 1 à 3 nombres entiers supérieurs à 0.",
+      "steps_not_ascending": "Les paliers doivent être uniques et croissants."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Modifier le défi",
+        "description": "Un nouvel objectif quotidien s'applique à partir d'aujourd'hui ; les jours passés gardent leur objectif.",
+        "data": {
+          "name": "Nom",
+          "icon": "Icône",
+          "unit": "Unité",
+          "daily_target": "Objectif quotidien",
+          "start_date": "Date de début",
+          "end_date": "Date de fin",
+          "steps": "Paliers",
+          "streak_rule": "Règle de série",
+          "deficit_mode": "Gestion du retard"
+        },
+        "data_description": {
+          "name": "Doit être unique parmi vos défis.",
+          "unit": "Choisissez une suggestion ou saisissez votre propre unité.",
+          "daily_target": "Quantité que vous voulez atteindre chaque jour. Les modifications s'appliquent à partir d'aujourd'hui.",
+          "start_date": "Premier jour du défi. Les jours avant une date de début ultérieure sont ignorés mais pas supprimés.",
+          "end_date": "Dernier jour du défi (facultatif).",
+          "steps": "Jusqu'à 3 quantités par ordre croissant. Chacune obtient un bouton + ; la plus petite sert aussi pour le bouton −.",
+          "streak_rule": "Quand un jour compte pour votre série.",
+          "deficit_mode": "Ce qui se passe quand vous prenez du retard."
+        }
+      }
+    },
+    "error": {
+      "name_required": "Veuillez saisir un nom.",
+      "name_exists": "Un défi portant ce nom existe déjà.",
+      "unit_required": "Veuillez saisir une unité.",
+      "invalid_target": "L'objectif quotidien doit être un nombre entier supérieur à 0.",
+      "start_in_future": "La date de début ne peut pas être dans le futur.",
+      "end_before_start": "La date de fin doit être postérieure à la date de début.",
+      "invalid_steps": "Saisissez 1 à 3 nombres entiers supérieurs à 0.",
+      "steps_not_ascending": "Les paliers doivent être uniques et croissants."
+    }
+  },
+  "selector": {
+    "streak_rule": {
+      "options": {
+        "target": "Objectif quotidien atteint",
+        "any": "N'importe quelle quantité supérieure à 0"
+      }
+    },
+    "deficit_mode": {
+      "options": {
+        "display": "Afficher seulement le retard",
+        "catch_up": "Rattrapage : le retard augmente l'objectif du jour"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "goal_reached_today": {
+        "name": "Objectif atteint aujourd'hui"
+      }
+    },
+    "button": {
+      "add": {
+        "name": "+{amount}"
+      },
+      "subtract": {
+        "name": "−{amount}"
+      }
+    },
+    "number": {
+      "today": {
+        "name": "Aujourd'hui"
+      }
+    },
+    "sensor": {
+      "today_target": {
+        "name": "Objectif du jour",
+        "state_attributes": {
+          "daily_target": {
+            "name": "Objectif quotidien"
+          },
+          "deficit": {
+            "name": "Retard"
+          }
+        }
+      },
+      "progress": {
+        "name": "Progression"
+      },
+      "total": {
+        "name": "Total"
+      },
+      "current_streak": {
+        "name": "Série actuelle"
+      },
+      "best_streak": {
+        "name": "Meilleure série",
+        "state_attributes": {
+          "start": {
+            "name": "Début"
+          },
+          "end": {
+            "name": "Fin"
+          }
+        }
+      },
+      "target_to_date": {
+        "name": "Objectif à ce jour"
+      },
+      "delta": {
+        "name": "Avance / retard"
+      },
+      "remaining": {
+        "name": "Reste jusqu'à l'objectif"
+      },
+      "average": {
+        "name": "Moyenne par jour"
+      },
+      "best_day": {
+        "name": "Meilleur jour",
+        "state_attributes": {
+          "date": {
+            "name": "Date"
+          }
+        }
+      },
+      "this_week": {
+        "name": "Cette semaine"
+      },
+      "this_month": {
+        "name": "Ce mois-ci"
+      },
+      "this_year": {
+        "name": "Cette année"
+      }
+    }
+  },
+  "exceptions": {
+    "date_in_future": {
+      "message": "{date} est dans le futur."
+    },
+    "date_before_start": {
+      "message": "{date} est antérieur à la date de début du défi ({start_date})."
+    },
+    "date_after_end": {
+      "message": "{date} est postérieur à la date de fin du défi ({end_date})."
+    },
+    "entry_not_found": {
+      "message": "Aucun défi trouvé avec l'ID {entry_id}."
+    },
+    "entry_not_loaded": {
+      "message": "Le défi {name} n'est pas chargé."
+    },
+    "invalid_range": {
+      "message": "Le début {start} est postérieur à la fin {end}."
+    }
+  },
+  "services": {
+    "add": {
+      "name": "Ajouter une quantité",
+      "description": "Ajoute une quantité à un jour d'un défi. Le résultat ne descend jamais en dessous de 0.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Défi",
+          "description": "Le défi à mettre à jour."
+        },
+        "amount": {
+          "name": "Quantité",
+          "description": "Quantité à ajouter. Les valeurs négatives soustraient."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Jour à modifier. Par défaut aujourd'hui."
+        }
+      }
+    },
+    "set": {
+      "name": "Définir la valeur",
+      "description": "Définit la valeur d'un jour d'un défi. 0 supprime l'entrée.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Défi",
+          "description": "Le défi à mettre à jour."
+        },
+        "value": {
+          "name": "Valeur",
+          "description": "Nouvelle valeur du jour."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Jour à modifier. Par défaut aujourd'hui."
+        }
+      }
+    },
+    "get_history": {
+      "name": "Obtenir l'historique",
+      "description": "Renvoie les valeurs quotidiennes, les objectifs et la réussite de la série d'un défi.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Défi",
+          "description": "Le défi à lire."
+        },
+        "start": {
+          "name": "Début",
+          "description": "Premier jour à renvoyer. Par défaut la date de début du défi."
+        },
+        "end": {
+          "name": "Fin",
+          "description": "Dernier jour à renvoyer. Par défaut aujourd'hui."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,252 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nuova sfida giornaliera",
+        "description": "Monitora una quantità giornaliera, ad esempio 20 flessioni al giorno.",
+        "data": {
+          "name": "Nome",
+          "icon": "Icona",
+          "unit": "Unità",
+          "daily_target": "Obiettivo giornaliero",
+          "start_date": "Data di inizio",
+          "end_date": "Data di fine",
+          "steps": "Incrementi",
+          "streak_rule": "Regola della serie",
+          "deficit_mode": "Gestione del ritardo"
+        },
+        "data_description": {
+          "name": "Deve essere unico tra le tue sfide.",
+          "unit": "Scegli un suggerimento o inserisci la tua unità.",
+          "daily_target": "Quantità che vuoi raggiungere ogni giorno.",
+          "start_date": "Primo giorno della sfida. Non può essere nel futuro.",
+          "end_date": "Ultimo giorno della sfida (facoltativo).",
+          "steps": "Fino a 3 quantità in ordine crescente. Ognuna riceve un pulsante +; la più piccola viene usata anche per il pulsante −.",
+          "streak_rule": "Quando un giorno conta per la tua serie.",
+          "deficit_mode": "Cosa succede quando resti indietro."
+        }
+      }
+    },
+    "error": {
+      "name_required": "Inserisci un nome.",
+      "name_exists": "Esiste già una sfida con questo nome.",
+      "unit_required": "Inserisci un'unità.",
+      "invalid_target": "L'obiettivo giornaliero deve essere un numero intero maggiore di 0.",
+      "start_in_future": "La data di inizio non può essere nel futuro.",
+      "end_before_start": "La data di fine deve essere successiva alla data di inizio.",
+      "invalid_steps": "Inserisci da 1 a 3 numeri interi maggiori di 0.",
+      "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Modifica sfida",
+        "description": "Un nuovo obiettivo giornaliero vale da oggi in poi; i giorni passati mantengono il loro obiettivo.",
+        "data": {
+          "name": "Nome",
+          "icon": "Icona",
+          "unit": "Unità",
+          "daily_target": "Obiettivo giornaliero",
+          "start_date": "Data di inizio",
+          "end_date": "Data di fine",
+          "steps": "Incrementi",
+          "streak_rule": "Regola della serie",
+          "deficit_mode": "Gestione del ritardo"
+        },
+        "data_description": {
+          "name": "Deve essere unico tra le tue sfide.",
+          "unit": "Scegli un suggerimento o inserisci la tua unità.",
+          "daily_target": "Quantità che vuoi raggiungere ogni giorno. Le modifiche valgono da oggi in poi.",
+          "start_date": "Primo giorno della sfida. I giorni prima di una data di inizio successiva vengono ignorati ma non eliminati.",
+          "end_date": "Ultimo giorno della sfida (facoltativo).",
+          "steps": "Fino a 3 quantità in ordine crescente. Ognuna riceve un pulsante +; la più piccola viene usata anche per il pulsante −.",
+          "streak_rule": "Quando un giorno conta per la tua serie.",
+          "deficit_mode": "Cosa succede quando resti indietro."
+        }
+      }
+    },
+    "error": {
+      "name_required": "Inserisci un nome.",
+      "name_exists": "Esiste già una sfida con questo nome.",
+      "unit_required": "Inserisci un'unità.",
+      "invalid_target": "L'obiettivo giornaliero deve essere un numero intero maggiore di 0.",
+      "start_in_future": "La data di inizio non può essere nel futuro.",
+      "end_before_start": "La data di fine deve essere successiva alla data di inizio.",
+      "invalid_steps": "Inserisci da 1 a 3 numeri interi maggiori di 0.",
+      "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente."
+    }
+  },
+  "selector": {
+    "streak_rule": {
+      "options": {
+        "target": "Obiettivo giornaliero raggiunto",
+        "any": "Qualsiasi quantità superiore a 0"
+      }
+    },
+    "deficit_mode": {
+      "options": {
+        "display": "Mostra solo il ritardo",
+        "catch_up": "Recupero: il ritardo aumenta l'obiettivo di oggi"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "goal_reached_today": {
+        "name": "Obiettivo raggiunto oggi"
+      }
+    },
+    "button": {
+      "add": {
+        "name": "+{amount}"
+      },
+      "subtract": {
+        "name": "−{amount}"
+      }
+    },
+    "number": {
+      "today": {
+        "name": "Oggi"
+      }
+    },
+    "sensor": {
+      "today_target": {
+        "name": "Obiettivo di oggi",
+        "state_attributes": {
+          "daily_target": {
+            "name": "Obiettivo giornaliero"
+          },
+          "deficit": {
+            "name": "Ritardo"
+          }
+        }
+      },
+      "progress": {
+        "name": "Avanzamento"
+      },
+      "total": {
+        "name": "Totale"
+      },
+      "current_streak": {
+        "name": "Serie attuale"
+      },
+      "best_streak": {
+        "name": "Serie migliore",
+        "state_attributes": {
+          "start": {
+            "name": "Inizio"
+          },
+          "end": {
+            "name": "Fine"
+          }
+        }
+      },
+      "target_to_date": {
+        "name": "Obiettivo finora"
+      },
+      "delta": {
+        "name": "Vantaggio / ritardo"
+      },
+      "remaining": {
+        "name": "Mancante all'obiettivo"
+      },
+      "average": {
+        "name": "Media giornaliera"
+      },
+      "best_day": {
+        "name": "Giorno migliore",
+        "state_attributes": {
+          "date": {
+            "name": "Data"
+          }
+        }
+      },
+      "this_week": {
+        "name": "Questa settimana"
+      },
+      "this_month": {
+        "name": "Questo mese"
+      },
+      "this_year": {
+        "name": "Quest'anno"
+      }
+    }
+  },
+  "exceptions": {
+    "date_in_future": {
+      "message": "{date} è nel futuro."
+    },
+    "date_before_start": {
+      "message": "{date} è precedente alla data di inizio della sfida ({start_date})."
+    },
+    "date_after_end": {
+      "message": "{date} è successivo alla data di fine della sfida ({end_date})."
+    },
+    "entry_not_found": {
+      "message": "Nessuna sfida trovata con l'ID {entry_id}."
+    },
+    "entry_not_loaded": {
+      "message": "La sfida {name} non è caricata."
+    },
+    "invalid_range": {
+      "message": "L'inizio {start} è successivo alla fine {end}."
+    }
+  },
+  "services": {
+    "add": {
+      "name": "Aggiungi quantità",
+      "description": "Aggiunge una quantità a un giorno di una sfida. Il risultato non scende mai sotto 0.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sfida",
+          "description": "La sfida da aggiornare."
+        },
+        "amount": {
+          "name": "Quantità",
+          "description": "Quantità da aggiungere. I valori negativi sottraggono."
+        },
+        "date": {
+          "name": "Data",
+          "description": "Giorno da modificare. Predefinito: oggi."
+        }
+      }
+    },
+    "set": {
+      "name": "Imposta valore",
+      "description": "Imposta il valore di un giorno di una sfida. 0 rimuove la voce.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sfida",
+          "description": "La sfida da aggiornare."
+        },
+        "value": {
+          "name": "Valore",
+          "description": "Nuovo valore del giorno."
+        },
+        "date": {
+          "name": "Data",
+          "description": "Giorno da modificare. Predefinito: oggi."
+        }
+      }
+    },
+    "get_history": {
+      "name": "Ottieni cronologia",
+      "description": "Restituisce i valori giornalieri, gli obiettivi e il completamento della serie di una sfida.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sfida",
+          "description": "La sfida da leggere."
+        },
+        "start": {
+          "name": "Inizio",
+          "description": "Primo giorno da restituire. Predefinito: la data di inizio della sfida."
+        },
+        "end": {
+          "name": "Fine",
+          "description": "Ultimo giorno da restituire. Predefinito: oggi."
+        }
+      }
+    }
+  }
+}

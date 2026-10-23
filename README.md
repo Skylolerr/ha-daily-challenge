@@ -16,6 +16,12 @@ Not a sensor-triggered counter – a goal-based daily challenge tracker.
 - Past days can be corrected at any time via actions
 - Plain entities that work with Tile, Entities, Mushroom or ApexCharts cards
 
+## Translations
+
+The integration and the card are available in English, German, French and Italian.
+The French and Italian translations are new – **community review welcome!** Please
+open an issue or pull request if something reads oddly.
+
 ## Development
 
 ```bash

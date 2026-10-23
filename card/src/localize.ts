@@ -1,11 +1,13 @@
 import { de } from "./translations/de";
 import { en } from "./translations/en";
+import { fr } from "./translations/fr";
+import { it } from "./translations/it";
 import type { HomeAssistant } from "./types";
 
 export type StringKey = keyof typeof en;
 export type Translations = Record<StringKey, string>;
 
-const languages: Record<string, Translations> = { de, en };
+export const LANGUAGES: Record<string, Translations> = { de, en, fr, it };
 
 /** The user's language: from Home Assistant, else from the page. */
 function language(hass: HomeAssistant | undefined): string {
@@ -18,7 +20,7 @@ function language(hass: HomeAssistant | undefined): string {
 
 /** Translations for a language tag ("de-CH" falls back to "de", then English). */
 function translations(tag: string): Translations {
-  return languages[tag] ?? languages[tag.split("-")[0]] ?? en;
+  return LANGUAGES[tag] ?? LANGUAGES[tag.split("-")[0]] ?? en;
 }
 
 export function localize(

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { formatDelta, formatNumber, localize } from "../src/localize";
+import {
+  formatDelta,
+  formatNumber,
+  LANGUAGES,
+  localize,
+} from "../src/localize";
 import { de } from "../src/translations/de";
 import { en } from "../src/translations/en";
 import type { HomeAssistant } from "../src/types";
@@ -50,13 +55,30 @@ describe("localize", () => {
     );
   });
 
-  it("has a German text for every English one, with the same placeholders", () => {
-    const placeholders = (text: string) =>
-      [...text.matchAll(/\{\w+\}/g)].map((match) => match[0]).sort();
-    expect(Object.keys(de).sort()).toEqual(Object.keys(en).sort());
-    for (const key of Object.keys(en) as (keyof typeof en)[]) {
-      expect(placeholders(de[key]), key).toEqual(placeholders(en[key]));
-    }
+  it("speaks French and Italian", () => {
+    expect(localize(hass("fr-CH"), "challenge")).toBe("Défi");
+    expect(localize(hass("it"), "challenge")).toBe("Sfida");
+  });
+
+  it.each(Object.keys(LANGUAGES))(
+    "%s has every English text with the same placeholders",
+    (language) => {
+      const translations = LANGUAGES[language];
+      const placeholders = (text: string) =>
+        [...text.matchAll(/\{\w+\}/g)].map((match) => match[0]).sort();
+      expect(Object.keys(translations).sort()).toEqual(Object.keys(en).sort());
+      for (const key of Object.keys(en) as (keyof typeof en)[]) {
+        expect(placeholders(translations[key]), key).toEqual(
+          placeholders(en[key]),
+        );
+        expect(translations[key].trim(), key).not.toBe("");
+      }
+    },
+  );
+
+  it("covers English, German, French and Italian", () => {
+    expect(Object.keys(LANGUAGES).sort()).toEqual(["de", "en", "fr", "it"]);
+    expect(LANGUAGES.de).toBe(de);
   });
 });
 
