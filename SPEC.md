@@ -18,7 +18,7 @@ Es gibt bereits Habit-Tracker für HA (`habit_tracker`, `habit_log`). Daily Chal
 
 - **Mengenziel pro Tag** statt Ja/Nein-Habit
 - **Soll/Ist über die ganze Laufzeit** (Vorsprung/Rückstand, Rest bis Endziel)
-- **Optionaler Catch-up-Modus** (Rückstand erhöht das heutige Ziel)
+- **Optionaler Catch-up-Modus** (der gestrige Rückstand erhöht das heutige Ziel)
 - **Nachträgliches Korrigieren** jedes vergangenen Tages
 - Saubere Entities, die auch ohne die eigene Card mit Tile/Mushroom/ApexCharts funktionieren
 
@@ -173,14 +173,14 @@ Alles in `calculations.py` als reine Funktionen mit Input (`days`, `target_histo
 - `total`: Summe aller `value(d)` in der Laufzeit
 - `target_to_date`: Summe aller `target(d)` von `start_date` bis heute, inklusive heute
 - `delta`: `total − target_to_date`. Positiv heisst Vorsprung, negativ Rückstand.
-- `deficit_until_yesterday`: `max(0, Σ target(d) − Σ value(d))` über `start_date … gestern`
+- `deficit_yesterday`: `max(0, target(gestern) − value(gestern))`, nur der gestrige Rückstand (0, wenn gestern vor dem `start_date` liegt). Ältere Rückstände werden nicht weitergetragen, ein Vorsprung senkt nichts.
 - `effective_target_today`:
   - Modus `display`: `target(today)`
-  - Modus `catch_up`: `target(today) + deficit_until_yesterday`
+  - Modus `catch_up`: `target(today) + deficit_yesterday`
 - `progress_today`: `value(today) / effective_target_today × 100`, auf 0–999 begrenzt
 - `goal_reached_today`: `value(today) ≥ effective_target_today`
 - Nur mit `end_date`: `end_target = Σ target(d)` über die ganze Laufzeit bis `end_date`. Daraus `remaining = max(0, end_target − total)`.
-- Nur mit `end_date`: `days_left` = Tage von heute (bzw. vom `start_date`, falls die Challenge noch nicht begonnen hat) bis `end_date`, heute eingeschlossen; nach dem Ende 0. `required_per_day = max(0, end_target − Σ value(d) bis gestern) / days_left`, 1 Dezimalstelle, nach dem Ende leer. Der heutige Wert zählt dabei erst ab morgen, damit die Zahl während des Tages stabil bleibt und direkt mit dem Tagesziel vergleichbar ist.
+- Nur mit `end_date`: `days_left` = Tage von heute (bzw. vom `start_date`, falls die Challenge noch nicht begonnen hat) bis `end_date`, heute eingeschlossen; nach dem Ende 0. `required_per_day = remaining / days_left`, 1 Dezimalstelle, nach dem Ende leer. Der heutige Wert zählt sofort mit, passend zu «Noch … in … Tagen».
 - `average_per_day`: `total / Anzahl vergangener Tage inkl. heute`
 - `best_day`: maximaler Tageswert, das Datum kommt als Attribut dazu
 - `this_week` / `this_month` / `this_year`: Summen. Die Woche beginnt am Montag (ISO).
@@ -188,7 +188,7 @@ Alles in `calculations.py` als reine Funktionen mit Input (`days`, `target_histo
 **Tag erfüllt (für Streak):**
 - `streak_rule = any`: `value(d) > 0`
 - `streak_rule = target`, Modus `display`: `value(d) ≥ target(d)`
-- `streak_rule = target`, Modus `catch_up`: Der Tag gilt als erfüllt, wenn **bis Ende des Folgetags** kein kumulierter Rückstand mehr besteht. Ein verpasster Tag lässt sich also am nächsten Tag «reparieren». Für `gestern` ist der Status vorläufig, bis `heute` vorbei ist. Er wird während heute als «noch rettbar» behandelt und bricht den Streak nicht.
+- `streak_rule = target`, Modus `catch_up`: Der Tag gilt als erfüllt, wenn `value(d) ≥ target(d)` oder wenn er **am direkten Folgetag** aufgeholt wird: `value(d) + value(d+1) ≥ target(d) + target(d+1)`. Weiter zurück lässt sich nichts aufholen, und Vorarbeiten zählt nicht für spätere Tage. Ein nie aufgeholter Tag bricht den Streak einmal, blockiert ihn aber nicht dauerhaft. Für `gestern` ist der Status vorläufig, bis `heute` vorbei ist: Während heute gilt gestern als «noch rettbar» und bricht den Streak nicht (zählt aber auch nicht). Ohne Catch-up gibt es kein Aufholen; ein verpasster Tag beendet den Streak. (Entschieden 2026-10-23.)
 
 **Streak:**
 - `current_streak`: Anzahl aufeinanderfolgender erfüllter Tage bis gestern. Ist heute bereits erfüllt, zählt heute dazu. **Ein noch nicht erfüllter heutiger Tag bricht den Streak nicht.**
@@ -429,7 +429,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 3 | Screenshots: Card im Dashboard (hell und dunkel), Card mit Catch-up-Rückstand und Enddatum, Einrichtungsformular | README-Platzhalter `TODO screenshot`; PNG, ca. 1200 px breit, landen in `docs/images/` |
 | 4 | Feedback zum Logo-Entwurf | 3.b, gemeinsame Überarbeitung |
 | 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |
-| 6 | Entscheidung Catch-up-Regel (Review 2026-10-23): (a) Ein Vorsprung lässt den Streak über leere Tage weiterlaufen, während «Tagesziel erreicht» aus ist. (b) Ein nie aufgeholter Rückstand blockiert jeden späteren Streak, auch wenn danach jeden Tag das Ziel erreicht wird. Beides folgt wörtlich §6. | ggf. Anpassung in `calculations.py` |
+| 6 | ~~Entscheidung Catch-up-Regel~~ – erledigt 2026-10-23: nur der Vortag kann aufgeholt werden, kein Vorarbeiten (§6) | – |
 | 7 | ~~GitHub-Einstellungen: Beschreibung, Topics, Issues~~ – erledigt 2026-10-23 per `gh` | `hacs/action`-Job wird beim Öffentlich-Schalten wieder eingeschaltet (er prüft nur öffentliche Repos) |
 | 8 | Repo öffentlich schalten, Release `v0.1.0` als Pre-Release mit dem CHANGELOG-Text erstellen | 3.e; Tag-Check und ZIP laufen automatisch |
 | 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |

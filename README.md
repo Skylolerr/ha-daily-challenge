@@ -22,8 +22,8 @@ the whole challenge and its own dashboard card.
 - **A daily amount, not a yes/no habit.** Each challenge has its own daily target and unit.
 - **Target vs. actual over the whole runtime.** See at a glance whether you are ahead or
   behind, and – with an end date – how much is left until the end goal.
-- **Optional catch-up mode.** A deficit from previous days raises today's target. A missed
-  day can be repaired on the following day without breaking the streak.
+- **Optional catch-up mode.** Yesterday's deficit raises today's target, so a missed day
+  can be made up on the following day without breaking the streak.
 - **Streaks** with a choice of rule (daily target reached, or any amount), plus best streak,
   best day, daily average and weekly, monthly and yearly sums.
 - **Correct any past day** via actions (and, from v0.2.0, directly in the card).
@@ -88,17 +88,18 @@ All options can be changed later via **Configure**:
 - **Target to date** is the sum of the daily targets from the start date up to and
   including today. **Ahead / behind** is the total minus that target – so it is negative
   in the morning until today's amount is done.
-- **Today's target** is the daily target. In **catch-up mode** it also includes the
-  deficit of the previous days (a lead never lowers it).
+- **Today's target** is the daily target. In **catch-up mode** it also includes what was
+  missing yesterday – only yesterday; older deficits are not carried along and a lead
+  never lowers it.
 - **Streaks:** a day counts if it meets the streak rule. Today never breaks the streak
-  while it is still running; it counts as soon as it is fulfilled. In catch-up mode with
-  the "daily target" rule, a day also counts if the overall deficit is cleared by the end
-  of the following day – so yesterday can still be rescued today.
+  while it is still running; it counts as soon as it is fulfilled. Without catch-up a
+  missed day ends the streak. In catch-up mode with the "daily target" rule, a missed day
+  still counts if the **following day** makes up both targets together – so yesterday can
+  be rescued today, but nothing older. Working ahead does not count for later days.
 - **Midnight:** nothing is reset. A new day simply reads a new date, so restarts, daylight
   saving time and Home Assistant being off over midnight are no problem.
 - **Required per day** spreads what is still missing for the end goal over the days left,
-  today included. Only the days before today count, so the figure stays the same during
-  the day and can be compared directly with today's target.
+  today included. It goes down as soon as you log today's amount.
 - After the **end date** no values are accepted for new days; past days stay editable.
 
 ## Entities

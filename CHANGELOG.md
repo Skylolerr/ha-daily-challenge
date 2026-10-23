@@ -20,8 +20,9 @@ First public beta.
   current and best streak, target to date, ahead/behind, remaining until the end goal,
   days left and required average per day (with an end date), daily average, best day,
   weekly/monthly/yearly sums and "goal reached today".
-- Catch-up mode: a deficit raises today's target, and a missed day can be repaired on the
-  following day without breaking the streak.
+- Catch-up mode: yesterday's deficit raises today's target, and a missed day can be made
+  up on the following day without breaking the streak (only the previous day, no working
+  ahead).
 - Actions `daily_challenge.add`, `daily_challenge.set` and `daily_challenge.get_history`
   with translated validation errors.
 - Day rollover at local midnight without resetting anything, robust against restarts and
