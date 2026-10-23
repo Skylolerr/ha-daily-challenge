@@ -49,7 +49,9 @@ export function formatNumber(hass: HomeAssistant | undefined, value: number): st
   const locales =
     numberFormat in NUMBER_FORMAT_LOCALES
       ? NUMBER_FORMAT_LOCALES[numberFormat]
-      : [language(hass)];
+      : numberFormat === "none"
+        ? ["en-US"]
+        : [language(hass)];
   try {
     return new Intl.NumberFormat(locales, {
       useGrouping: numberFormat !== "none",

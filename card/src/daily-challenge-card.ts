@@ -13,6 +13,7 @@ import type {
 
 export const CARD_TYPE = "daily-challenge-card";
 export const LONG_PRESS_MS = 500;
+export const LOOKUP_RETRY_MS = 5000;
 
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -64,6 +65,13 @@ export class DailyChallengeCard extends LitElement {
   private _pressTimer?: ReturnType<typeof setTimeout>;
   private _committing = false;
   private _historyTotal?: string;
+  // Only the latest lookup may set its result; older answers are dropped.
+  private _lookupId = 0;
+  private _historyId = 0;
+  /** After a failed lookup (e.g. while HA restarts), retry no earlier than this. */
+  private _retryAt = 0;
+  /** Value shown when the inline input opens; not updated while typing. */
+  private _editValue = "";
 
   constructor() {
     super();
@@ -84,13 +92,22 @@ export class DailyChallengeCard extends LitElement {
   }
 
   getCardSize(): number {
-    return 4;
+    // Rows of 50 px: header, ring (4), summary lines and buttons.
+    const summaryLines =
+      Number(this._show("show_target_vs_actual")) +
+      Number(this._show("show_remaining") || this._show("show_required_average"));
+    return 5 + summaryLines + Number(this._show("show_buttons"));
   }
 
-  protected override willUpdate(changed: PropertyValues): void {
-    // Look the challenge up again whenever the entity registry changes,
-    // e.g. after the steps were edited and buttons were added or removed.
-    if (changed.has("hass") && this.hass && this.hass.entities !== this._entitiesSeen) {
+  protected override willUpdate(_changed: PropertyValues): void {
+    // Look the challenge up for a new entity and again whenever the entity
+    // registry changes, e.g. after the steps were edited.
+    if (
+      this.hass &&
+      this._config &&
+      this.hass.entities !== this._entitiesSeen &&
+      Date.now() >= this._retryAt
+    ) {
       this._entitiesSeen = this.hass.entities;
       void this._loadChallenge();
     }
@@ -108,39 +125,73 @@ export class DailyChallengeCard extends LitElement {
   }
 
   private async _loadHistory(entryId: string): Promise<void> {
+    const id = ++this._historyId;
     try {
-      this._history = await this.hass?.callWS<ChallengeHistory>({
+      const history = await this.hass?.callWS<ChallengeHistory>({
         type: "daily_challenge/history",
         entry_id: entryId,
       });
+      if (id === this._historyId && entryId === this._challenge?.entry_id) {
+        this._history = history;
+      }
     } catch {
       // Keep the last known history; the next change retries.
     }
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has("_editing") && this._editing) {
-      const input = this.renderRoot.querySelector("input");
-      input?.focus();
-      input?.select();
+    if (changed.has("_editing")) {
+      if (this._editing) {
+        const input = this.renderRoot.querySelector("input");
+        input?.focus();
+        input?.select();
+        // Mobile browsers may not focus the input, so blur never fires:
+        // a tap anywhere else also closes it.
+        document.addEventListener("pointerdown", this._outsidePointer, true);
+      } else {
+        document.removeEventListener("pointerdown", this._outsidePointer, true);
+      }
     }
   }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    document.removeEventListener("pointerdown", this._outsidePointer, true);
+    this._clearPress();
+  }
+
+  private _outsidePointer = (ev: PointerEvent): void => {
+    const input = this.renderRoot.querySelector("input");
+    if (input && !ev.composedPath().includes(input)) {
+      void this._commit(input);
+    }
+  };
 
   private async _loadChallenge(): Promise<void> {
     const entity = this._config?.entity;
     if (!this.hass || !entity) {
       return;
     }
+    const id = ++this._lookupId;
     try {
       const result = await this.hass.callWS<ChallengeList>({
         type: "daily_challenge/list",
       });
+      if (id !== this._lookupId || entity !== this._config?.entity) {
+        return;
+      }
       this._challenge =
         result.challenges.find((challenge) =>
           Object.values(challenge.entities).includes(entity),
         ) ?? null;
     } catch {
-      this._challenge = null;
+      if (id !== this._lookupId) {
+        return;
+      }
+      // Not an answer (e.g. HA is still starting): keep what is shown and
+      // try again with a later update.
+      this._entitiesSeen = NOT_LOADED;
+      this._retryAt = Date.now() + LOOKUP_RETRY_MS;
     }
   }
 
@@ -204,7 +255,9 @@ export class DailyChallengeCard extends LitElement {
 
   private _startEdit(): void {
     this._clearPress();
-    if (this._number("today") !== undefined) {
+    const value = this._number("today");
+    if (value !== undefined) {
+      this._editValue = String(value);
       this._committing = false;
       this._editing = true;
     }
@@ -212,8 +265,13 @@ export class DailyChallengeCard extends LitElement {
 
   private _inputKeyDown(ev: KeyboardEvent): void {
     if (ev.key === "Enter") {
+      ev.preventDefault();
+      ev.stopPropagation();
       void this._commit(ev.target as HTMLInputElement);
     } else if (ev.key === "Escape") {
+      // Keep Escape from also closing a surrounding dialog (card editor).
+      ev.preventDefault();
+      ev.stopPropagation();
       this._committing = true;
       this._editing = false;
     }
@@ -227,12 +285,14 @@ export class DailyChallengeCard extends LitElement {
     this._editing = false;
     const value = Number(input.value);
     const entityId = this._challenge?.entities.today;
+    const current = this._number("today");
     if (
       entityId &&
+      current !== undefined &&
       input.value.trim() !== "" &&
       Number.isInteger(value) &&
       value >= 0 &&
-      value !== this._number("today")
+      value !== current
     ) {
       await this._call("number", "set_value", { entity_id: entityId, value });
     }
@@ -265,8 +325,12 @@ export class DailyChallengeCard extends LitElement {
   }
 
   private _renderHeader(challenge: ChallengeInfo) {
-    const current = this._state("current_streak") ?? "–";
-    const best = this._state("best_streak") ?? "–";
+    const streak = (key: string) => {
+      const days = this._number(key);
+      return days === undefined ? "–" : formatNumber(this.hass, days);
+    };
+    const current = streak("current_streak");
+    const best = streak("best_streak");
     return html`<div class="header">
       <ha-icon .icon=${challenge.icon}></ha-icon>
       <span class="name">${challenge.name}</span>
@@ -318,7 +382,7 @@ export class DailyChallengeCard extends LitElement {
             min="0"
             step="1"
             aria-label=${localize(this.hass, "edit_value")}
-            .value=${String(value ?? 0)}
+            .value=${this._editValue}
             @keydown=${this._inputKeyDown}
             @blur=${(ev: FocusEvent) =>
               this._commit(ev.target as HTMLInputElement)}
@@ -458,16 +522,22 @@ export class DailyChallengeCard extends LitElement {
     if (!this._show("show_buttons")) {
       return nothing;
     }
-    const steps = addSteps(challenge.entities);
+    // Disabled entities are listed by the backend but have no state.
+    const exists = (key: string) => {
+      const entityId = challenge.entities[key];
+      return entityId !== undefined && this.hass?.states[entityId] !== undefined;
+    };
+    const allSteps = addSteps(challenge.entities);
+    const steps = allSteps.filter((step) => exists(`add_${step}`));
     const disabled = this._number("today_target") === undefined;
     return html`<div class="buttons">
-      ${challenge.entities.subtract && steps.length
+      ${exists("subtract") && allSteps.length
         ? html`<button
             class="subtract"
             ?disabled=${disabled}
             @click=${() => this._press("subtract")}
           >
-            −${steps[0]}
+            −${allSteps[0]}
           </button>`
         : nothing}
       ${steps.map(

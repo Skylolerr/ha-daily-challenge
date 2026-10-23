@@ -4,6 +4,7 @@ import {
   CARD_TYPE,
   DailyChallengeCard,
   LONG_PRESS_MS,
+  LOOKUP_RETRY_MS,
 } from "../src/daily-challenge-card";
 import type {
   ChallengeInfo,
@@ -190,11 +191,26 @@ describe("setup", () => {
     );
   });
 
-  it("treats a failed lookup like an unknown challenge", async () => {
+  it("retries a failed lookup instead of giving up", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     const hass = makeHass();
-    hass.callWS = vi.fn().mockRejectedValue(new Error("boom")) as HomeAssistant["callWS"];
-    const card = await createCard(hass);
-    expect(text(root(card))).toMatch(/does not belong/);
+    const failing = vi
+      .fn()
+      .mockRejectedValue(new Error("unknown_command")) as HomeAssistant["callWS"];
+    const card = await createCard({ ...hass, callWS: failing });
+    // Still loading, no false "not a challenge" warning.
+    expect(text(root(card))).toBe("");
+
+    // Before the retry delay nothing happens …
+    card.hass = { ...hass, callWS: failing, states: makeStates({ today: "16" }) };
+    await settle(card);
+    expect(failing).toHaveBeenCalledTimes(1);
+
+    // … afterwards the next update looks the challenge up again.
+    vi.setSystemTime(Date.now() + LOOKUP_RETRY_MS);
+    card.hass = { ...hass, states: makeStates({ today: "16" }) };
+    await settle(card);
+    expect(text(root(card).querySelector(".name"))).toBe("Push-ups");
   });
 
   it("looks the challenge up again when the entity registry changes", async () => {
@@ -729,5 +745,177 @@ describe("card picker", () => {
     expect(DailyChallengeCard.getConfigElement().tagName.toLowerCase()).toBe(
       "daily-challenge-card-editor",
     );
+  });
+});
+
+describe("review fixes", () => {
+  const OTHER: ChallengeInfo = {
+    entry_id: "squats",
+    name: "Squats",
+    icon: "mdi:human",
+    unit: "reps",
+    entities: { today: "number.squats_today" },
+  };
+
+  function twoChallengeHass(): HomeAssistant {
+    const hass = makeHass({}, [CHALLENGE, OTHER]);
+    hass.states["number.squats_today"] = entity("number.squats_today", "3");
+    return hass;
+  }
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((done) => {
+      resolve = done;
+    });
+    return { promise, resolve };
+  }
+
+  it("looks up a new entity right after setConfig", async () => {
+    const card = await createCard(twoChallengeHass());
+    card.setConfig({ type: `custom:${CARD_TYPE}`, entity: "number.squats_today" });
+    await settle(card);
+    expect(text(root(card).querySelector(".name"))).toBe("Squats");
+  });
+
+  it("ignores a late answer for the previous entity", async () => {
+    const hass = twoChallengeHass();
+    const slow = deferred<unknown>();
+    let calls = 0;
+    hass.callWS = vi.fn(async (msg: { type: string }) => {
+      if (msg.type !== "daily_challenge/list") {
+        return HISTORY;
+      }
+      calls += 1;
+      return calls === 1 ? slow.promise : { challenges: [CHALLENGE, OTHER] };
+    }) as unknown as HomeAssistant["callWS"];
+
+    const card = await createCard(hass);
+    card.setConfig({ type: `custom:${CARD_TYPE}`, entity: "number.squats_today" });
+    await settle(card);
+    expect(text(root(card).querySelector(".name"))).toBe("Squats");
+
+    slow.resolve({ challenges: [CHALLENGE, OTHER] });
+    await settle(card);
+    expect(text(root(card).querySelector(".name"))).toBe("Squats");
+  });
+
+  it("keeps the newest history when answers arrive out of order", async () => {
+    const hass = makeHass();
+    const slow = deferred<unknown>();
+    const newer = { ...HISTORY, days: { "2026-11-03": 7 } };
+    let historyCalls = 0;
+    hass.callWS = vi.fn(async (msg: { type: string }) => {
+      if (msg.type === "daily_challenge/list") {
+        return { challenges: [CHALLENGE] };
+      }
+      historyCalls += 1;
+      return historyCalls === 1 ? slow.promise : newer;
+    }) as unknown as HomeAssistant["callWS"];
+
+    const card = await createCard(hass);
+    card.hass = { ...hass, states: makeStates({ total: "61" }) };
+    await settle(card);
+    slow.resolve(HISTORY);
+    await settle(card);
+    expect(card.history).toEqual(newer);
+  });
+
+  async function openInput(card: DailyChallengeCard): Promise<HTMLInputElement> {
+    const value = root(card).querySelector(".value") as HTMLElement;
+    value.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    await settle(card);
+    return root(card).querySelector("input") as HTMLInputElement;
+  }
+
+  it("closes and saves the input on a tap elsewhere", async () => {
+    const hass = makeHass();
+    const card = await createCard(hass);
+    const input = await openInput(card);
+    input.value = "30";
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await settle(card);
+    expect(root(card).querySelector("input")).toBeNull();
+    expect(hass.callService).toHaveBeenCalledWith("number", "set_value", {
+      entity_id: ENTITIES.today,
+      value: 30,
+    });
+  });
+
+  it("does not close on a tap into the input", async () => {
+    const card = await createCard();
+    const input = await openInput(card);
+    input.dispatchEvent(new Event("pointerdown", { bubbles: true, composed: true }));
+    await settle(card);
+    expect(root(card).querySelector("input")).not.toBeNull();
+  });
+
+  it("keeps what is typed when today's value changes meanwhile", async () => {
+    const hass = makeHass();
+    const card = await createCard(hass);
+    const input = await openInput(card);
+    input.value = "30";
+    card.hass = { ...hass, states: makeStates({ today: "16" }) };
+    await settle(card);
+    expect((root(card).querySelector("input") as HTMLInputElement).value).toBe("30");
+  });
+
+  it("does not send a value while today is unavailable", async () => {
+    const hass = makeHass();
+    const card = await createCard(hass);
+    const input = await openInput(card);
+    card.hass = { ...hass, states: makeStates({ today: "unavailable" }) };
+    await settle(card);
+    input.value = "30";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    await settle(card);
+    expect(hass.callService).not.toHaveBeenCalled();
+  });
+
+  it("keeps Escape inside the input", async () => {
+    const card = await createCard();
+    const input = await openInput(card);
+    const outside = vi.fn();
+    document.addEventListener("keydown", outside);
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+    );
+    document.removeEventListener("keydown", outside);
+    expect(outside).not.toHaveBeenCalled();
+  });
+
+  it("hides buttons of disabled entities", async () => {
+    const hass = makeHass();
+    delete hass.states[ENTITIES.add_10];
+    const card = await createCard(hass);
+    expect(buttons(card).map((b) => text(b))).toEqual(["−1", "+1", "+5"]);
+
+    const noMinus = makeHass();
+    delete noMinus.states[ENTITIES.subtract];
+    delete noMinus.states[ENTITIES.add_1];
+    const card2 = await createCard(noMinus);
+    // The minus button keeps the smallest configured step.
+    expect(buttons(card2).map((b) => text(b))).toEqual(["+5", "+10"]);
+  });
+
+  it("shows a dash for unavailable streaks", async () => {
+    const card = await createCard(
+      makeHass({ current_streak: "unavailable", best_streak: "unknown" }),
+    );
+    expect(text(root(card).querySelector(".streak"))).toBe("🔥 – · Best –");
+  });
+
+  it("reports its size from the shown parts", async () => {
+    const card = await createCard();
+    expect(card.getCardSize()).toBe(8);
+    card.setConfig({
+      type: `custom:${CARD_TYPE}`,
+      entity: ENTITIES.today,
+      show_target_vs_actual: false,
+      show_remaining: false,
+      show_required_average: false,
+      show_buttons: false,
+    });
+    expect(card.getCardSize()).toBe(5);
   });
 });

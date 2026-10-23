@@ -101,9 +101,12 @@ export class DailyChallengeCardEditor extends LitElement {
       return;
     }
     const value = ev.detail.value;
-    const challenge = this._challenges?.find(
-      (item) => item.entry_id === value.challenge,
-    );
+    // Keep the configured entity (any entity of the challenge is allowed)
+    // unless another challenge was picked.
+    const challenge =
+      value.challenge === this._selected()
+        ? undefined
+        : this._challenges?.find((item) => item.entry_id === value.challenge);
     const config: DailyChallengeCardConfig = {
       ...this._config,
       entity: challenge?.entities.today ?? this._config.entity,

@@ -90,6 +90,7 @@ describe("formatNumber", () => {
     ["comma_decimal", "de", "1,234.5"],
     ["decimal_comma", "en", "1.234,5"],
     ["none", "en", "1234.5"],
+    ["none", "de", "1234.5"],
   ])("format %s with language %s gives %s", (format, language, expected) => {
     expect(formatNumber(hass(language, format), 1234.5)).toBe(expected);
   });

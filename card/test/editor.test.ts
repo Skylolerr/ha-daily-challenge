@@ -181,6 +181,26 @@ describe("editor", () => {
     expect(changes).toEqual([]);
   });
 
+  it("keeps a non-today entity when a switch is toggled", async () => {
+    const editor = await createEditor(makeHass([PUSH_UPS]), "sensor.push_ups_total");
+    const changes: unknown[] = [];
+    editor.addEventListener("config-changed", (ev) =>
+      changes.push((ev as CustomEvent).detail.config),
+    );
+    form(editor).dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: { ...form(editor).data, show_streak: false } },
+      }),
+    );
+    expect(changes).toEqual([
+      {
+        type: "custom:daily-challenge-card",
+        entity: "sensor.push_ups_total",
+        show_streak: false,
+      },
+    ]);
+  });
+
   it("explains when no challenge exists", async () => {
     const editor = await createEditor(makeHass([]));
     expect(editor.shadowRoot?.textContent?.trim()).toBe(
