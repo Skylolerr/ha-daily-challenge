@@ -183,16 +183,29 @@ async def test_remaining_sensor_follows_end_date(
     loaded_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
-    """The remaining sensor exists only while an end date is set."""
+    """The end-date sensors exist only while an end date is set."""
     assert state(hass, "sensor.push_ups_remaining") == "200"
+    # Nov 4 to Nov 11, today included; 200 still to do before today.
+    assert state(hass, "sensor.push_ups_days_left") == "8"
+    required = hass.states.get("sensor.push_ups_required_per_day")
+    assert required.state == "25.0"
+    assert required.attributes[ATTR_UNIT_OF_MEASUREMENT] == "repetitions/d"
+    assert required.attributes["state_class"] == "measurement"
+    assert (
+        hass.states.get("sensor.push_ups_days_left").attributes[
+            ATTR_UNIT_OF_MEASUREMENT
+        ]
+        == "d"
+    )
 
     hass.config_entries.async_update_entry(
         loaded_entry, options={**loaded_entry.options, "end_date": None}
     )
     assert await hass.config_entries.async_reload(loaded_entry.entry_id)
     await hass.async_block_till_done()
-    assert entity_registry.async_get("sensor.push_ups_remaining") is None
-    assert hass.states.get("sensor.push_ups_remaining") is None
+    for key in ("remaining", "days_left", "required_per_day"):
+        assert entity_registry.async_get(f"sensor.push_ups_{key}") is None
+        assert hass.states.get(f"sensor.push_ups_{key}") is None
 
 
 async def test_changed_steps_remove_orphaned_buttons(

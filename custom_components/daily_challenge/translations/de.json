@@ -151,6 +151,12 @@
       "remaining": {
         "name": "Rest bis Ziel"
       },
+      "days_left": {
+        "name": "Verbleibende Tage"
+      },
+      "required_per_day": {
+        "name": "Nötig pro Tag"
+      },
       "average": {
         "name": "Durchschnitt pro Tag"
       },

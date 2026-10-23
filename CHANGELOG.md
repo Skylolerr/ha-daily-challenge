@@ -18,7 +18,8 @@ First public beta.
 - Daily target changes apply from the day of the change; past days keep their target.
 - Entities: today's value (number), add/subtract buttons, today's target, progress, total,
   current and best streak, target to date, ahead/behind, remaining until the end goal,
-  daily average, best day, weekly/monthly/yearly sums and "goal reached today".
+  days left and required average per day (with an end date), daily average, best day,
+  weekly/monthly/yearly sums and "goal reached today".
 - Catch-up mode: a deficit raises today's target, and a missed day can be repaired on the
   following day without breaking the streak.
 - Actions `daily_challenge.add`, `daily_challenge.set` and `daily_challenge.get_history`
@@ -27,7 +28,8 @@ First public beta.
   daylight saving time.
 - Lovelace card `custom:daily-challenge-card`, installed and registered automatically:
   progress ring, quick buttons, direct input by long press, streaks, target vs. actual,
-  remaining amount and catch-up deficit, visual editor and card picker entry.
+  remaining amount with days left and required average, catch-up deficit, visual editor
+  and card picker entry.
 - WebSocket commands `daily_challenge/list`, `daily_challenge/history` and
   `daily_challenge/set_day` for the card.
 - Diagnostics.

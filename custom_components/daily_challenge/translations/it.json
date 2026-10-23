@@ -151,6 +151,12 @@
       "remaining": {
         "name": "Mancante all'obiettivo"
       },
+      "days_left": {
+        "name": "Giorni rimanenti"
+      },
+      "required_per_day": {
+        "name": "Necessario al giorno"
+      },
       "average": {
         "name": "Media giornaliera"
       },

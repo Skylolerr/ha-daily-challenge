@@ -151,6 +151,12 @@
       "remaining": {
         "name": "Reste jusqu'à l'objectif"
       },
+      "days_left": {
+        "name": "Jours restants"
+      },
+      "required_per_day": {
+        "name": "Nécessaire par jour"
+      },
       "average": {
         "name": "Moyenne par jour"
       },

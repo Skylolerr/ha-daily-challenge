@@ -35,6 +35,8 @@ class ChallengeSensorDescription(SensorEntityDescription):
     value_fn: Callable[[ChallengeStats], StateType]
     attrs_fn: Callable[[ChallengeStats], dict[str, Any]] | None = None
     uses_challenge_unit: bool = True
+    # Appended to the challenge unit, e.g. "/d" for amounts per day.
+    unit_suffix: str = ""
     requires_end_date: bool = False
 
 
@@ -105,6 +107,23 @@ SENSORS: tuple[ChallengeSensorDescription, ...] = (
         value_fn=lambda s: s.remaining,
     ),
     ChallengeSensorDescription(
+        key="days_left",
+        translation_key="days_left",
+        native_unit_of_measurement=UnitOfTime.DAYS,
+        uses_challenge_unit=False,
+        requires_end_date=True,
+        value_fn=lambda s: s.days_left,
+    ),
+    ChallengeSensorDescription(
+        key="required_per_day",
+        translation_key="required_per_day",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        unit_suffix=f"/{UnitOfTime.DAYS}",
+        requires_end_date=True,
+        value_fn=lambda s: s.required_per_day,
+    ),
+    ChallengeSensorDescription(
         key="average",
         translation_key="average",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -146,12 +165,15 @@ async def async_setup_entry(
     """Set up the sensors."""
     has_end_date = bool(entry.options.get(CONF_END_DATE))
     if not has_end_date:
-        # The end date was removed: drop the now meaningless sensor.
+        # The end date was removed: drop the now meaningless sensors.
         registry = er.async_get(hass)
-        if entity_id := registry.async_get_entity_id(
-            Platform.SENSOR, DOMAIN, f"{entry.entry_id}_remaining"
-        ):
-            registry.async_remove(entity_id)
+        for description in SENSORS:
+            if description.requires_end_date and (
+                entity_id := registry.async_get_entity_id(
+                    Platform.SENSOR, DOMAIN, f"{entry.entry_id}_{description.key}"
+                )
+            ):
+                registry.async_remove(entity_id)
 
     async_add_entities(
         ChallengeSensor(entry.runtime_data, description)
@@ -174,7 +196,9 @@ class ChallengeSensor(DailyChallengeEntity, SensorEntity):
         super().__init__(coordinator, description.key)
         self.entity_description = description
         if description.uses_challenge_unit:
-            self._attr_native_unit_of_measurement = self.challenge_unit
+            self._attr_native_unit_of_measurement = (
+                self.challenge_unit + description.unit_suffix
+            )
 
     @property
     def native_value(self) -> StateType:

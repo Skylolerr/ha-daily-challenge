@@ -46,6 +46,12 @@
       "remaining": {
         "default": "mdi:flag-checkered"
       },
+      "days_left": {
+        "default": "mdi:calendar-clock"
+      },
+      "required_per_day": {
+        "default": "mdi:speedometer"
+      },
       "average": {
         "default": "mdi:chart-line"
       },

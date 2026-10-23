@@ -72,7 +72,7 @@ Each challenge is its own entry; add the integration again for another challenge
 | Unit | repetitions | Pick a suggestion (repetitions, minutes, km, pages, glasses) or type your own. |
 | Daily target | 20 | Whole number above 0. |
 | Start date | today | Cannot be in the future. |
-| End date | – | Optional. Enables "remaining until the end goal". |
+| End date | – | Optional. Enables what is left until the end goal, days left and the required average per day. |
 | Steps | 1, 5, 10 | Up to 3 amounts in ascending order. Each gets a **+** button; the smallest one is also used for **−**. |
 | Streak rule | Daily target reached | When a day counts towards the streak: *daily target reached* or *any amount above 0*. |
 | Deficit handling | Only show the deficit | *Only show the deficit*, or *Catch up*: a deficit raises today's target. |
@@ -96,6 +96,9 @@ All options can be changed later via **Configure**:
   of the following day – so yesterday can still be rescued today.
 - **Midnight:** nothing is reset. A new day simply reads a new date, so restarts, daylight
   saving time and Home Assistant being off over midnight are no problem.
+- **Required per day** spreads what is still missing for the end goal over the days left,
+  today included. Only the days before today count, so the figure stays the same during
+  the day and can be compared directly with today's target.
 - After the **end date** no values are accepted for new days; past days stay editable.
 
 ## Entities
@@ -114,6 +117,8 @@ One device per challenge with these entities (example IDs for a challenge named
 | Best streak | `sensor.push_ups_best_streak` | In days, attributes `start` and `end`. |
 | Ahead / behind | `sensor.push_ups_ahead_behind` | Total minus target to date. |
 | Remaining | `sensor.push_ups_remaining` | Left until the end goal (only with an end date). |
+| Days left | `sensor.push_ups_days_left` | Days until the end date, today included (only with an end date). |
+| Required per day | `sensor.push_ups_required_per_day` | Average still needed per day to reach the end goal (only with an end date). |
 | Best day | `sensor.push_ups_best_day` | Highest daily value, attribute `date`. |
 | Goal reached today | `binary_sensor.push_ups_goal_reached_today` | On once today's target is reached. |
 | Target to date, Daily average, This week, This month, This year | `sensor.push_ups_target_to_date`, … | Diagnostic sensors. Weeks start on Monday. |
@@ -139,8 +144,8 @@ lets you pick the challenge from a list.
 - Today's value with a progress ring against today's target – full in the success colour
   once the goal is reached
 - **−** and **+n** buttons; **long press** (or Enter) on the value to type a value directly
-- Target vs. actual with ahead/behind, the remaining amount with an end date, and the
-  deficit marked in catch-up mode
+- Target vs. actual with ahead/behind; with an end date also what is left, in how many
+  days and the average still needed per day; the deficit marked in catch-up mode
 - Follows your theme (light and dark), language and number format
 
 ## Actions

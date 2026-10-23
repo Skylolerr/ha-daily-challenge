@@ -151,6 +151,12 @@
       "remaining": {
         "name": "Remaining"
       },
+      "days_left": {
+        "name": "Days left"
+      },
+      "required_per_day": {
+        "name": "Required per day"
+      },
       "average": {
         "name": "Daily average"
       },

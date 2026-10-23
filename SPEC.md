@@ -180,6 +180,7 @@ Alles in `calculations.py` als reine Funktionen mit Input (`days`, `target_histo
 - `progress_today`: `value(today) / effective_target_today × 100`, auf 0–999 begrenzt
 - `goal_reached_today`: `value(today) ≥ effective_target_today`
 - Nur mit `end_date`: `end_target = Σ target(d)` über die ganze Laufzeit bis `end_date`. Daraus `remaining = max(0, end_target − total)`.
+- Nur mit `end_date`: `days_left` = Tage von heute (bzw. vom `start_date`, falls die Challenge noch nicht begonnen hat) bis `end_date`, heute eingeschlossen; nach dem Ende 0. `required_per_day = max(0, end_target − Σ value(d) bis gestern) / days_left`, 1 Dezimalstelle, nach dem Ende leer. Der heutige Wert zählt dabei erst ab morgen, damit die Zahl während des Tages stabil bleibt und direkt mit dem Tagesziel vergleichbar ist.
 - `average_per_day`: `total / Anzahl vergangener Tage inkl. heute`
 - `best_day`: maximaler Tageswert, das Datum kommt als Attribut dazu
 - `this_week` / `this_month` / `this_year`: Summen. Die Woche beginnt am Montag (ISO).
@@ -223,6 +224,8 @@ Ein Device pro Challenge, mit Name = Challenge-Name und `entry_type: service`. A
 | sensor | `target_to_date` | Soll bis heute | – |
 | sensor | `delta` | Vorsprung (+) / Rückstand (−) | measurement |
 | sensor | `remaining` | Rest bis Endziel | nur wenn `end_date` gesetzt |
+| sensor | `days_left` | verbleibende Tage inkl. heute | Einheit `d`, nur wenn `end_date` gesetzt |
+| sensor | `required_per_day` | nötiger Schnitt pro Tag bis zum Endziel | Einheit `<unit>/d`, measurement, 1 Dezimalstelle, nur wenn `end_date` gesetzt |
 | sensor | `average` | Ø pro Tag | 1 Dezimalstelle |
 | sensor | `best_day` | bester Tageswert | Attribut `date` |
 | sensor | `this_week` / `this_month` / `this_year` | Summen | – |
@@ -294,7 +297,7 @@ heatmap_range: year                # year | 6months | 3months
 - Kopfzeile mit Icon, Name und Streak (🔥 aktuell / Best)
 - Grosser Tageswert mit Fortschrittsring gegen `effective_target_today`. Bei erreichtem Ziel wird der Ring in Erfolgsfarbe ganz gefüllt.
 - Buttons: «−» und je ein «+n» pro Step. Ein langer Druck auf den Wert öffnet ein Eingabefeld für einen direkten Wert.
-- Soll/Ist-Zeile: «Ist 1'240 / Soll 1'200 · +40». Mit Enddatum zusätzlich «Noch 3'100 bis Ziel».
+- Soll/Ist-Zeile: «Ist 1'240 / Soll 1'200 · +40». Mit Enddatum zusätzlich «Noch 3'100 in 60 Tagen · Ø 51,7/Tag».
 - Im Catch-up-Modus ist der Rückstand im heutigen Ziel sichtbar markiert, z. B. «20 + 10 Rückstand».
 
 ### Phase 4 (v0.2.0, nach dem ersten Release)
@@ -448,4 +451,3 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - Erinnerungs-Blueprint auf Basis von `goal_reached_today`
 - Challenge einer HA-Person zuordnen (Mehrbenutzer)
 - Personal Bests / Podium, Habit-Score
-- Nur mit `end_date`: Sensoren `days_left` (Resttage inkl. heute, Einheit `d`) und `required_per_day` (nötiger Schnitt ab heute = `remaining / days_left`, 1 Dezimalstelle, Einheit `<unit>/Tag`), optional als Zeile in der Card («Noch 3'100 in 60 Tagen · Ø 51,7/Tag»)
