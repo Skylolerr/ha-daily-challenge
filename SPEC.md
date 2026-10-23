@@ -433,3 +433,4 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - Erinnerungs-Blueprint auf Basis von `goal_reached_today`
 - Challenge einer HA-Person zuordnen (Mehrbenutzer)
 - Personal Bests / Podium, Habit-Score
+- Nur mit `end_date`: Sensoren `days_left` (Resttage inkl. heute, Einheit `d`) und `required_per_day` (nötiger Schnitt ab heute = `remaining / days_left`, 1 Dezimalstelle, Einheit `<unit>/Tag`), optional als Zeile in der Card («Noch 3'100 in 60 Tagen · Ø 51,7/Tag»)
