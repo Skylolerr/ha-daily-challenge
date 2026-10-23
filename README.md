@@ -137,7 +137,18 @@ entity: number.push_ups_today
 ```
 
 `entity` can be any entity of the challenge; the card finds the others. The visual editor
-lets you pick the challenge from a list.
+lets you pick the challenge from a list and switch parts of the card on or off:
+
+| Option | Default | Shows |
+|---|---|---|
+| `show_streak` | `true` | Current and best streak in the header |
+| `show_target_vs_actual` | `true` | Actual vs. target with ahead/behind |
+| `show_remaining` | `true` | What is left until the end goal and in how many days |
+| `show_required_average` | `true` | The average still needed per day |
+| `show_catch_up` | `true` | The deficit in today's target in catch-up mode |
+| `show_buttons` | `true` | The − and + buttons |
+
+Today's value and the progress ring are always shown.
 
 <!-- TODO screenshot: card with catch-up deficit and end date -->
 

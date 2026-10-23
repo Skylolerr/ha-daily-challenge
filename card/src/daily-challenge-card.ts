@@ -7,6 +7,7 @@ import type {
   ChallengeInfo,
   ChallengeList,
   DailyChallengeCardConfig,
+  DisplayOption,
   HomeAssistant,
 } from "./types";
 
@@ -269,11 +270,18 @@ export class DailyChallengeCard extends LitElement {
     return html`<div class="header">
       <ha-icon .icon=${challenge.icon}></ha-icon>
       <span class="name">${challenge.name}</span>
-      <span class="streak" title=${localize(this.hass, "current_streak")}>
-        🔥 <span class="current">${current}</span>
-        <span class="best">· ${localize(this.hass, "best")} ${best}</span>
-      </span>
+      ${this._show("show_streak")
+        ? html`<span class="streak" title=${localize(this.hass, "current_streak")}>
+            🔥 <span class="current">${current}</span>
+            <span class="best">· ${localize(this.hass, "best")} ${best}</span>
+          </span>`
+        : nothing}
     </div>`;
+  }
+
+  /** Whether a part of the card is shown (all are by default). */
+  private _show(option: DisplayOption): boolean {
+    return this._config?.[option] !== false;
   }
 
   private _renderValue(challenge: ChallengeInfo) {
@@ -361,54 +369,95 @@ export class DailyChallengeCard extends LitElement {
       deficit > 0 &&
       effective > dailyTarget;
 
-    return html`<div class="summary">
-      ${total !== undefined && targetToDate !== undefined
-        ? html`<div class="target-vs-actual">
-            ${localize(hass, "target_vs_actual", {
-              total: formatNumber(hass, total),
-              target: formatNumber(hass, targetToDate),
-            })}${delta === undefined
-              ? nothing
-              : html` ·
-                  <span class="delta ${delta < 0 ? "behind" : "ahead"}"
-                    >${formatDelta(hass, delta)}</span
-                  >`}
-          </div>`
-        : nothing}
-      ${remaining === undefined
-        ? nothing
-        : html`<div class="remaining">${this._remainingText(remaining)}</div>`}
-      ${catchUp
-        ? html`<div class="catch-up">
-            ${localize(hass, "catch_up", {
-              target: formatNumber(hass, dailyTarget),
-              deficit: formatNumber(hass, deficit),
-            })}
-          </div>`
-        : nothing}
-    </div>`;
+    const lines = [];
+    if (
+      this._show("show_target_vs_actual") &&
+      total !== undefined &&
+      targetToDate !== undefined
+    ) {
+      lines.push(
+        html`<div class="target-vs-actual">
+          ${localize(hass, "target_vs_actual", {
+            total: formatNumber(hass, total),
+            target: formatNumber(hass, targetToDate),
+          })}${delta === undefined
+            ? nothing
+            : html` ·
+                <span class="delta ${delta < 0 ? "behind" : "ahead"}"
+                  >${formatDelta(hass, delta)}</span
+                >`}
+        </div>`,
+      );
+    }
+    const remainingParts =
+      remaining === undefined ? [] : this._remainingParts(remaining);
+    if (remainingParts.length) {
+      // Each part stays on one line; wrapping only happens between parts.
+      lines.push(
+        html`<div class="remaining">
+          ${remainingParts.map(
+            (part, index) =>
+              html`${index ? " · " : ""}<span class="part">${part}</span>`,
+          )}
+        </div>`,
+      );
+    }
+    if (this._show("show_catch_up") && catchUp) {
+      lines.push(
+        html`<div class="catch-up">
+          ${localize(hass, "catch_up", {
+            target: formatNumber(hass, dailyTarget),
+            deficit: formatNumber(hass, deficit),
+          })}
+        </div>`,
+      );
+    }
+    return lines.length ? html`<div class="summary">${lines}</div>` : nothing;
   }
 
-  /** "3'100 left in 60 days · Ø 51.7/day" – or shorter if figures are missing. */
-  private _remainingText(remaining: number): string {
+  /**
+   * "3'100 left in 60 days · Ø 51.7/day"; each part can be hidden and is
+   * shortened when figures are missing.
+   */
+  private _remainingParts(remaining: number): string[] {
     const hass = this.hass;
     const days = this._number("days_left");
     const perDay = this._number("required_per_day");
     const amount = formatNumber(hass, remaining);
-    if (days === 1) {
-      return localize(hass, "left_to_goal_last_day", { remaining: amount });
+    const parts: string[] = [];
+    if (this._show("show_remaining")) {
+      if (days === 1) {
+        parts.push(localize(hass, "left_to_goal_last_day", { remaining: amount }));
+      } else if (days !== undefined && days > 1) {
+        parts.push(
+          localize(hass, "left_in_days", {
+            remaining: amount,
+            days: formatNumber(hass, days),
+          }),
+        );
+      } else {
+        parts.push(localize(hass, "left_to_goal", { remaining: amount }));
+      }
     }
-    if (days !== undefined && days > 1 && perDay !== undefined) {
-      return localize(hass, "left_to_goal_in_days", {
-        remaining: amount,
-        days: formatNumber(hass, days),
-        per_day: formatNumber(hass, perDay),
-      });
+    if (
+      this._show("show_required_average") &&
+      days !== undefined &&
+      days > 1 &&
+      perDay !== undefined
+    ) {
+      parts.push(
+        localize(hass, "required_per_day", {
+          per_day: formatNumber(hass, perDay),
+        }),
+      );
     }
-    return localize(hass, "left_to_goal", { remaining: amount });
+    return parts;
   }
 
   private _renderButtons(challenge: ChallengeInfo) {
+    if (!this._show("show_buttons")) {
+      return nothing;
+    }
     const steps = addSteps(challenge.entities);
     const disabled = this._number("today_target") === undefined;
     return html`<div class="buttons">
@@ -532,6 +581,9 @@ export class DailyChallengeCard extends LitElement {
     }
     .delta {
       font-weight: 500;
+    }
+    .remaining .part {
+      white-space: nowrap;
     }
     .delta.ahead {
       color: var(--success-color, #43a047);

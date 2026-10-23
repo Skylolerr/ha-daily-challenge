@@ -5,7 +5,12 @@ import {
   DailyChallengeCard,
   LONG_PRESS_MS,
 } from "../src/daily-challenge-card";
-import type { ChallengeInfo, HassEntity, HomeAssistant } from "../src/types";
+import type {
+  ChallengeInfo,
+  DailyChallengeCardConfig,
+  HassEntity,
+  HomeAssistant,
+} from "../src/types";
 
 const ENTITIES: Record<string, string> = {
   today: "number.push_ups_today",
@@ -548,6 +553,80 @@ describe("summary", () => {
     expect(text(root(card).querySelector(".remaining"))).toBe(
       "Noch 1.380 in 69 Tagen · Ø 20/Tag",
     );
+  });
+
+  describe("display options", () => {
+    const FULL = {
+      total: "60",
+      target_to_date: "72",
+      delta: "-12",
+      remaining: "1380",
+      days_left: "69",
+      required_per_day: "20",
+      today_target: "30",
+    };
+    const CATCH_UP = { daily_target: 20, deficit: 10 };
+
+    async function cardWith(
+      options: Partial<DailyChallengeCardConfig>,
+    ): Promise<DailyChallengeCard> {
+      const card = document.createElement(CARD_TYPE);
+      card.setConfig({
+        type: `custom:${CARD_TYPE}`,
+        entity: ENTITIES.today,
+        ...options,
+      });
+      card.hass = summaryHass(FULL, CATCH_UP);
+      document.body.appendChild(card);
+      await settle(card);
+      return card;
+    }
+
+    it("shows everything by default", async () => {
+      const card = await cardWith({});
+      expect(summary(card)).toBe(
+        "Actual 60 / Target 72 · −12 1,380 left in 69 days · Ø 20/day Today: 20 + 10 deficit",
+      );
+      expect(root(card).querySelector(".streak")).not.toBeNull();
+      expect(buttons(card)).toHaveLength(4);
+    });
+
+    it("hides the required average only", async () => {
+      const card = await cardWith({ show_required_average: false });
+      expect(text(root(card).querySelector(".remaining"))).toBe(
+        "1,380 left in 69 days",
+      );
+    });
+
+    it("shows the required average without the remaining amount", async () => {
+      const card = await cardWith({ show_remaining: false });
+      expect(text(root(card).querySelector(".remaining"))).toBe("Ø 20/day");
+    });
+
+    it("hides each part", async () => {
+      const card = await cardWith({
+        show_streak: false,
+        show_target_vs_actual: false,
+        show_remaining: false,
+        show_required_average: false,
+        show_catch_up: false,
+        show_buttons: false,
+      });
+      expect(root(card).querySelector(".streak")).toBeNull();
+      expect(root(card).querySelector(".summary")).toBeNull();
+      expect(buttons(card)).toEqual([]);
+      // Name, value and ring always stay.
+      expect(text(root(card).querySelector(".name"))).toBe("Push-ups");
+      expect(root(card).querySelector(".ring")).not.toBeNull();
+    });
+
+    it("keeps the other lines when one is hidden", async () => {
+      const card = await cardWith({
+        show_target_vs_actual: false,
+        show_catch_up: false,
+      });
+      expect(summary(card)).toBe("1,380 left in 69 days · Ø 20/day");
+    });
   });
 
   it("omits the line without figures", async () => {

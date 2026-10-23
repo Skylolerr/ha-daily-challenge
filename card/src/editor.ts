@@ -1,11 +1,12 @@
 import { html, LitElement, nothing, type PropertyValues } from "lit";
 
-import { localize } from "./localize";
-import type {
-  ChallengeInfo,
-  ChallengeList,
-  DailyChallengeCardConfig,
-  HomeAssistant,
+import { localize, type StringKey } from "./localize";
+import {
+  type ChallengeInfo,
+  type ChallengeList,
+  type DailyChallengeCardConfig,
+  DISPLAY_OPTIONS,
+  type HomeAssistant,
 } from "./types";
 
 export const EDITOR_TYPE = "daily-challenge-card-editor";
@@ -77,22 +78,51 @@ export class DailyChallengeCardEditor extends LitElement {
           },
         },
       },
+      ...DISPLAY_OPTIONS.map((option) => ({
+        name: option,
+        selector: { boolean: {} },
+      })),
     ];
   }
 
-  private _valueChanged(ev: CustomEvent<{ value: { challenge?: string } }>): void {
+  private _formData(): Record<string, unknown> {
+    const data: Record<string, unknown> = { challenge: this._selected() };
+    for (const option of DISPLAY_OPTIONS) {
+      data[option] = this._config?.[option] !== false;
+    }
+    return data;
+  }
+
+  private _valueChanged(
+    ev: CustomEvent<{ value: Record<string, unknown> }>,
+  ): void {
     ev.stopPropagation();
-    const challenge = this._challenges?.find(
-      (item) => item.entry_id === ev.detail.value.challenge,
-    );
-    const entity = challenge?.entities.today;
-    if (!this._config || !entity || entity === this._config.entity) {
+    if (!this._config) {
       return;
     }
-    this._config = { ...this._config, entity };
+    const value = ev.detail.value;
+    const challenge = this._challenges?.find(
+      (item) => item.entry_id === value.challenge,
+    );
+    const config: DailyChallengeCardConfig = {
+      ...this._config,
+      entity: challenge?.entities.today ?? this._config.entity,
+    };
+    // Only hidden parts are written; shown is the default.
+    for (const option of DISPLAY_OPTIONS) {
+      if (value[option] === false) {
+        config[option] = false;
+      } else {
+        delete config[option];
+      }
+    }
+    if (JSON.stringify(config) === JSON.stringify(this._config)) {
+      return;
+    }
+    this._config = config;
     this.dispatchEvent(
       new CustomEvent("config-changed", {
-        detail: { config: this._config },
+        detail: { config },
         bubbles: true,
         composed: true,
       }),
@@ -108,10 +138,10 @@ export class DailyChallengeCardEditor extends LitElement {
     }
     return html`<ha-form
       .hass=${this.hass}
-      .data=${{ challenge: this._selected() }}
+      .data=${this._formData()}
       .schema=${this._schema(this._challenges)}
       .computeLabel=${(schema: FormSchema) =>
-        localize(this.hass, schema.name as "challenge")}
+        localize(this.hass, schema.name as StringKey)}
       @value-changed=${this._valueChanged}
     ></ha-form>`;
   }

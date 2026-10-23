@@ -29,7 +29,7 @@ First public beta.
 - Lovelace card `custom:daily-challenge-card`, installed and registered automatically:
   progress ring, quick buttons, direct input by long press, streaks, target vs. actual,
   remaining amount with days left and required average, catch-up deficit, visual editor
-  and card picker entry.
+  with switches to hide each part, and card picker entry.
 - WebSocket commands `daily_challenge/list`, `daily_challenge/history` and
   `daily_challenge/set_day` for the card.
 - Diagnostics.

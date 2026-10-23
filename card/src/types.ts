@@ -34,7 +34,20 @@ export interface HomeAssistant {
   ): Promise<unknown>;
 }
 
-export interface DailyChallengeCardConfig {
+/** Parts of the card that can be hidden; all are shown by default. */
+export const DISPLAY_OPTIONS = [
+  "show_streak",
+  "show_target_vs_actual",
+  "show_remaining",
+  "show_required_average",
+  "show_catch_up",
+  "show_buttons",
+] as const;
+
+export type DisplayOption = (typeof DISPLAY_OPTIONS)[number];
+
+export interface DailyChallengeCardConfig
+  extends Partial<Record<DisplayOption, boolean>> {
   type: string;
   entity: string;
 }

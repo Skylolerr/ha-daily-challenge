@@ -283,9 +283,17 @@ TypeScript + Lit, gebündelt mit Rollup zu einer einzigen JS-Datei, ohne externe
 ```yaml
 type: custom:daily-challenge-card
 entity: number.liegestutze_today   # beliebige Entity der Challenge; die Card findet die übrigen
+show_streak: true                  # Streak in der Kopfzeile
+show_target_vs_actual: true        # Zeile «Ist / Soll · Vorsprung»
+show_remaining: true               # «Noch … in … Tagen» (nur mit Enddatum)
+show_required_average: true        # «Ø …/Tag» nötiger Schnitt (nur mit Enddatum)
+show_catch_up: true                # «Heute: 20 + 10 Rückstand» (nur im Catch-up-Modus)
+show_buttons: true                 # Buttons − und +n
 show_heatmap: true                 # ab Phase 4 (v0.2.0)
 heatmap_range: year                # year | 6months | 3months
 ```
+
+- Alle `show_*`-Optionen sind standardmässig `true` und im visuellen Editor als Schalter einstellbar. Der Editor schreibt nur abweichende Werte (`false`) ins YAML. Tageswert und Fortschrittsring sind immer sichtbar.
 
 - `getStubConfig()` wählt die erste vorhandene Challenge.
 - `getConfigElement()` liefert einen visuellen Editor mit Challenge-Dropdown (`daily_challenge/list`) und Optionen.

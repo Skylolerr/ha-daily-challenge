@@ -70,8 +70,86 @@ describe("editor", () => {
       { value: "push_ups", label: "Push-ups" },
       { value: "squats", label: "Squats" },
     ]);
-    expect(form(editor).data).toEqual({ challenge: "push_ups" });
+    expect(form(editor).data).toEqual({
+      challenge: "push_ups",
+      show_streak: true,
+      show_target_vs_actual: true,
+      show_remaining: true,
+      show_required_average: true,
+      show_catch_up: true,
+      show_buttons: true,
+    });
     expect(form(editor).computeLabel({ name: "challenge" })).toBe("Challenge");
+    expect(form(editor).computeLabel({ name: "show_required_average" })).toBe(
+      "Show required average per day",
+    );
+    expect(form(editor).schema.map((field) => field.name)).toEqual([
+      "challenge",
+      "show_streak",
+      "show_target_vs_actual",
+      "show_remaining",
+      "show_required_average",
+      "show_catch_up",
+      "show_buttons",
+    ]);
+  });
+
+  it("writes only hidden parts into the config", async () => {
+    const editor = await createEditor(makeHass([PUSH_UPS]), "number.push_ups_today");
+    const changes: unknown[] = [];
+    editor.addEventListener("config-changed", (ev) =>
+      changes.push((ev as CustomEvent).detail.config),
+    );
+    const change = (value: Record<string, unknown>) =>
+      form(editor).dispatchEvent(
+        new CustomEvent("value-changed", { detail: { value } }),
+      );
+
+    change({ ...form(editor).data, show_required_average: false });
+    change({ ...form(editor).data, show_required_average: true });
+    expect(changes).toEqual([
+      {
+        type: "custom:daily-challenge-card",
+        entity: "number.push_ups_today",
+        show_required_average: false,
+      },
+      { type: "custom:daily-challenge-card", entity: "number.push_ups_today" },
+    ]);
+  });
+
+  it("shows hidden parts as switched off and keeps them on a challenge switch", async () => {
+    const hass = makeHass([PUSH_UPS, SQUATS]);
+    const editor = document.createElement(EDITOR_TYPE);
+    editor.setConfig({
+      type: "custom:daily-challenge-card",
+      entity: "number.push_ups_today",
+      show_buttons: false,
+    });
+    editor.hass = hass;
+    document.body.appendChild(editor);
+    for (let i = 0; i < 3; i++) {
+      await Promise.resolve();
+      await editor.updateComplete;
+    }
+    expect(form(editor).data.show_buttons).toBe(false);
+    expect(form(editor).data.show_streak).toBe(true);
+
+    const changes: unknown[] = [];
+    editor.addEventListener("config-changed", (ev) =>
+      changes.push((ev as CustomEvent).detail.config),
+    );
+    form(editor).dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: { ...form(editor).data, challenge: "squats" } },
+      }),
+    );
+    expect(changes).toEqual([
+      {
+        type: "custom:daily-challenge-card",
+        entity: "number.squats_today",
+        show_buttons: false,
+      },
+    ]);
   });
 
   it("switches the challenge via its today entity", async () => {
