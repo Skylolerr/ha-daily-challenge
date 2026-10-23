@@ -325,17 +325,40 @@ def test_catch_up_yesterday_is_still_rescuable_today() -> None:
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
     assert stats.effective_target_today == 35
     assert stats.current_streak == 2
-    # Today reaches its own target only: today counts, yesterday is still open.
+    # Today reaches its own target only: yesterday is still open, and today
+    # does not count before yesterday's deficit is made up as well.
     days[d(3)] = 20
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
     assert stats.goal_reached_today is False
-    assert stats.current_streak == 3
-    assert stats.best_streak.length == 3
+    assert stats.current_streak == 2
+    assert stats.best_streak.length == 2
+    assert fulfilled_days(days, TARGETS_20, CATCH_UP, today=d(3))[d(3)] is False
     # Today makes up yesterday as well: yesterday is repaired.
     days[d(3)] = 35
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
     assert stats.goal_reached_today is True
     assert stats.current_streak == 4
+
+
+def test_catch_up_today_needs_the_deficit_for_the_best_streak_too() -> None:
+    """Today's own target alone does not start a streak while a deficit is open."""
+    days = {d(0): 0, d(1): 20}
+    stats = calculate(days, TARGETS_20, CATCH_UP, today=d(1))
+    assert stats.effective_target_today == 40
+    assert stats.current_streak == 0
+    assert stats.best_streak.length == 0
+
+
+def test_catch_up_today_counts_with_its_own_target_without_deficit() -> None:
+    days = {d(0): 25, d(1): 20}
+    stats = calculate(days, TARGETS_20, CATCH_UP, today=d(1))
+    assert stats.effective_target_today == 20
+    assert stats.current_streak == 2
+
+
+def test_catch_up_today_without_yesterday_counts_on_the_start_day() -> None:
+    stats = calculate({d(0): 20}, TARGETS_20, CATCH_UP, today=d(0))
+    assert stats.current_streak == 1
 
 
 def test_catch_up_rescue_window_closes_at_midnight() -> None:
@@ -349,8 +372,12 @@ def test_catch_up_rescue_window_closes_at_midnight() -> None:
 def test_catch_up_no_working_ahead() -> None:
     """A surplus does not cover later days."""
     days = {d(0): 40, d(2): 20}
+    # d2 reaches its own target, but not d1's open deficit of 20.
     fulfilled = fulfilled_days(days, TARGETS_20, CATCH_UP, today=d(2))
-    assert fulfilled == {d(0): True, d(1): False, d(2): True}
+    assert fulfilled == {d(0): True, d(1): False, d(2): False}
+    # Once d2 is over, it counts with its own target.
+    fulfilled = fulfilled_days(days, TARGETS_20, CATCH_UP, today=d(3))
+    assert fulfilled == {d(0): True, d(1): False, d(2): True, d(3): False}
     # 60 on d0 does not cover d1 and d2.
     stats = calculate({d(0): 60}, TARGETS_20, CATCH_UP, today=d(3))
     assert stats.current_streak == 0

@@ -22,7 +22,8 @@ First public beta.
   weekly/monthly/yearly sums and "goal reached today".
 - Catch-up mode: yesterday's deficit raises today's target, and a missed day can be made
   up on the following day without breaking the streak (only the previous day, no working
-  ahead).
+  ahead). While yesterday is open, today counts for the streak only once its target
+  including yesterday's deficit is reached.
 - Actions `daily_challenge.add`, `daily_challenge.set` and `daily_challenge.get_history`
   with translated validation errors.
 - Day rollover at local midnight without resetting anything, robust against restarts and

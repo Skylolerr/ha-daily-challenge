@@ -98,7 +98,9 @@ All options can be changed later via **Configure**:
   while it is still running; it counts as soon as it is fulfilled. Without catch-up a
   missed day ends the streak. In catch-up mode with the "daily target" rule, a missed day
   still counts if the **following day** makes up both targets together – so yesterday can
-  be rescued today, but nothing older. Working ahead does not count for later days.
+  be rescued today, but nothing older. While yesterday is still open, today only counts
+  once it reaches its target **including** yesterday's deficit. Working ahead does not
+  count for later days.
 - **Midnight:** nothing is reset. A new day simply reads a new date, so restarts, daylight
   saving time and Home Assistant being off over midnight are no problem.
 - **Required per day** spreads what is still missing for the end goal over the days left,

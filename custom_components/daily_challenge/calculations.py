@@ -137,6 +137,7 @@ def _fulfilled(
     values: list[int],
     targets: list[int],
     settings: ChallengeSettings,
+    status: ChallengeStatus,
 ) -> list[bool]:
     """Return whether each day of `period` counts towards the streak."""
     if settings.streak_rule is StreakRule.ANY:
@@ -146,7 +147,7 @@ def _fulfilled(
 
     # Catch-up: a missed day can be made up on the following day only, by
     # reaching both targets together. A surplus never covers later days.
-    return [
+    fulfilled = [
         values[i] >= targets[i]
         or (
             i + 1 < len(period)
@@ -154,6 +155,11 @@ def _fulfilled(
         )
         for i in range(len(period))
     ]
+    # While today runs it only counts once yesterday's deficit is made up too,
+    # i.e. with the effective target. Yesterday is fulfilled exactly then.
+    if status is ChallengeStatus.ACTIVE and len(period) >= 2:
+        fulfilled[-1] = fulfilled[-1] and fulfilled[-2]
+    return fulfilled
 
 
 def fulfilled_days(
@@ -166,7 +172,9 @@ def fulfilled_days(
     period = _date_range(settings.start_date, _period_end(settings, today))
     values = [days.get(day, 0) for day in period]
     targets = [target_on(target_history, day) for day in period]
-    return dict(zip(period, _fulfilled(period, values, targets, settings), strict=True))
+    status = _status(settings, today)
+    fulfilled = _fulfilled(period, values, targets, settings, status)
+    return dict(zip(period, fulfilled, strict=True))
 
 
 def _best_streak(period: list[date], fulfilled: list[bool]) -> Streak:
@@ -237,7 +245,7 @@ def calculate(
     )
     values = [days.get(day, 0) for day in period]
     targets = [target_on(target_history, day) for day in period]
-    fulfilled = _fulfilled(period, values, targets, settings)
+    fulfilled = _fulfilled(period, values, targets, settings, status)
 
     total = sum(values)
     target_to_date = sum(targets)
