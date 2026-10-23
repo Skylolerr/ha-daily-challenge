@@ -417,7 +417,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 2 | Testergebnis Card (2.h) und Freigabe | Abschluss Phase 2 |
 | 3 | Screenshots: Card im Dashboard (hell und dunkel), Card mit Catch-up-Rückstand und Enddatum, Einrichtungsformular | README-Platzhalter `TODO screenshot`; PNG, ca. 1200 px breit, landen in `docs/images/` |
 | 4 | Feedback zum Logo-Entwurf | 3.b, gemeinsame Überarbeitung |
-| 5 | CI-Status im Actions-Tab (Validate mit Hassfest/Lint/Card, Tests) | Fehler beheben, bevor das Repo öffentlich wird |
+| 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |
 | 6 | Bestätigung der Catch-up-Regel: Vorsprung früherer Tage deckt spätere leere Tage ab | ggf. Anpassung in `calculations.py` |
 | 7 | GitHub-Einstellungen: Beschreibung, Topics (`home-assistant`, `hacs`, `integration`, `habit-tracker`, `challenge`), Issues aktiviert | danach wird der `hacs/action`-Job wieder eingeschaltet (3.d) |
 | 8 | Repo öffentlich schalten, Release `v0.1.0` als Pre-Release mit dem CHANGELOG-Text erstellen | 3.e; Tag-Check und ZIP laufen automatisch |
