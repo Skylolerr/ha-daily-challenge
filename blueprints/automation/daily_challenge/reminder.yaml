@@ -1,0 +1,73 @@
+blueprint:
+  name: Daily Challenge reminder
+  description: >-
+    Reminds you at a chosen time when today's goal of a Daily Challenge is not
+    reached yet. In the notification you can use the variables
+    `{{ challenge }}` (name), `{{ done }}` (today's amount),
+    `{{ target }}` (today's target), `{{ remaining }}` (still to do) and
+    `{{ unit }}`.
+  domain: automation
+  author: Skylolerr
+  source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/reminder.yaml
+  homeassistant:
+    min_version: "2026.10.0"
+  input:
+    goal_entity:
+      name: Challenge
+      description: The "Goal reached today" sensor of the challenge.
+      selector:
+        entity:
+          filter:
+            - integration: daily_challenge
+              domain: binary_sensor
+    reminder_time:
+      name: Time
+      description: When to remind you if the goal is not reached yet.
+      default: "20:00:00"
+      selector:
+        time: {}
+    notify_action:
+      name: Reminder
+      description: >-
+        What should happen, e.g. a notification to your phone. Defaults to a
+        persistent notification in Home Assistant.
+      default:
+        - action: persistent_notification.create
+          data:
+            title: "{{ challenge }}"
+            message: "Still {{ remaining }} {{ unit }} to go today."
+      selector:
+        action: {}
+
+triggers:
+  - trigger: time
+    at: !input reminder_time
+
+conditions:
+  # "off" only while the challenge is running and today's goal is open.
+  - condition: state
+    entity_id: !input goal_entity
+    state: "off"
+
+variables:
+  goal_entity: !input goal_entity
+  challenge_entities: "{{ device_entities(device_id(goal_entity)) }}"
+  challenge: >-
+    {{ device_attr(device_id(goal_entity), 'name_by_user')
+       or device_attr(device_id(goal_entity), 'name') }}
+  # Today's value is the only number entity of the challenge.
+  done: >-
+    {{ expand(challenge_entities) | selectattr('domain', 'eq', 'number')
+       | map(attribute='state') | map('int', 0) | first | default(0) }}
+  unit: >-
+    {{ expand(challenge_entities) | selectattr('domain', 'eq', 'number')
+       | map(attribute='attributes.unit_of_measurement') | first | default('') }}
+  # Today's target is the sensor that carries the "deficit" attribute.
+  target: >-
+    {{ expand(challenge_entities) | selectattr('attributes.deficit', 'defined')
+       | map(attribute='state') | map('int', 0) | first | default(0) }}
+  remaining: "{{ [target | int - done | int, 0] | max }}"
+
+actions: !input notify_action
+
+mode: single
