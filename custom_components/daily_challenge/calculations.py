@@ -68,7 +68,8 @@ class ChallengeStats:
     value_today: int
     target_today: int | None
     effective_target_today: int | None
-    deficit_until_yesterday: int
+    # Yesterday's shortfall against its own target (the catch-up amount).
+    deficit_yesterday: int
     progress_today: float | None
     goal_reached_today: bool | None
     total: int
@@ -143,15 +144,14 @@ def _fulfilled(
     if settings.deficit_mode is DeficitMode.DISPLAY:
         return [value >= target for value, target in zip(values, targets, strict=True)]
 
-    # Catch-up: a day is fulfilled if there is no cumulative deficit at the
-    # end of that day or at the end of the following day (if it exists yet).
-    cumulative: list[int] = []
-    running = 0
-    for value, target in zip(values, targets, strict=True):
-        running += target - value
-        cumulative.append(running)
+    # Catch-up: a missed day can be made up on the following day only, by
+    # reaching both targets together. A surplus never covers later days.
     return [
-        cumulative[i] <= 0 or (i + 1 < len(period) and cumulative[i + 1] <= 0)
+        values[i] >= targets[i]
+        or (
+            i + 1 < len(period)
+            and values[i] + values[i + 1] >= targets[i] + targets[i + 1]
+        )
         for i in range(len(period))
     ]
 
@@ -186,32 +186,40 @@ def _best_streak(period: list[date], fulfilled: list[bool]) -> Streak:
 
 
 def _current_streak(
+    period: list[date],
     fulfilled: list[bool],
     settings: ChallengeSettings,
     status: ChallengeStatus,
-) -> int:
+) -> Streak:
     """Return the current streak, counting back from the end of the period.
 
     An unfinished today never breaks the streak. In catch-up mode with the
-    target rule, a short yesterday can still be repaired today, so it neither
+    target rule, a short yesterday can still be made up today, so it neither
     counts nor breaks the streak while today is running.
     """
     if not fulfilled:
-        return 0
-    cursor = len(fulfilled) - 1
-    if status is ChallengeStatus.ACTIVE and not fulfilled[cursor]:
-        cursor -= 1
-        rescuable = (
-            settings.streak_rule is StreakRule.TARGET
-            and settings.deficit_mode is DeficitMode.CATCH_UP
-        )
-        if rescuable and cursor >= 0 and not fulfilled[cursor]:
+        return Streak()
+    last = len(fulfilled) - 1
+    active = status is ChallengeStatus.ACTIVE
+    rescuable = (
+        settings.streak_rule is StreakRule.TARGET
+        and settings.deficit_mode is DeficitMode.CATCH_UP
+    )
+    skip = last - 1 if active and rescuable and last >= 1 else None
+    cursor = last - 1 if active and not fulfilled[last] else last
+    length = 0
+    start = end = None
+    while cursor >= 0:
+        if cursor == skip and not fulfilled[cursor]:
             cursor -= 1
-    streak = 0
-    while cursor >= 0 and fulfilled[cursor]:
-        streak += 1
+            continue
+        if not fulfilled[cursor]:
+            break
+        length += 1
+        end = end or period[cursor]
+        start = period[cursor]
         cursor -= 1
-    return streak
+    return Streak(length, start, end)
 
 
 def calculate(
@@ -237,10 +245,8 @@ def calculate(
     active = status is ChallengeStatus.ACTIVE
     value_today = values[-1] if active else 0
     target_today: int | None = targets[-1] if active else None
-    deficit_until_yesterday = (
-        max(0, sum(targets[:-1]) - sum(values[:-1]))
-        if active
-        else max(0, target_to_date - total)
+    deficit_yesterday = (
+        max(0, targets[-2] - values[-2]) if active and len(period) >= 2 else 0
     )
     effective_target: int | None = None
     progress: float | None = None
@@ -248,7 +254,7 @@ def calculate(
     if target_today is not None:
         effective_target = target_today
         if settings.deficit_mode is DeficitMode.CATCH_UP:
-            effective_target += deficit_until_yesterday
+            effective_target += deficit_yesterday
         goal_reached = value_today >= effective_target
         progress = (
             min(MAX_PROGRESS, round(value_today / effective_target * 100, 1))
@@ -266,14 +272,11 @@ def calculate(
             for day in _date_range(settings.start_date, settings.end_date)
         )
         remaining = max(0, end_target - total)
-        # Days still to go, today included. The required average uses only
-        # what was done before today, so it stays stable during the day.
+        # Days still to go, today included; what is left spread over them.
         first_open_day = max(today, settings.start_date)
         days_left = max(0, (settings.end_date - first_open_day).days + 1)
         if days_left:
-            required_per_day = round(
-                max(0, end_target - (total - value_today)) / days_left, 1
-            )
+            required_per_day = round(remaining / days_left, 1)
 
     best_day_value = 0
     best_day_date: date | None = None
@@ -284,12 +287,18 @@ def calculate(
     week_start = today - timedelta(days=today.weekday())
     in_period = list(zip(period, values, strict=True))
 
+    current = _current_streak(period, fulfilled, settings, status)
+    best = _best_streak(period, fulfilled)
+    # The current streak may bridge a still rescuable yesterday.
+    if current.length >= best.length:
+        best = current
+
     return ChallengeStats(
         status=status,
         value_today=value_today,
         target_today=target_today,
         effective_target_today=effective_target,
-        deficit_until_yesterday=deficit_until_yesterday,
+        deficit_yesterday=deficit_yesterday,
         progress_today=progress,
         goal_reached_today=goal_reached,
         total=total,
@@ -309,8 +318,8 @@ def calculate(
             if (day.year, day.month) == (today.year, today.month)
         ),
         this_year=sum(v for day, v in in_period if day.year == today.year),
-        current_streak=_current_streak(fulfilled, settings, status),
-        best_streak=_best_streak(period, fulfilled),
+        current_streak=current.length,
+        best_streak=best,
     )
 
 

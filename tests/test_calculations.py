@@ -76,7 +76,7 @@ def test_empty_history_on_start_day() -> None:
     assert stats.total == 0
     assert stats.target_to_date == 20
     assert stats.delta == -20
-    assert stats.deficit_until_yesterday == 0
+    assert stats.deficit_yesterday == 0
     assert stats.target_today == 20
     assert stats.effective_target_today == 20
     assert stats.progress_today == 0
@@ -247,19 +247,27 @@ def test_streak_rule_any_ignores_catch_up() -> None:
 CATCH_UP = settings(deficit_mode=DeficitMode.CATCH_UP)
 
 
-def test_catch_up_adds_deficit_to_todays_target() -> None:
+def test_catch_up_adds_only_yesterdays_deficit() -> None:
+    """Catch-up covers yesterday only; older deficits are not carried along."""
     days = {d(0): 20, d(1): 10, d(2): 15}
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
-    assert stats.deficit_until_yesterday == 15
+    assert stats.deficit_yesterday == 5
     assert stats.target_today == 20
-    assert stats.effective_target_today == 35
+    assert stats.effective_target_today == 25
     assert stats.goal_reached_today is False
+
+
+def test_catch_up_does_not_carry_older_deficits() -> None:
+    days = {d(0): 0, d(1): 20}
+    stats = calculate(days, TARGETS_20, CATCH_UP, today=d(2))
+    assert stats.deficit_yesterday == 0
+    assert stats.effective_target_today == 20
 
 
 def test_display_mode_keeps_plain_target_but_shows_deficit() -> None:
     days = {d(0): 20, d(1): 10}
     stats = calculate(days, TARGETS_20, settings(), today=d(2))
-    assert stats.deficit_until_yesterday == 10
+    assert stats.deficit_yesterday == 10
     assert stats.effective_target_today == 20
     assert stats.delta == -30
 
@@ -267,7 +275,7 @@ def test_display_mode_keeps_plain_target_but_shows_deficit() -> None:
 def test_catch_up_surplus_does_not_lower_todays_target() -> None:
     days = {d(0): 50}
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(1))
-    assert stats.deficit_until_yesterday == 0
+    assert stats.deficit_yesterday == 0
     assert stats.effective_target_today == 20
     assert stats.delta == 10
 
@@ -281,7 +289,7 @@ def test_catch_up_goal_reached_with_deficit() -> None:
 
 
 def test_catch_up_day_repaired_on_following_day() -> None:
-    """A missed day counts as fulfilled once the next day clears the deficit."""
+    """A missed day counts once the next day makes up both targets."""
     days = {d(0): 20, d(1): 5, d(2): 35, d(3): 20}
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
     assert stats.current_streak == 4
@@ -294,7 +302,7 @@ def test_catch_up_day_repaired_on_following_day() -> None:
 
 
 def test_catch_up_day_not_repaired_within_following_day_breaks_streak() -> None:
-    """Clearing the deficit two days later only rescues the later days."""
+    """Making up two days later is too late: only the following day counts."""
     days = {d(0): 20, d(1): 5, d(2): 20, d(3): 35}
     fulfilled = fulfilled_days(days, TARGETS_20, CATCH_UP, today=d(3))
     assert fulfilled == {d(0): True, d(1): False, d(2): True, d(3): True}
@@ -303,13 +311,27 @@ def test_catch_up_day_not_repaired_within_following_day_breaks_streak() -> None:
     assert stats.best_streak.length == 2
 
 
+def test_catch_up_an_old_deficit_does_not_block_the_streak() -> None:
+    """A day that was never made up breaks the streak once, not forever."""
+    days = {d(0): 0, d(1): 20, d(2): 20, d(3): 20}
+    stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
+    assert stats.current_streak == 3
+    assert stats.best_streak.length == 3
+
+
 def test_catch_up_yesterday_is_still_rescuable_today() -> None:
     """A short yesterday neither counts nor breaks the streak during today."""
     days = {d(0): 20, d(1): 20, d(2): 5, d(3): 10}
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
     assert stats.effective_target_today == 35
     assert stats.current_streak == 2
-    # Today clears the deficit: yesterday is repaired and today counts too.
+    # Today reaches its own target only: today counts, yesterday is still open.
+    days[d(3)] = 20
+    stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
+    assert stats.goal_reached_today is False
+    assert stats.current_streak == 3
+    assert stats.best_streak.length == 3
+    # Today makes up yesterday as well: yesterday is repaired.
     days[d(3)] = 35
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(3))
     assert stats.goal_reached_today is True
@@ -317,17 +339,30 @@ def test_catch_up_yesterday_is_still_rescuable_today() -> None:
 
 
 def test_catch_up_rescue_window_closes_at_midnight() -> None:
-    days = {d(0): 20, d(1): 20, d(2): 5, d(3): 10}
+    days = {d(0): 20, d(1): 20, d(2): 5, d(3): 20}
     stats = calculate(days, TARGETS_20, CATCH_UP, today=d(4))
-    assert stats.current_streak == 0
+    # d2 was not made up on d3 and is final now; d3 itself counts.
+    assert stats.current_streak == 1
     assert stats.best_streak.length == 2
 
 
-def test_catch_up_surplus_covers_a_later_day() -> None:
-    """With a cumulative surplus there is no deficit, so the day is fulfilled."""
+def test_catch_up_no_working_ahead() -> None:
+    """A surplus does not cover later days."""
     days = {d(0): 40, d(2): 20}
     fulfilled = fulfilled_days(days, TARGETS_20, CATCH_UP, today=d(2))
-    assert fulfilled == {d(0): True, d(1): True, d(2): True}
+    assert fulfilled == {d(0): True, d(1): False, d(2): True}
+    # 60 on d0 does not cover d1 and d2.
+    stats = calculate({d(0): 60}, TARGETS_20, CATCH_UP, today=d(3))
+    assert stats.current_streak == 0
+
+
+def test_display_mode_has_no_repair() -> None:
+    """Without catch-up a missed day stays missed."""
+    days = {d(0): 20, d(1): 5, d(2): 35}
+    fulfilled = fulfilled_days(days, TARGETS_20, settings(), today=d(2))
+    assert fulfilled == {d(0): True, d(1): False, d(2): True}
+    stats = calculate(days, TARGETS_20, settings(), today=d(2))
+    assert stats.current_streak == 1
 
 
 def test_display_mode_fulfilled_days() -> None:
@@ -358,8 +393,9 @@ def test_target_change_in_catch_up_mode() -> None:
     stats = calculate(
         days, history, settings(deficit_mode=DeficitMode.CATCH_UP), today=d(2)
     )
-    assert stats.deficit_until_yesterday == 5
-    assert stats.effective_target_today == 15
+    # Yesterday met its new target of 10; the older gap is not carried.
+    assert stats.deficit_yesterday == 0
+    assert stats.effective_target_today == 10
 
 
 # --- end date --------------------------------------------------------------
@@ -434,15 +470,16 @@ def test_required_per_day_until_the_end() -> None:
     days = {d(0): 20, d(1): 25, d(2): 5}
     stats = calculate(days, TARGETS_20, settings(end=d(9)), today=d(2))
     assert stats.days_left == 8
-    # 200 - 45 done before today, spread over 8 days
-    assert stats.required_per_day == 19.4
+    # What is left (200 - 50) spread over the days left, today included
+    assert stats.remaining == 150
+    assert stats.required_per_day == 18.8
 
 
-def test_required_per_day_ignores_todays_progress() -> None:
-    """The figure stays stable during the day; today's amount counts tomorrow."""
+def test_required_per_day_follows_todays_progress() -> None:
+    """Every amount logged today lowers the figure at once."""
     days = {d(0): 20, d(1): 25, d(2): 50}
     stats = calculate(days, TARGETS_20, settings(end=d(9)), today=d(2))
-    assert stats.required_per_day == 19.4
+    assert stats.required_per_day == 13.1
     tomorrow = calculate(days, TARGETS_20, settings(end=d(9)), today=d(3))
     assert tomorrow.days_left == 7
     assert tomorrow.required_per_day == 15.0

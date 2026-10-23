@@ -51,7 +51,7 @@ SENSORS: tuple[ChallengeSensorDescription, ...] = (
         value_fn=lambda s: s.effective_target_today,
         attrs_fn=lambda s: {
             "daily_target": s.target_today,
-            "deficit": s.deficit_until_yesterday,
+            "deficit": s.deficit_yesterday,
         },
     ),
     ChallengeSensorDescription(
