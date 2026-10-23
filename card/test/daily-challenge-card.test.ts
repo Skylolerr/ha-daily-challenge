@@ -60,6 +60,24 @@ function makeStates(overrides: Record<string, string> = {}) {
   );
 }
 
+const HISTORY = {
+  days: { "2026-11-02": 20 },
+  targets: { "2026-11-02": 20 },
+  fulfilled: { "2026-11-02": true },
+};
+
+function mockWS(challenges: ChallengeInfo[]): HomeAssistant["callWS"] {
+  return vi.fn(async (msg: { type: string }) =>
+    msg.type === "daily_challenge/list" ? { challenges } : HISTORY,
+  ) as unknown as HomeAssistant["callWS"];
+}
+
+function calls(hass: HomeAssistant, type: string): number {
+  return vi
+    .mocked(hass.callWS)
+    .mock.calls.filter(([msg]) => msg.type === type).length;
+}
+
 function makeHass(
   overrides: Record<string, string> = {},
   challenges: ChallengeInfo[] = [CHALLENGE],
@@ -68,7 +86,7 @@ function makeHass(
     locale: { language: "en" },
     states: makeStates(overrides),
     entities: {},
-    callWS: vi.fn().mockResolvedValue({ challenges }) as HomeAssistant["callWS"],
+    callWS: mockWS(challenges),
     callService: vi.fn().mockResolvedValue(undefined),
   };
 }
@@ -184,19 +202,17 @@ describe("setup", () => {
     const updated: HomeAssistant = {
       ...hass,
       entities: {},
-      callWS: vi.fn().mockResolvedValue({
-        challenges: [{ ...CHALLENGE, entities: withoutTen }],
-      }) as HomeAssistant["callWS"],
+      callWS: mockWS([{ ...CHALLENGE, entities: withoutTen }]),
     };
     card.hass = updated;
     await settle(card);
-    expect(updated.callWS).toHaveBeenCalledTimes(1);
+    expect(calls(updated, "daily_challenge/list")).toBe(1);
     expect(buttons(card).map((b) => text(b))).toEqual(["−1", "+1", "+5"]);
 
     // Same registry, new states: no new lookup.
     card.hass = { ...updated, states: makeStates({ today: "16" }) };
     await settle(card);
-    expect(updated.callWS).toHaveBeenCalledTimes(1);
+    expect(calls(updated, "daily_challenge/list")).toBe(1);
   });
 
   it("starts a new lookup when the entity changes", async () => {
@@ -205,7 +221,7 @@ describe("setup", () => {
     card.setConfig({ type: `custom:${CARD_TYPE}`, entity: ENTITIES.total });
     card.hass = { ...hass };
     await settle(card);
-    expect(hass.callWS).toHaveBeenCalledTimes(2);
+    expect(calls(hass, "daily_challenge/list")).toBe(2);
   });
 });
 
@@ -399,5 +415,192 @@ describe("direct input", () => {
     const card = await createCard(makeHass({ today: "unavailable" }));
     await longPress(card);
     expect(input(card)).toBeNull();
+  });
+});
+
+describe("summary", () => {
+  const SUMMARY_ENTITIES = {
+    ...ENTITIES,
+    target_to_date: "sensor.push_ups_target_to_date",
+    delta: "sensor.push_ups_ahead_behind",
+    remaining: "sensor.push_ups_remaining",
+  };
+  const SUMMARY_CHALLENGE = { ...CHALLENGE, entities: SUMMARY_ENTITIES };
+
+  function summaryHass(
+    states: Record<string, string>,
+    targetAttributes: Record<string, unknown> = { daily_target: 20, deficit: 0 },
+    language = "en",
+  ): HomeAssistant {
+    const hass = makeHass({}, [SUMMARY_CHALLENGE]);
+    hass.locale = { language };
+    for (const [key, state] of Object.entries(states)) {
+      const id = SUMMARY_ENTITIES[key as keyof typeof SUMMARY_ENTITIES];
+      hass.states[id] = entity(id, state);
+    }
+    hass.states[ENTITIES.today_target].attributes = {
+      ...hass.states[ENTITIES.today_target].attributes,
+      ...targetAttributes,
+    };
+    return hass;
+  }
+
+  function summary(card: DailyChallengeCard): string {
+    return text(root(card).querySelector(".summary"));
+  }
+
+  it("shows actual vs. target with the lead", async () => {
+    const card = await createCard(
+      summaryHass({ total: "1240", target_to_date: "1200", delta: "40" }),
+    );
+    expect(summary(card)).toBe("Actual 1,240 / Target 1,200 · +40");
+    expect(root(card).querySelector(".delta.ahead")).not.toBeNull();
+  });
+
+  it("marks a deficit", async () => {
+    const card = await createCard(
+      summaryHass({ total: "60", target_to_date: "72", delta: "-12" }),
+    );
+    expect(summary(card)).toBe("Actual 60 / Target 72 · −12");
+    expect(root(card).querySelector(".delta.behind")).not.toBeNull();
+  });
+
+  it("shows ±0 when on track", async () => {
+    const card = await createCard(
+      summaryHass({ total: "60", target_to_date: "60", delta: "0" }),
+    );
+    expect(summary(card)).toBe("Actual 60 / Target 60 · ±0");
+  });
+
+  it("formats numbers in the user's locale", async () => {
+    const card = await createCard(
+      summaryHass(
+        { total: "1240", target_to_date: "1200", delta: "40" },
+        undefined,
+        "de-CH",
+      ),
+    );
+    // The Swiss group separator is an apostrophe (exact glyph depends on CLDR).
+    const swiss = new Intl.NumberFormat("de-CH");
+    expect(summary(card)).toBe(
+      `Actual ${swiss.format(1240)} / Target ${swiss.format(1200)} · +40`,
+    );
+    expect(swiss.format(1240)).toMatch(/^1['’]240$/);
+  });
+
+  it("shows what is left with an end date", async () => {
+    const card = await createCard(
+      summaryHass({
+        total: "60",
+        target_to_date: "60",
+        delta: "0",
+        remaining: "3100",
+      }),
+    );
+    expect(text(root(card).querySelector(".remaining"))).toBe(
+      "3,100 left to goal",
+    );
+  });
+
+  it("omits the line without figures", async () => {
+    const card = await createCard();
+    expect(summary(card)).toBe("");
+  });
+
+  it("shows the target without delta when the delta is unavailable", async () => {
+    const card = await createCard(
+      summaryHass({ total: "60", target_to_date: "60", delta: "unavailable" }),
+    );
+    expect(summary(card)).toBe("Actual 60 / Target 60");
+  });
+
+  it("marks the deficit in today's target in catch-up mode", async () => {
+    const card = await createCard(
+      summaryHass({ today_target: "30" }, { daily_target: 20, deficit: 10 }),
+    );
+    expect(text(root(card).querySelector(".catch-up"))).toBe(
+      "Today: 20 + 10 deficit",
+    );
+    expect(text(root(card).querySelector(".target"))).toBe("/ 30");
+  });
+
+  it("does not mark a deficit that only is displayed", async () => {
+    const card = await createCard(
+      summaryHass({ today_target: "20" }, { daily_target: 20, deficit: 10 }),
+    );
+    expect(root(card).querySelector(".catch-up")).toBeNull();
+  });
+});
+
+describe("history", () => {
+  it("loads the history and reloads it when the total changes", async () => {
+    const hass = makeHass();
+    const card = await createCard(hass);
+    expect(calls(hass, "daily_challenge/history")).toBe(1);
+    expect(hass.callWS).toHaveBeenCalledWith({
+      type: "daily_challenge/history",
+      entry_id: "push_ups",
+    });
+    expect(card.history).toEqual(HISTORY);
+
+    card.hass = { ...hass, states: makeStates({ today: "16" }) };
+    await settle(card);
+    expect(calls(hass, "daily_challenge/history")).toBe(1);
+
+    card.hass = { ...hass, states: makeStates({ total: "61" }) };
+    await settle(card);
+    expect(calls(hass, "daily_challenge/history")).toBe(2);
+  });
+
+  it("keeps the last history when loading fails", async () => {
+    const hass = makeHass();
+    const card = await createCard(hass);
+    const failing = vi.fn(async (msg: { type: string }) => {
+      if (msg.type === "daily_challenge/history") {
+        throw new Error("offline");
+      }
+      return { challenges: [CHALLENGE] };
+    }) as unknown as HomeAssistant["callWS"];
+    card.hass = { ...hass, callWS: failing, states: makeStates({ total: "61" }) };
+    await settle(card);
+    expect(card.history).toEqual(HISTORY);
+  });
+});
+
+describe("card picker", () => {
+  it("registers the card with a preview", () => {
+    const cards = (window as unknown as { customCards: { type: string }[] })
+      .customCards;
+    expect(cards.filter((card) => card.type === CARD_TYPE)).toEqual([
+      expect.objectContaining({ name: "Daily Challenge", preview: true }),
+    ]);
+  });
+
+  it("suggests the first challenge as stub config", () => {
+    const hass = makeHass();
+    hass.entities = {
+      "light.kitchen": { entity_id: "light.kitchen", platform: "hue" },
+      "sensor.push_ups_total": {
+        entity_id: "sensor.push_ups_total",
+        platform: "daily_challenge",
+        translation_key: "total",
+      },
+      "number.push_ups_today": {
+        entity_id: "number.push_ups_today",
+        platform: "daily_challenge",
+        translation_key: "today",
+      },
+    };
+    expect(DailyChallengeCard.getStubConfig(hass)).toEqual({
+      type: `custom:${CARD_TYPE}`,
+      entity: "number.push_ups_today",
+    });
+    expect(DailyChallengeCard.getStubConfig(undefined).entity).toBe("");
+  });
+
+  it("provides the visual editor", () => {
+    expect(DailyChallengeCard.getConfigElement().tagName.toLowerCase()).toBe(
+      "daily-challenge-card-editor",
+    );
   });
 });

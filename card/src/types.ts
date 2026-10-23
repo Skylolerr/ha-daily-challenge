@@ -10,10 +10,17 @@ export interface HassEntity {
   };
 }
 
+/** Entry of the entity registry as exposed to the frontend. */
+export interface EntityRegistryDisplayEntry {
+  entity_id: string;
+  platform?: string;
+  translation_key?: string;
+}
+
 export interface HomeAssistant {
   states: Record<string, HassEntity>;
   // Replaced by the frontend whenever the entity registry changes.
-  entities?: Record<string, unknown>;
+  entities?: Record<string, EntityRegistryDisplayEntry>;
   locale: { language: string };
   callWS<T>(msg: { type: string; [key: string]: unknown }): Promise<T>;
   callService(
@@ -40,4 +47,11 @@ export interface ChallengeInfo {
 
 export interface ChallengeList {
   challenges: ChallengeInfo[];
+}
+
+/** Result of `daily_challenge/history`; keys are ISO dates. */
+export interface ChallengeHistory {
+  days: Record<string, number>;
+  targets: Record<string, number>;
+  fulfilled: Record<string, boolean>;
 }

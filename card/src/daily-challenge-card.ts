@@ -1,7 +1,9 @@
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 
-import { localize } from "./localize";
+import { EDITOR_TYPE } from "./editor";
+import { formatDelta, formatNumber, localize } from "./localize";
 import type {
+  ChallengeHistory,
   ChallengeInfo,
   ChallengeList,
   DailyChallengeCardConfig,
@@ -15,6 +17,14 @@ const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const NOT_LOADED = Symbol("not loaded");
 const INACTIVE_STATES = new Set(["unknown", "unavailable"]);
+
+/** Find the "today" entity of the first challenge without a round trip. */
+export function findStubEntity(hass: HomeAssistant | undefined): string {
+  const entry = Object.values(hass?.entities ?? {}).find(
+    (item) => item.platform === "daily_challenge" && item.translation_key === "today",
+  );
+  return entry?.entity_id ?? "";
+}
 
 /** Keys of the add buttons ("add_5") sorted by amount. */
 function addSteps(entities: Record<string, string>): number[] {
@@ -30,17 +40,29 @@ export class DailyChallengeCard extends LitElement {
     _config: { state: true },
     _challenge: { state: true },
     _editing: { state: true },
+    _history: { state: true },
   };
+
+  static getConfigElement(): HTMLElement {
+    return document.createElement(EDITOR_TYPE);
+  }
+
+  static getStubConfig(hass?: HomeAssistant): DailyChallengeCardConfig {
+    return { type: `custom:${CARD_TYPE}`, entity: findStubEntity(hass) };
+  }
 
   declare hass?: HomeAssistant;
   declare private _config?: DailyChallengeCardConfig;
   /** undefined while loading, null if the entity is not part of a challenge. */
   declare private _challenge?: ChallengeInfo | null;
   declare private _editing: boolean;
+  /** Daily values for the history views of later phases. */
+  declare private _history?: ChallengeHistory;
 
   private _entitiesSeen: unknown = NOT_LOADED;
   private _pressTimer?: ReturnType<typeof setTimeout>;
   private _committing = false;
+  private _historyTotal?: string;
 
   constructor() {
     super();
@@ -53,6 +75,8 @@ export class DailyChallengeCard extends LitElement {
     }
     if (config.entity !== this._config?.entity) {
       this._challenge = undefined;
+      this._history = undefined;
+      this._historyTotal = undefined;
       this._entitiesSeen = NOT_LOADED;
     }
     this._config = config;
@@ -68,6 +92,28 @@ export class DailyChallengeCard extends LitElement {
     if (changed.has("hass") && this.hass && this.hass.entities !== this._entitiesSeen) {
       this._entitiesSeen = this.hass.entities;
       void this._loadChallenge();
+    }
+    // Every change of a day also changes the total: fetch the history again.
+    const total = this._state("total");
+    if (this._challenge && total !== undefined && total !== this._historyTotal) {
+      this._historyTotal = total;
+      void this._loadHistory(this._challenge.entry_id);
+    }
+  }
+
+  /** The most recently loaded history (undefined until loaded). */
+  get history(): ChallengeHistory | undefined {
+    return this._history;
+  }
+
+  private async _loadHistory(entryId: string): Promise<void> {
+    try {
+      this._history = await this.hass?.callWS<ChallengeHistory>({
+        type: "daily_challenge/history",
+        entry_id: entryId,
+      });
+    } catch {
+      // Keep the last known history; the next change retries.
     }
   }
 
@@ -209,7 +255,7 @@ export class DailyChallengeCard extends LitElement {
     }
     return html`<ha-card>
       ${this._renderHeader(this._challenge)} ${this._renderValue(this._challenge)}
-      ${this._renderButtons(this._challenge)}
+      ${this._renderSummary()} ${this._renderButtons(this._challenge)}
     </ha-card>`;
   }
 
@@ -281,10 +327,69 @@ export class DailyChallengeCard extends LitElement {
             @contextmenu=${(ev: Event) => ev.preventDefault()}
             @keydown=${this._valueKeyDown}
           >
-            <span class="number">${value ?? "–"}</span>
-            <span class="target">/ ${target ?? "–"}</span>
+            <span class="number"
+              >${value === undefined ? "–" : formatNumber(this.hass, value)}</span
+            >
+            <span class="target"
+              >/ ${target === undefined
+                ? "–"
+                : formatNumber(this.hass, target)}</span
+            >
             <span class="unit">${unit}</span>
           </div>`}
+    </div>`;
+  }
+
+  private _renderSummary() {
+    const hass = this.hass;
+    const total = this._number("total");
+    const targetToDate = this._number("target_to_date");
+    const delta = this._number("delta");
+    const remaining = this._number("remaining");
+
+    // In catch-up mode the effective target is the daily target plus deficit.
+    const targetEntity = this._challenge?.entities.today_target;
+    const attributes = targetEntity
+      ? hass?.states[targetEntity]?.attributes
+      : undefined;
+    const effective = this._number("today_target");
+    const dailyTarget = Number(attributes?.daily_target);
+    const deficit = Number(attributes?.deficit);
+    const catchUp =
+      effective !== undefined &&
+      Number.isFinite(dailyTarget) &&
+      deficit > 0 &&
+      effective > dailyTarget;
+
+    return html`<div class="summary">
+      ${total !== undefined && targetToDate !== undefined
+        ? html`<div class="target-vs-actual">
+            ${localize(hass, "target_vs_actual", {
+              total: formatNumber(hass, total),
+              target: formatNumber(hass, targetToDate),
+            })}${delta === undefined
+              ? nothing
+              : html` ·
+                  <span class="delta ${delta < 0 ? "behind" : "ahead"}"
+                    >${formatDelta(hass, delta)}</span
+                  >`}
+          </div>`
+        : nothing}
+      ${remaining === undefined
+        ? nothing
+        : html`<div class="remaining">
+            ${localize(hass, "left_to_goal", {
+              remaining: formatNumber(hass, remaining),
+            })}
+          </div>`}
+      ${catchUp
+        ? html`<div class="catch-up">
+            ${localize(hass, "catch_up", {
+              target: formatNumber(hass, dailyTarget),
+              deficit: formatNumber(hass, deficit),
+            })}
+          </div>`
+        : nothing}
     </div>`;
   }
 
@@ -316,6 +421,7 @@ export class DailyChallengeCard extends LitElement {
 
   static override styles = css`
     ha-card {
+      display: block;
       padding: 16px;
     }
     .header {
@@ -325,6 +431,7 @@ export class DailyChallengeCard extends LitElement {
     }
     .name {
       flex: 1;
+      min-width: 0;
       font-size: 1.2em;
       font-weight: 500;
       overflow: hidden;
@@ -402,6 +509,22 @@ export class DailyChallengeCard extends LitElement {
       text-align: center;
       cursor: text;
     }
+    .summary {
+      margin-bottom: 16px;
+      text-align: center;
+      color: var(--secondary-text-color);
+      line-height: 1.5;
+    }
+    .delta {
+      font-weight: 500;
+    }
+    .delta.ahead {
+      color: var(--success-color, #43a047);
+    }
+    .delta.behind,
+    .catch-up {
+      color: var(--warning-color, #ffa600);
+    }
     .buttons {
       display: flex;
       justify-content: center;
@@ -436,6 +559,27 @@ export class DailyChallengeCard extends LitElement {
 
 if (!customElements.get(CARD_TYPE)) {
   customElements.define(CARD_TYPE, DailyChallengeCard);
+}
+
+interface CustomCardEntry {
+  type: string;
+  name: string;
+  description: string;
+  preview: boolean;
+  documentationURL: string;
+}
+
+// Make the card show up in the card picker.
+const cardWindow = window as unknown as { customCards?: CustomCardEntry[] };
+cardWindow.customCards ??= [];
+if (!cardWindow.customCards.some((card) => card.type === CARD_TYPE)) {
+  cardWindow.customCards.push({
+    type: CARD_TYPE,
+    name: localize(undefined, "card_name"),
+    description: localize(undefined, "card_description"),
+    preview: true,
+    documentationURL: "https://github.com/Skylolerr/ha-daily-challenge",
+  });
 }
 
 declare global {
