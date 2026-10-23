@@ -51,7 +51,7 @@ body:
     attributes:
       label: Home Assistant version
       description: Settings → About.
-      placeholder: "2026.11.0"
+      placeholder: "2026.10.2"
     validations:
       required: true
   - type: input

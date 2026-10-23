@@ -11,7 +11,7 @@ maintainer instead of deviating.
 
 - Domain: `daily_challenge` – integration code lives in `custom_components/daily_challenge/`
 - Repo: `Skylolerr/ha-daily-challenge`, license MIT (Copyright skylolerlp)
-- Minimum Home Assistant version: **2026.11.0** (`hacs.json`), Python as required by that HA release
+- Minimum Home Assistant version: **2026.10.0** (`hacs.json`), Python as required by that HA release
 - `integration_type: service`, one config entry and one device per challenge
 - Source of truth: one `helpers.storage.Store` per challenge (`.storage/daily_challenge.<entry_id>`)
 - All business logic lives in `calculations.py` as pure functions (no HA imports needed to test it)

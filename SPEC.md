@@ -6,7 +6,7 @@ Home-Assistant-Custom-Integration (HACS / HA Marketplace) zum Tracken von tägli
 - **Domain:** `daily_challenge`
 - **Repo:** `Skylolerr/ha-daily-challenge` (privat während Phase 1–2, öffentlich ab dem ersten Beta-Release v0.1.0)
 - **Lizenz:** MIT, Copyright skylolerlp
-- **Mindestversion:** Home Assistant 2026.11.0
+- **Mindestversion:** Home Assistant 2026.10.0 (vom Maintainer am 2026-10-23 von 2026.11.0 gesenkt, damit v0.1.0 nicht auf 2026.11 warten muss)
 - **Sprachen:** EN (Basis), DE, FR, IT
 - **Code, Kommentare, README, Commit-Messages:** Englisch
 
@@ -106,7 +106,7 @@ Das Card-Bundle wird **committet**, weil HACS/Marketplace keinen Build-Schritt a
 ```json
 {
   "name": "Daily Challenge",
-  "homeassistant": "2026.11.0",
+  "homeassistant": "2026.10.0",
   "render_readme": true
 }
 ```
@@ -398,7 +398,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - 1.a Berechnungen mit Tests, Store, Tageswechsel
 - 1.b Config/Options Flow, Entities, Actions, Übersetzungen EN/DE, Diagnostics, CI, `deploy.sh`
 - 1.c **(M)** Test auf der eigenen HA-Instanz mit Standard-Karten, Feedback
-- 1.d Bugfixes aus 1.c; Test-Pin auf HA 2026.11 anheben, sobald verfügbar
+- 1.d Bugfixes aus 1.c; Tests gegen HA 2026.11 (Beta ab ca. 28.10.) prüfen und den Test-Pin anheben, sobald verfügbar
 - 1.e **(M)** Freigabe Phase 1
 
 **Phase 2 – Card MVP**
@@ -425,7 +425,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | # | Was | Wofür / Format |
 |---|---|---|
 | 1 | Testergebnis Phase 1 inkl. Tageswechsel (1.c) und Freigabe (1.e) | Bugfixes in 1.d |
-| 2 | Testergebnis Card (2.h) und Freigabe | Abschluss Phase 2 |
+| 2 | ~~Testergebnis Card (2.h) und Freigabe~~ – erledigt 2026-10-23: Card vom Maintainer freigegeben | – |
 | 3 | ~~Screenshots~~ – erledigt 2026-10-23 (`docs/images/`: Card gerendert mit Testdaten, Einrichtungsformular vom Maintainer) | – |
 | 4 | ~~Feedback zum Logo-Entwurf~~ – erledigt 2026-10-23: Entwurf gefällt, leicht verfeinert | – |
 | 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |

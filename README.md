@@ -2,7 +2,7 @@
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
 [![GitHub Release](https://img.shields.io/github/v/release/Skylolerr/ha-daily-challenge?include_prereleases)](https://github.com/Skylolerr/ha-daily-challenge/releases)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.11%2B-41BDF5.svg)](https://www.home-assistant.io)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.10%2B-41BDF5.svg)](https://www.home-assistant.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Track quantity-based daily challenges in Home Assistant – "20 push-ups per day",
@@ -37,7 +37,7 @@ the whole challenge and its own dashboard card.
 
 ## Requirements
 
-- Home Assistant **2026.11** or newer
+- Home Assistant **2026.10** or newer
 - [HACS](https://hacs.xyz) for the recommended installation
 
 ## Installation
