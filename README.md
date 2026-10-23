@@ -66,7 +66,7 @@ Or manually in HACS:
 Or go to **Settings → Devices & services → Add integration → Daily Challenge**.
 Each challenge is its own entry; add the integration again for another challenge.
 
-<!-- TODO screenshot: the setup form -->
+<img src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/setup-form.png" alt="Setup form of a new challenge" width="360">
 
 | Option | Default | Description |
 |---|---|---|
@@ -78,7 +78,7 @@ Each challenge is its own entry; add the integration again for another challenge
 | End date | – | Optional. Enables what is left until the end goal, days left and the required average per day. |
 | Steps | 1, 5, 10 | Up to 3 amounts in ascending order. Each gets a **+** button; the smallest one is also used for **−**. |
 | Streak rule | Daily target reached | When a day counts towards the streak: *daily target reached* or *any amount above 0*. |
-| Deficit handling | Only show the deficit | *Only show the deficit*, or *Catch up*: a deficit raises today's target. |
+| Deficit handling | Only show the deficit | *Only show the deficit*, or *Catch up*: yesterday's deficit raises today's target. |
 
 All options can be changed later via **Configure**:
 
