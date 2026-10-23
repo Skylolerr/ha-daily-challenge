@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Deploy Daily Challenge to your own Home Assistant instance for testing.
 #
-# Usage: scripts/deploy.sh [--no-restart]
+# Usage: scripts/deploy.sh [--no-restart | --reload]
+#
+#   (default)     with HA_TOKEN: check the config and restart Home Assistant
+#   --reload      with HA_TOKEN: only reload the Daily Challenge entries;
+#                 enough for card-only changes (Python changes need a restart)
+#   --no-restart  only copy the files
 #
 # Reads HA_HOST, HA_USER, HA_CONFIG_PATH (and optionally HA_SSH_PORT, HA_URL,
 # HA_TOKEN) from .env in the repository root. Requires an SSH add-on on Home
@@ -10,13 +15,14 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT}/.env"
-RESTART=1
+MODE=restart
 
 for arg in "$@"; do
   case "$arg" in
-    --no-restart) RESTART=0 ;;
+    --no-restart) MODE=none ;;
+    --reload) MODE=reload ;;
     -h | --help)
-      sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -65,21 +71,37 @@ else
     "${SSH[@]}" "$TARGET" "rm -rf '${DEST}' && mkdir -p '${DEST}' && tar -C '${DEST}' -xf -"
 fi
 
-if [[ "$RESTART" -eq 0 ]]; then
+if [[ "$MODE" == none ]]; then
   echo "==> Done (restart skipped)"
   exit 0
 fi
 if [[ -z "${HA_TOKEN:-}" ]]; then
-  echo "==> Done. Set HA_TOKEN in .env to restart automatically; restart Home Assistant now."
+  echo "==> Done. Set HA_TOKEN in .env to restart or reload automatically;"
+  echo "    restart Home Assistant (or reload the integration) now."
   exit 0
 fi
 
 api() {
-  curl -fsS -X POST \
+  curl -fsS -X "${2:-POST}" \
     -H "Authorization: Bearer ${HA_TOKEN}" \
     -H "Content-Type: application/json" \
     "${HA_URL%/}/api/$1"
 }
+
+if [[ "$MODE" == reload ]]; then
+  echo "==> Reloading Daily Challenge"
+  entries="$(api "config/config_entries/entry?domain=daily_challenge" GET |
+    grep -o '"entry_id":"[^"]*"' | cut -d'"' -f4)"
+  if [[ -z "$entries" ]]; then
+    echo "    No Daily Challenge set up yet, nothing to reload."
+  fi
+  for entry in $entries; do
+    api "config/config_entries/entry/${entry}/reload" >/dev/null
+    echo "    reloaded ${entry}"
+  done
+  echo "==> Done. Reload the dashboard to get the new card."
+  exit 0
+fi
 
 echo "==> Checking configuration"
 check="$(api config/core/check_config)"
