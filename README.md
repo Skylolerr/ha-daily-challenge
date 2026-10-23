@@ -237,6 +237,33 @@ automation:
             - states('number.push_ups_today') | int }} push-ups to go today!
 ```
 
+## Known limitations
+
+- There are no rest or skip days – "daily" means every day.
+- A day always ends at local midnight.
+- Past days can be corrected with the actions; editing them in the card comes with
+  v0.2.0.
+- Only "at least" challenges: an upper limit such as "at most one coffee" is not
+  supported yet.
+- Long-term statistics are not filled in retroactively when a past day is corrected.
+
+## Troubleshooting
+
+- **The card is missing in the card picker or looks outdated:** reload the page. In the
+  Companion app use *Settings → Companion app → Troubleshooting → Reset frontend cache*.
+  *Settings → Dashboards → ⋮ → Resources* should list exactly one
+  `/daily_challenge/daily-challenge-card.js?v=…`.
+- **A figure looks wrong:** download the diagnostics (*Settings → Devices & services →
+  Daily Challenge → ⋮ → Download diagnostics*) and attach them to an
+  [issue](https://github.com/Skylolerr/ha-daily-challenge/issues).
+- **Debug logging:**
+
+  ```yaml
+  logger:
+    logs:
+      custom_components.daily_challenge: debug
+  ```
+
 ## Removal
 
 1. **Settings → Devices & services → Daily Challenge**, then delete each challenge

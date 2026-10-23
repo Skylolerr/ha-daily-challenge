@@ -1,0 +1,106 @@
+# Internal checklist against the Home Assistant integration quality scale.
+# Goal: all Silver rules, Gold where it makes sense (SPEC.md §13).
+rules:
+  # Bronze
+  action-setup: done
+  appropriate-polling:
+    status: exempt
+    comment: No polling. Figures are calculated locally on changes and at midnight.
+  brands: done
+  common-modules: done
+  config-flow: done
+  config-flow-test-coverage: done
+  dependency-transparency:
+    status: exempt
+    comment: No external requirements.
+  docs-actions: done
+  docs-conditions:
+    status: exempt
+    comment: No device conditions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  docs-triggers:
+    status: exempt
+    comment: No device triggers.
+  entity-event-setup:
+    status: exempt
+    comment: Entities only follow the coordinator; they do not subscribe to events.
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure:
+    status: exempt
+    comment: Nothing to connect to; the input is validated in the flow.
+  test-before-setup:
+    status: exempt
+    comment: Nothing to connect to; only local storage is loaded.
+  unique-config-entry:
+    status: done
+    comment: Each challenge has a generated unique ID; names must be unique.
+
+  # Silver
+  action-exceptions: done
+  config-entry-unloading: done
+  docs-configuration-parameters: done
+  docs-installation-parameters: done
+  entity-unavailable:
+    status: exempt
+    comment: Local calculation, always available.
+  integration-owner: done
+  log-when-unavailable:
+    status: exempt
+    comment: Local calculation, never unavailable.
+  parallel-updates: done
+  reauthentication-flow:
+    status: exempt
+    comment: No authentication.
+  test-coverage: done
+
+  # Gold
+  devices: done
+  diagnostics: done
+  discovery:
+    status: exempt
+    comment: Challenges are created by the user; nothing to discover.
+  discovery-update-info:
+    status: exempt
+    comment: No discovery.
+  docs-data-update: done
+  docs-examples: done
+  docs-known-limitations: done
+  docs-supported-devices:
+    status: exempt
+    comment: Service integration without physical devices.
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
+  dynamic-devices:
+    status: exempt
+    comment: Exactly one device per config entry.
+  entity-category: done
+  entity-device-class:
+    status: exempt
+    comment: Amounts use the user's own unit; no device class fits.
+  entity-disabled-by-default:
+    status: exempt
+    comment: All entities are enabled on purpose (SPEC.md §8); rarely used ones are diagnostic.
+  entity-translations: done
+  exception-translations: done
+  icon-translations: done
+  reconfiguration-flow:
+    status: exempt
+    comment: Every setting can be changed in the options flow.
+  repair-issues:
+    status: exempt
+    comment: No issues that the user would need to repair.
+  stale-devices: done
+
+  # Platinum
+  async-dependency:
+    status: exempt
+    comment: No external dependencies.
+  inject-websession:
+    status: exempt
+    comment: No HTTP requests.
+  strict-typing: done
