@@ -426,8 +426,8 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 |---|---|---|
 | 1 | Testergebnis Phase 1 inkl. Tageswechsel (1.c) und Freigabe (1.e) | Bugfixes in 1.d |
 | 2 | Testergebnis Card (2.h) und Freigabe | Abschluss Phase 2 |
-| 3 | Screenshots: Card im Dashboard (hell und dunkel), Card mit Catch-up-Rückstand und Enddatum, Einrichtungsformular | README-Platzhalter `TODO screenshot`; PNG, ca. 1200 px breit, landen in `docs/images/` |
-| 4 | Feedback zum Logo-Entwurf | 3.b, gemeinsame Überarbeitung |
+| 3 | ~~Screenshots der Card~~ – erledigt 2026-10-23 (`docs/images/`, gerendert mit Testdaten). Offen: Einrichtungsformular | README-Platzhalter `TODO screenshot` |
+| 4 | ~~Feedback zum Logo-Entwurf~~ – erledigt 2026-10-23: Entwurf gefällt, leicht verfeinert | – |
 | 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |
 | 6 | ~~Entscheidung Catch-up-Regel~~ – erledigt 2026-10-23: nur der Vortag kann aufgeholt werden, kein Vorarbeiten (§6) | – |
 | 7 | ~~GitHub-Einstellungen: Beschreibung, Topics, Issues~~ – erledigt 2026-10-23 per `gh` | `hacs/action`-Job wird beim Öffentlich-Schalten wieder eingeschaltet (er prüft nur öffentliche Repos) |

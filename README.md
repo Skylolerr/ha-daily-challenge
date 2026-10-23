@@ -15,7 +15,10 @@ the whole challenge and its own dashboard card.
 > **Beta** – breaking changes are possible before 1.0. They are always listed in the
 > [changelog](CHANGELOG.md), and your recorded data is migrated, never dropped.
 
-<!-- TODO screenshot: the card on a dashboard (light and dark) -->
+<p>
+  <img src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/card-dark.png" alt="Daily Challenge card in dark mode" width="320">
+  <img src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/card-light.png" alt="Daily Challenge card in light mode with the goal reached" width="320">
+</p>
 
 ## Features
 
@@ -151,7 +154,7 @@ lets you pick the challenge from a list and switch parts of the card on or off:
 
 Today's value and the progress ring are always shown.
 
-<!-- TODO screenshot: card with catch-up deficit and end date -->
+<img src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/card-catch-up.png" alt="Card in catch-up mode with yesterday's deficit added to today's target" width="320">
 
 - Header with icon, name, current and best streak
 - Today's value with a progress ring against today's target – full in the success colour
