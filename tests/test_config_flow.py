@@ -120,11 +120,25 @@ async def test_steps_accept_blank_fields_and_single_value(hass: HomeAssistant) -
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {**USER_INPUT, "steps": ["", "3", ""], "end_date": "2026-12-31"},
+        {**USER_INPUT, "steps": ["", " 3 ", "  "], "end_date": "2026-12-31"},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["options"]["steps"] == [3]
     assert result["options"]["end_date"] == "2026-12-31"
+
+
+async def test_cleared_icon_falls_back_to_default(hass: HomeAssistant) -> None:
+    """A cleared icon picker stores the default icon instead of an empty one."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, "icon": " "}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"]["icon"] == "mdi:trophy"
+    await hass.async_block_till_done()
+    assert hass.states.get("number.push_ups_today").attributes["icon"] == "mdi:trophy"
 
 
 async def test_name_must_be_unique(

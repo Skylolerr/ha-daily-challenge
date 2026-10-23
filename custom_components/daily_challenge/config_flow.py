@@ -115,7 +115,7 @@ def _parse_steps(raw: Any) -> list[int] | None:
     values = raw if isinstance(raw, list) else [raw]
     steps: list[int] = []
     for value in values:
-        if value in (None, ""):
+        if value is None or not str(value).strip():
             continue
         try:
             number = float(value)
@@ -169,7 +169,8 @@ def _validate(
 
     options = {
         CONF_NAME: name,
-        CONF_ICON: user_input[CONF_ICON],
+        # A cleared icon picker sends an empty string.
+        CONF_ICON: str(user_input[CONF_ICON]).strip() or DEFAULT_ICON,
         CONF_UNIT: unit,
         CONF_DAILY_TARGET: int(daily_target),
         CONF_START_DATE: start_date.isoformat(),
