@@ -409,6 +409,20 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - 3.e **(M)** Repo öffentlich schalten, GitHub-Release v0.1.0 als Pre-Release
 - 3.f **(M)** Installation über HACS «Custom Repository» verifizieren
 
+**Offene Zuarbeit des Maintainers bis v0.1.0** (Stand 2026-10-23; README, CHANGELOG und Issue-Templates sind fertig)
+
+| # | Was | Wofür / Format |
+|---|---|---|
+| 1 | Testergebnis Phase 1 inkl. Tageswechsel (1.c) und Freigabe (1.e) | Bugfixes in 1.d |
+| 2 | Testergebnis Card (2.h) und Freigabe | Abschluss Phase 2 |
+| 3 | Screenshots: Card im Dashboard (hell und dunkel), Card mit Catch-up-Rückstand und Enddatum, Einrichtungsformular | README-Platzhalter `TODO screenshot`; PNG, ca. 1200 px breit, landen in `docs/images/` |
+| 4 | Feedback zum Logo-Entwurf | 3.b, gemeinsame Überarbeitung |
+| 5 | CI-Status im Actions-Tab (Validate mit Hassfest/Lint/Card, Tests) | Fehler beheben, bevor das Repo öffentlich wird |
+| 6 | Bestätigung der Catch-up-Regel: Vorsprung früherer Tage deckt spätere leere Tage ab | ggf. Anpassung in `calculations.py` |
+| 7 | GitHub-Einstellungen: Beschreibung, Topics (`home-assistant`, `hacs`, `integration`, `habit-tracker`, `challenge`), Issues aktiviert | danach wird der `hacs/action`-Job wieder eingeschaltet (3.d) |
+| 8 | Repo öffentlich schalten, Release `v0.1.0` als Pre-Release mit dem CHANGELOG-Text erstellen | 3.e; Tag-Check und ZIP laufen automatisch |
+| 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |
+
 **Phase 4 – v0.2.0**
 - 4.a Heatmap (Wochen als Spalten, Montag oben, Intensität value/target, erfüllt/unerfüllt unterscheidbar, ausserhalb der Laufzeit grau)
 - 4.b Tag antippen → Dialog, Wert ändern via `set_day`
