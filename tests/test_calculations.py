@@ -420,6 +420,67 @@ def test_end_date_is_today() -> None:
     assert stats.current_streak == 2
 
 
+# --- days left and required average --------------------------------------
+
+
+def test_no_end_date_has_no_days_left() -> None:
+    stats = calculate({d(0): 20}, TARGETS_20, settings(), today=d(0))
+    assert stats.days_left is None
+    assert stats.required_per_day is None
+
+
+def test_required_per_day_until_the_end() -> None:
+    """The average still needed per day, today included, from the end goal."""
+    days = {d(0): 20, d(1): 25, d(2): 5}
+    stats = calculate(days, TARGETS_20, settings(end=d(9)), today=d(2))
+    assert stats.days_left == 8
+    # 200 - 45 done before today, spread over 8 days
+    assert stats.required_per_day == 19.4
+
+
+def test_required_per_day_ignores_todays_progress() -> None:
+    """The figure stays stable during the day; today's amount counts tomorrow."""
+    days = {d(0): 20, d(1): 25, d(2): 50}
+    stats = calculate(days, TARGETS_20, settings(end=d(9)), today=d(2))
+    assert stats.required_per_day == 19.4
+    tomorrow = calculate(days, TARGETS_20, settings(end=d(9)), today=d(3))
+    assert tomorrow.days_left == 7
+    assert tomorrow.required_per_day == 15.0
+
+
+def test_required_per_day_follows_target_changes() -> None:
+    history = {d(0): 20, d(5): 30}
+    stats = calculate({}, history, settings(end=d(9)), today=d(0))
+    assert stats.days_left == 10
+    assert stats.required_per_day == 25.0
+
+
+def test_required_per_day_on_the_last_day() -> None:
+    days = {d(0): 20}
+    stats = calculate(days, TARGETS_20, settings(end=d(1)), today=d(1))
+    assert stats.days_left == 1
+    assert stats.required_per_day == 20.0
+
+
+def test_required_per_day_once_the_goal_is_reached() -> None:
+    days = {d(0): 100}
+    stats = calculate(days, TARGETS_20, settings(end=d(3)), today=d(1))
+    assert stats.days_left == 3
+    assert stats.required_per_day == 0.0
+
+
+def test_days_left_before_the_start() -> None:
+    stats = calculate({}, {d(3): 20}, settings(start=d(3), end=d(12)), today=d(0))
+    assert stats.days_left == 10
+    assert stats.required_per_day == 20.0
+
+
+def test_days_left_after_the_end() -> None:
+    stats = calculate({d(0): 20}, TARGETS_20, settings(end=d(1)), today=d(3))
+    assert stats.days_left == 0
+    assert stats.required_per_day is None
+
+
 # --- midnight and daylight saving time ------------------------------------
 
 

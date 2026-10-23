@@ -76,6 +76,8 @@ class ChallengeStats:
     delta: int
     end_target: int | None
     remaining: int | None
+    days_left: int | None
+    required_per_day: float | None
     average_per_day: float
     best_day_value: int
     best_day_date: date | None
@@ -256,12 +258,22 @@ def calculate(
 
     end_target: int | None = None
     remaining: int | None = None
+    days_left: int | None = None
+    required_per_day: float | None = None
     if settings.end_date is not None:
         end_target = sum(
             target_on(target_history, day)
             for day in _date_range(settings.start_date, settings.end_date)
         )
         remaining = max(0, end_target - total)
+        # Days still to go, today included. The required average uses only
+        # what was done before today, so it stays stable during the day.
+        first_open_day = max(today, settings.start_date)
+        days_left = max(0, (settings.end_date - first_open_day).days + 1)
+        if days_left:
+            required_per_day = round(
+                max(0, end_target - (total - value_today)) / days_left, 1
+            )
 
     best_day_value = 0
     best_day_date: date | None = None
@@ -285,6 +297,8 @@ def calculate(
         delta=total - target_to_date,
         end_target=end_target,
         remaining=remaining,
+        days_left=days_left,
+        required_per_day=required_per_day,
         average_per_day=round(total / len(period), 1) if period else 0.0,
         best_day_value=best_day_value,
         best_day_date=best_day_date,
