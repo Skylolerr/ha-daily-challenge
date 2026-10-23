@@ -200,7 +200,7 @@ Nach jeder Datenänderung, beim Tageswechsel und beim Start werden alle Kennzahl
 
 ## 7. Tageswechsel
 
-- `async_track_time_change(hour=0, minute=0, second=0)` löst eine Neuberechnung aus und benachrichtigt die Entities.
+- Ein Timer auf den Beginn des nächsten lokalen Tags (`async_track_point_in_utc_time` auf `start_of_local_day(morgen)`, danach neu geplant) löst eine Neuberechnung aus und benachrichtigt die Entities. Kein Zeitmuster «00:00:00»: In Zeitzonen, in denen die Sommerzeit um Mitternacht beginnt (z. B. Chile), gibt es 00:00 an diesem Tag nicht, und ein Muster würde den ganzen Tag überspringen.
 - Beim Setup wird alles mit dem aktuellen Datum neu berechnet. So stimmt alles auch dann, wenn HA über Mitternacht aus war.
 - Es wird nie etwas «zurückgesetzt». Es wird nur ein neuer Datumsschlüssel gelesen. Darum sind Sommerzeit und Neustarts unkritisch.
 - Nach `end_date` nimmt die Challenge keine Werte mehr für neue Tage an (Status «beendet»). Vergangene Tage bleiben editierbar.
@@ -429,7 +429,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 3 | Screenshots: Card im Dashboard (hell und dunkel), Card mit Catch-up-Rückstand und Enddatum, Einrichtungsformular | README-Platzhalter `TODO screenshot`; PNG, ca. 1200 px breit, landen in `docs/images/` |
 | 4 | Feedback zum Logo-Entwurf | 3.b, gemeinsame Überarbeitung |
 | 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |
-| 6 | Bestätigung der Catch-up-Regel: Vorsprung früherer Tage deckt spätere leere Tage ab | ggf. Anpassung in `calculations.py` |
+| 6 | Entscheidung Catch-up-Regel (Review 2026-10-23): (a) Ein Vorsprung lässt den Streak über leere Tage weiterlaufen, während «Tagesziel erreicht» aus ist. (b) Ein nie aufgeholter Rückstand blockiert jeden späteren Streak, auch wenn danach jeden Tag das Ziel erreicht wird. Beides folgt wörtlich §6. | ggf. Anpassung in `calculations.py` |
 | 7 | ~~GitHub-Einstellungen: Beschreibung, Topics, Issues~~ – erledigt 2026-10-23 per `gh` | `hacs/action`-Job wird beim Öffentlich-Schalten wieder eingeschaltet (er prüft nur öffentliche Repos) |
 | 8 | Repo öffentlich schalten, Release `v0.1.0` als Pre-Release mit dem CHANGELOG-Text erstellen | 3.e; Tag-Check und ZIP laufen automatisch |
 | 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |
