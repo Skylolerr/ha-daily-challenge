@@ -423,11 +423,11 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - 3.e2 **(M)** PR an `hacs/default` vom Account `Skylolerr`, sobald HACS-Check und Release grün sind
 - 3.f **(M)** Installation über HACS «Custom Repository» verifizieren
 
-**Offene Zuarbeit des Maintainers bis v0.1.0** (Stand 2026-10-23; README, CHANGELOG und Issue-Templates sind fertig)
+**Offene Zuarbeit des Maintainers bis v0.1.0** (Stand 2026-10-24; README, CHANGELOG und Issue-Templates sind fertig)
 
 | # | Was | Wofür / Format |
 |---|---|---|
-| 1 | Testergebnis Phase 1 inkl. Tageswechsel (1.c) und Freigabe (1.e) | Bugfixes in 1.d |
+| 1 | ~~Testergebnis Phase 1 inkl. Tageswechsel (1.c) und Freigabe (1.e)~~ – erledigt 2026-10-24: Tageswechsel auf der eigenen Instanz geprüft, Phase 1 vom Maintainer freigegeben | – |
 | 2 | ~~Testergebnis Card (2.h) und Freigabe~~ – erledigt 2026-10-23: Card vom Maintainer freigegeben | – |
 | 3 | ~~Screenshots~~ – erledigt 2026-10-23 (`docs/images/`: Card gerendert mit Testdaten, Einrichtungsformular vom Maintainer) | – |
 | 4 | ~~Feedback zum Logo-Entwurf~~ – erledigt 2026-10-23: Entwurf gefällt, leicht verfeinert | – |

@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Before 1.0, minor releases may contain
 breaking changes; they are always listed under **Breaking changes**.
 
-## [0.1.0] – unreleased
+## [0.1.0] – 2026-10-24
 
 First public beta.
 
