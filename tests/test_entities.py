@@ -156,6 +156,22 @@ async def test_set_number(hass: HomeAssistant, loaded_entry: MockConfigEntry) ->
     assert state(hass, "binary_sensor.push_ups_goal_reached_today") == "on"
 
 
+async def test_set_number_rejects_fractions(
+    hass: HomeAssistant, loaded_entry: MockConfigEntry
+) -> None:
+    """A fraction is rejected instead of being cut to a whole number."""
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": "number.push_ups_today", "value": 12.5},
+            blocking=True,
+        )
+    assert err.value.translation_key == "not_whole_number"
+    assert err.value.translation_placeholders == {"value": "12.5"}
+    assert state(hass, "number.push_ups_today") =="0"
+
+
 @pytest.mark.parametrize(
     "options", [make_options(deficit_mode="catch_up")], ids=["catch_up"]
 )

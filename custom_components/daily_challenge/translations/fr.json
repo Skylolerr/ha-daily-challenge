@@ -197,6 +197,9 @@
     },
     "invalid_range": {
       "message": "Le début {start} est postérieur à la fin {end}."
+    },
+    "not_whole_number": {
+      "message": "{value} n'est pas un nombre entier."
     }
   },
   "services": {

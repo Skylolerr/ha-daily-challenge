@@ -35,6 +35,8 @@ from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
 
 def whole_number(value: Any) -> int:
     """Accept whole numbers only; 2.5 is rejected instead of cut to 2."""
+    if isinstance(value, bool):
+        raise vol.Invalid("expected a whole number")
     try:
         number = float(value)
     except (TypeError, ValueError) as err:

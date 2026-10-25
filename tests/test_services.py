@@ -159,6 +159,8 @@ async def test_negative_value_is_rejected(hass: HomeAssistant) -> None:
         ("add", {"amount": 2.5}),
         ("add", {"amount": "abc"}),
         ("add", {"amount": 100001}),
+        ("set", {"value": True}),
+        ("add", {"amount": False}),
     ],
 )
 async def test_invalid_numbers_are_rejected(

@@ -197,6 +197,9 @@
     },
     "invalid_range": {
       "message": "The start {start} is after the end {end}."
+    },
+    "not_whole_number": {
+      "message": "{value} is not a whole number."
     }
   },
   "services": {

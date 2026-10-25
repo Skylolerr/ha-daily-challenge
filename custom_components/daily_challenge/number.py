@@ -5,9 +5,10 @@ from __future__ import annotations
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.const import CONF_ICON
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import MAX_DAY_VALUE
+from .const import DOMAIN, MAX_DAY_VALUE
 from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
 from .entity import DailyChallengeEntity
 
@@ -45,5 +46,11 @@ class TodayNumber(DailyChallengeEntity, NumberEntity):
         return self.coordinator.data.value_today
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set today's value."""
+        """Set today's value; a fraction is rejected instead of cut off."""
+        if not float(value).is_integer():
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="not_whole_number",
+                translation_placeholders={"value": str(value)},
+            )
         self.coordinator.async_set_value(int(value))
