@@ -15,7 +15,7 @@ export const CARD_TYPE = "daily-challenge-card";
 export const LONG_PRESS_MS = 500;
 export const LOOKUP_RETRY_MS = 5000;
 /** How long the undo message stays. */
-export const UNDO_MS = 5000;
+export const UNDO_MS = 8000;
 
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
