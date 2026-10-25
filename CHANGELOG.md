@@ -21,7 +21,6 @@ Small improvements after the first release.
 
 - Today's value and the buttons are unavailable before the start and after the end date
   instead of rejecting input with an error. Past days stay editable through the actions.
-- The daily average sensor now has the unit `<unit>/d`, like the required average.
 
 ### Fixed
 
