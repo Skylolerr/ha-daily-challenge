@@ -204,6 +204,7 @@ Nach jeder Datenänderung, beim Tageswechsel und beim Start werden alle Kennzahl
 - Beim Setup wird alles mit dem aktuellen Datum neu berechnet. So stimmt alles auch dann, wenn HA über Mitternacht aus war.
 - Es wird nie etwas «zurückgesetzt». Es wird nur ein neuer Datumsschlüssel gelesen. Darum sind Sommerzeit und Neustarts unkritisch.
 - Nach `end_date` nimmt die Challenge keine Werte mehr für neue Tage an (Status «beendet»). Vergangene Tage bleiben editierbar.
+- Ausserhalb der Laufzeit (vor dem Start und nach dem Ende) sind die `today`-Number und die Buttons nicht verfügbar, statt Eingaben mit einem Fehler abzulehnen (v0.1.1).
 
 ---
 
@@ -306,7 +307,9 @@ heatmap_range: year                # year | 6months | 3months
 - Grosser Tageswert mit Fortschrittsring gegen `effective_target_today`. Bei erreichtem Ziel wird der Ring in Erfolgsfarbe ganz gefüllt.
 - Buttons: «−» und je ein «+n» pro Step. Ein langer Druck auf den Wert öffnet ein Eingabefeld für einen direkten Wert.
 - Soll/Ist-Zeile: «Ist 1'240 / Soll 1'200 · +40». Mit Enddatum zusätzlich «Noch 3'100 in 60 Tagen · Ø 51,7/Tag».
-- Im Catch-up-Modus ist der Rückstand im heutigen Ziel sichtbar markiert, z. B. «20 + 10 Rückstand».
+- Im Catch-up-Modus ist der Rückstand im heutigen Ziel sichtbar markiert, z. B. «20 + 10 Rückstand». Ist das Ziel inkl. Rückstand erreicht, steht dort «Rückstand aufgeholt ✓» (v0.1.1).
+- Nach jedem Button-Druck und jeder direkten Eingabe erscheint kurz eine Meldung mit «Rückgängig», die die Änderung zurücknimmt (v0.1.1).
+- Beendete Challenge (v0.1.1): Ring und Wert zeigen das Total gegen das Endziel, darunter «Challenge abgeschlossen · 90 %» bzw. «Challenge abgeschlossen · Ziel erreicht ✓». Soll/Ist-, Rest- und Rückstandszeile sowie die Buttons entfallen.
 
 ### Phase 4 (v0.2.0, nach dem ersten Release)
 
@@ -436,6 +439,12 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 7 | ~~GitHub-Einstellungen: Beschreibung, Topics, Issues~~ – erledigt 2026-10-23 per `gh` | `hacs/action`-Job wird beim Öffentlich-Schalten wieder eingeschaltet (er prüft nur öffentliche Repos) |
 | 8 | ~~Repo öffentlich schalten, Release `v0.1.0` als normaler Release mit dem CHANGELOG-Text erstellen, danach PR an `hacs/default`~~ – erledigt 2026-10-25: Repo öffentlich, HACS-Check grün, Release v0.1.0 mit ZIP, PR hacs/default#12634 (alle Prüfungen grün, Review durch HACS ausstehend) | – |
 | 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |
+
+**v0.1.1 – kleine Verbesserungen** (vom Maintainer beauftragt 2026-10-25)
+- Beendete Challenge: Abschlussansicht in der Card; `today`-Number und Buttons ausserhalb der Laufzeit nicht verfügbar
+- Catch-up: «Rückstand aufgeholt ✓», sobald das Ziel inkl. Rückstand erreicht ist
+- «Rückgängig» nach Button-Druck und direkter Eingabe
+- Strengere Eingaben: Kommazahlen an der `today`-Number werden mit Fehler abgelehnt statt abgeschnitten; `true`/`false` gelten in Actions nicht als Zahl
 
 **Phase 4 – v0.2.0**
 - 4.a Heatmap (Wochen als Spalten, Montag oben, Intensität value/target, erfüllt/unerfüllt unterscheidbar, ausserhalb der Laufzeit grau)
