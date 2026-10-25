@@ -440,7 +440,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 8 | ~~Repo öffentlich schalten, Release `v0.1.0` als normaler Release mit dem CHANGELOG-Text erstellen, danach PR an `hacs/default`~~ – erledigt 2026-10-25: Repo öffentlich, HACS-Check grün, Release v0.1.0 mit ZIP, PR hacs/default#12634 (alle Prüfungen grün, Review durch HACS ausstehend) | – |
 | 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |
 
-**v0.1.1 – kleine Verbesserungen** (vom Maintainer beauftragt 2026-10-25)
+**v0.1.1 – kleine Verbesserungen** (vom Maintainer beauftragt 2026-10-25) – veröffentlicht 2026-10-25 als Release v0.1.1
 - Beendete Challenge: Abschlussansicht in der Card; `today`-Number und Buttons ausserhalb der Laufzeit nicht verfügbar
 - Catch-up: «Rückstand aufgeholt ✓», sobald das Ziel inkl. Rückstand erreicht ist
 - «Rückgängig» nach Button-Druck und direkter Eingabe
