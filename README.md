@@ -1,111 +1,158 @@
-# Daily Challenge
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/banner-dark.png">
+    <img alt="Daily Challenge – daily goals for Home Assistant, with streaks and its own card" src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/banner-light.png" width="900">
+  </picture>
+</p>
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
-[![GitHub Release](https://img.shields.io/github/v/release/Skylolerr/ha-daily-challenge)](https://github.com/Skylolerr/ha-daily-challenge/releases)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.10%2B-41BDF5.svg)](https://www.home-assistant.io)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<p align="center">
+  <a href="https://hacs.xyz/docs/faq/custom_repositories"><img alt="HACS custom repository" src="https://img.shields.io/badge/HACS-custom-41BDF5?logo=homeassistantcommunitystore&logoColor=white"></a>
+  <a href="https://github.com/Skylolerr/ha-daily-challenge/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Skylolerr/ha-daily-challenge?sort=semver&color=0c63b8"></a>
+  <img alt="Home Assistant 2026.10 or newer" src="https://img.shields.io/badge/Home%20Assistant-2026.10%2B-18BCF2?logo=homeassistant&logoColor=white">
+  <a href="https://github.com/Skylolerr/ha-daily-challenge/actions/workflows/validate.yml"><img alt="Validate" src="https://github.com/Skylolerr/ha-daily-challenge/actions/workflows/validate.yml/badge.svg"></a>
+  <a href="https://github.com/Skylolerr/ha-daily-challenge/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/Skylolerr/ha-daily-challenge/actions/workflows/tests.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/Skylolerr/ha-daily-challenge?color=555"></a>
+</p>
 
-Track quantity-based daily challenges in Home Assistant – "20 push-ups per day",
-"30 minutes of reading", "8 glasses of water" – with streaks, target vs. actual over
-the whole challenge and its own dashboard card.
+<p align="center">
+  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=Skylolerr&repository=ha-daily-challenge&category=integration"><img alt="Open this repository in HACS" src="https://my.home-assistant.io/badges/hacs_repository.svg"></a>
+  <a href="https://my.home-assistant.io/redirect/config_flow_start/?domain=daily_challenge"><img alt="Set up Daily Challenge" src="https://my.home-assistant.io/badges/config_flow_start.svg"></a>
+</p>
 
-**Not a sensor-triggered counter – a goal-based daily challenge tracker.**
+**Not a sensor-triggered counter – a goal-based daily challenge tracker.** Daily Challenge
+tracks amounts you want to reach every day – "20 push-ups", "30 minutes of reading",
+"8 glasses of water" – with streaks, target vs. actual over the whole challenge, an
+optional catch-up mode and its own dashboard card.
 
-> [!WARNING]
-> **Beta** – breaking changes are possible before 1.0. They are always listed in the
+> [!NOTE]
+> **Beta.** Breaking changes are possible before 1.0. They are always listed in the
 > [changelog](CHANGELOG.md), and your recorded data is migrated, never dropped.
 
-<p>
-  <img src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/card-dark.png" alt="Daily Challenge card in dark mode" width="320">
-  <img src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/card-light.png" alt="Daily Challenge card in light mode with the goal reached" width="320">
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/hero-dark.png">
+    <img alt="Three Daily Challenge cards: push-ups with an end date, reading in catch-up mode and water with today's goal reached" src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/hero-light.png">
+  </picture>
 </p>
+
+## See it in action
+
+<table>
+  <tr>
+    <td width="33%"><img alt="Tapping +5 fills the ring and reaches today's goal; Undo in the message takes it back" src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/buttons.gif"></td>
+    <td width="33%"><img alt="A long press on the value opens an input; 32 and Enter set today's value" src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/input.gif"></td>
+    <td width="33%"><img alt="In catch-up mode +10 and +5 make up yesterday's deficit; the card says Deficit made up" src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/catch-up.gif"></td>
+  </tr>
+  <tr>
+    <td><b>One tap, with undo.</b> Quick buttons for your steps; every change can be taken back from the message that follows.</td>
+    <td><b>Type a value.</b> A long press on today's value opens an input – handy after a workout without the phone.</td>
+    <td><b>Catch up.</b> Yesterday's deficit raises today's target; make it up and your streak survives.</td>
+  </tr>
+</table>
 
 ## Features
 
-- **A daily amount, not a yes/no habit.** Each challenge has its own daily target and unit.
-- **Target vs. actual over the whole runtime.** See at a glance whether you are ahead or
-  behind, and – with an end date – how much is left until the end goal.
-- **Optional catch-up mode.** Yesterday's deficit raises today's target, so a missed day
+**Track your goal**
+
+- **A daily amount, not a yes/no habit** – each challenge has its own daily target, unit
+  and buttons.
+- **Target vs. actual over the whole runtime** – ahead or behind at a glance and, with an
+  end date, what is left, in how many days and the average still needed per day.
+- **Correct any past day** with the actions (and, from v0.2.0, directly in the card).
+
+**Stay motivated**
+
+- **Streaks** with a choice of rule (daily target reached, or any amount), plus best
+  streak, best day, daily average and weekly, monthly and yearly sums.
+- **Optional catch-up mode** – yesterday's deficit raises today's target, so a missed day
   can be made up on the following day without breaking the streak.
-- **Streaks** with a choice of rule (daily target reached, or any amount), plus best streak,
-  best day, daily average and weekly, monthly and yearly sums.
-- **Correct any past day** via actions (and, from v0.2.0, directly in the card).
-- **Its own card** with a progress ring, quick buttons, streak and target vs. actual – and
-  a visual editor. It is installed and registered automatically.
+- **Reminder blueprint** – a notification at 20:00 while today's goal is still open.
+
+**Fits into Home Assistant**
+
+- **Its own card** with a progress ring, quick buttons, undo, streak and target vs.
+  actual, and a visual editor – installed and registered automatically.
 - **Plain entities** that work just as well with Tile, Entities, Mushroom or ApexCharts.
-- Available in English, German, French and Italian.
-
-## Requirements
-
-- Home Assistant **2026.10** or newer
-- [HACS](https://hacs.xyz) for the recommended installation
+- **English, German, French and Italian**, light and dark theme, your number format.
 
 ## Installation
 
-### HACS (recommended)
+1. **HACS:** click *Open this repository in HACS* above, or add
+   `https://github.com/Skylolerr/ha-daily-challenge` under HACS → ⋮ → **Custom
+   repositories** with type **Integration**. Download **Daily Challenge** and restart
+   Home Assistant.
+2. **Set up:** click *Set up Daily Challenge* above, or Settings → Devices & services →
+   **Add integration** → **Daily Challenge**. Each challenge is its own entry; add the
+   integration again for another challenge.
+3. **Add the card:** *Edit dashboard* → *Add card* → **Daily Challenge**.
 
-[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Skylolerr&repository=ha-daily-challenge&category=integration)
+Requires Home Assistant **2026.10.0** or newer.
 
-Or manually in HACS:
+<details>
+<summary>Manual installation</summary>
 
-1. Open HACS, then **⋮ → Custom repositories**.
-2. Add `https://github.com/Skylolerr/ha-daily-challenge` with the type **Integration**.
-3. Search for **Daily Challenge**, open it and select **Download**.
-4. Restart Home Assistant.
+Download `daily_challenge.zip` from the
+[latest release](https://github.com/Skylolerr/ha-daily-challenge/releases/latest),
+extract it to `config/custom_components/daily_challenge/` and restart Home Assistant.
+</details>
 
-### Manual
+### Options
 
-1. Download `daily_challenge.zip` from the [latest release](https://github.com/Skylolerr/ha-daily-challenge/releases).
-2. Extract it to `config/custom_components/daily_challenge/`.
-3. Restart Home Assistant.
+Set when you add a challenge; all of them can be changed later via **Configure**.
 
-## Setup
-
-[![Open your Home Assistant instance and start setting up Daily Challenge.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=daily_challenge)
-
-Or go to **Settings → Devices & services → Add integration → Daily Challenge**.
-Each challenge is its own entry; add the integration again for another challenge.
-
-<img src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/setup-form.png" alt="Setup form of a new challenge" width="360">
-
-| Option | Default | Description |
+| Option | Default | Meaning |
 |---|---|---|
 | Name | – | Unique name of the challenge, also the device name. |
 | Icon | `mdi:trophy` | Shown in the card and on the "Today" entity. |
 | Unit | repetitions | Pick a suggestion (repetitions, minutes, km, pages, glasses) or type your own. |
-| Daily target | 20 | Whole number above 0. |
-| Start date | today | Cannot be in the future. |
+| Daily target | 20 | Whole number above 0. A new target applies from today on; past days keep theirs. |
+| Start date | today | Cannot be in the future. Moved later, the days before it are ignored but not deleted. |
 | End date | – | Optional. Enables what is left until the end goal, days left and the required average per day. |
 | Steps | 1, 5, 10 | Up to 3 amounts in ascending order. Each gets a **+** button; the smallest one is also used for **−**. |
 | Streak rule | Daily target reached | When a day counts towards the streak: *daily target reached* or *any amount above 0*. |
 | Deficit handling | Only show the deficit | *Only show the deficit*, or *Catch up*: yesterday's deficit raises today's target. |
 
-All options can be changed later via **Configure**:
+<details>
+<summary>The setup form</summary>
 
-- A new **daily target** applies from today on. Past days keep the target they had.
-- Changed **steps** replace the buttons; buttons of removed steps are deleted.
-- A **start date** moved to later ignores the days before it, but does not delete them.
+<p align="center">
+  <img alt="The form for a new daily challenge" src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/setup-form.png" width="360">
+</p>
+</details>
 
-## How it works
+## Card
 
-- **Target to date** is the sum of the daily targets from the start date up to and
-  including today. **Ahead / behind** is the total minus that target – so it is negative
-  in the morning until today's amount is done.
-- **Today's target** is the daily target. In **catch-up mode** it also includes what was
-  missing yesterday – only yesterday; older deficits are not carried along and a lead
-  never lowers it.
-- **Streaks:** a day counts if it meets the streak rule. Today never breaks the streak
-  while it is still running; it counts as soon as it is fulfilled. Without catch-up a
-  missed day ends the streak. In catch-up mode with the "daily target" rule, a missed day
-  still counts if the **following day** makes up both targets together – so yesterday can
-  be rescued today, but nothing older. While yesterday is still open, today only counts
-  once it reaches its target **including** yesterday's deficit. Working ahead does not
-  count for later days.
-- **Midnight:** nothing is reset. A new day simply reads a new date, so restarts, daylight
-  saving time and Home Assistant being off over midnight are no problem.
-- **Required per day** spreads what is still missing for the end goal over the days left,
-  today included. It goes down as soon as you log today's amount.
-- After the **end date** no values are accepted for new days; past days stay editable.
+The card comes with the integration and is registered as a dashboard resource
+automatically. Add it in the dashboard editor (*Add card* → **Daily Challenge**) or in
+YAML:
+
+```yaml
+type: custom:daily-challenge-card
+entity: number.push_ups_today   # any entity of the challenge
+show_streak: true               # current and best streak in the header
+show_target_vs_actual: true     # actual vs. target with ahead/behind
+show_remaining: true            # what is left until the end goal, in how many days
+show_required_average: true     # the average still needed per day
+show_catch_up: true             # the deficit in today's target in catch-up mode
+show_buttons: true              # the − and + buttons
+```
+
+All parts are shown by default; the visual editor has a switch for each. Today's value
+and the progress ring are always shown.
+
+| To … | Do this |
+|---|---|
+| Add a step | Tap **+5** (or another step) |
+| Take back the last change | Tap **Undo** in the message that follows (8 seconds) |
+| Type today's value | Long press (or Enter) on the value, type, Enter |
+| See yesterday's deficit | In catch-up mode the card shows *Today: 20 + 10 deficit*, then *Deficit made up ✓* |
+| See how a finished challenge went | After the end date the card shows the total against the end goal |
+
+<p align="center">
+  <img alt="A finished challenge: 136 of 155 km, Challenge finished · 87 %" src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/card-finished.png" width="340">
+</p>
+
+The card follows your theme, language and number format.
 
 ## Entities
 
@@ -115,7 +162,7 @@ they look like `number.push_ups_heute` or `sensor.push_ups_notig_pro_tag`.
 
 | Entity | Example ID | Description |
 |---|---|---|
-| Today | `number.push_ups_today` | Today's value, directly settable. |
+| Today | `number.push_ups_today` | Today's value, directly settable. Unavailable before the start and after the end date. |
 | +n / −n | `button.push_ups_add_5`, `button.push_ups_subtract` | Add a step or subtract the smallest step (never below 0). |
 | Today's target | `sensor.push_ups_today_s_target` | Effective target of today. Attributes `daily_target` and `deficit`. |
 | Progress | `sensor.push_ups_progress` | Today's progress in % (up to 999 %). |
@@ -130,52 +177,15 @@ they look like `number.push_ups_heute` or `sensor.push_ups_notig_pro_tag`.
 | Goal reached today | `binary_sensor.push_ups_goal_reached_today` | On once today's target is reached. |
 | Target to date, Daily average, This week, This month, This year | `sensor.push_ups_target_to_date`, … | Diagnostic sensors. Weeks start on Monday. |
 
-The quantity sensors use the unit of the challenge.
-
-## Card
-
-The card is installed and registered as a dashboard resource automatically. Add it via
-**Edit dashboard → Add card → Daily Challenge**, or in YAML:
-
-```yaml
-type: custom:daily-challenge-card
-entity: number.push_ups_today
-```
-
-`entity` can be any entity of the challenge; the card finds the others. The visual editor
-lets you pick the challenge from a list and switch parts of the card on or off:
-
-| Option | Default | Shows |
-|---|---|---|
-| `show_streak` | `true` | Current and best streak in the header |
-| `show_target_vs_actual` | `true` | Actual vs. target with ahead/behind |
-| `show_remaining` | `true` | What is left until the end goal and in how many days |
-| `show_required_average` | `true` | The average still needed per day |
-| `show_catch_up` | `true` | The deficit in today's target in catch-up mode |
-| `show_buttons` | `true` | The − and + buttons |
-
-Today's value and the progress ring are always shown.
-
-<img src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/card-catch-up.png" alt="Card in catch-up mode with yesterday's deficit added to today's target" width="320">
-
-- Header with icon, name, current and best streak
-- Today's value with a progress ring against today's target – full in the success colour
-  once the goal is reached
-- **−** and **+n** buttons; **long press** (or Enter) on the value to type a value directly
-- Target vs. actual with ahead/behind; with an end date also what is left, in how many
-  days and the average still needed per day; the deficit marked in catch-up mode
-- Follows your theme (light and dark), language and number format
+The quantity sensors use the unit of the challenge; the averages use it per day.
 
 ## Actions
 
-All actions take the challenge as `config_entry_id` (pick it in the UI).
-Dates must lie between the start date (and end date) of the challenge and today.
-
-### `daily_challenge.add`
-
-Adds an amount to a day; negative amounts subtract. The result never drops below 0.
+All actions take the challenge as `config_entry_id` (pick it in the UI). Dates must lie
+between the start date (and end date) of the challenge and today.
 
 ```yaml
+# Add an amount to a day; negative amounts subtract, the result never drops below 0.
 action: daily_challenge.add
 data:
   config_entry_id: 01J0EXAMPLE
@@ -183,11 +193,8 @@ data:
   date: "2026-11-03" # optional, defaults to today
 ```
 
-### `daily_challenge.set`
-
-Sets the value of a day; `0` removes the entry.
-
 ```yaml
+# Set the value of a day; 0 removes the entry.
 action: daily_challenge.set
 data:
   config_entry_id: 01J0EXAMPLE
@@ -195,7 +202,8 @@ data:
   date: "2026-11-03" # optional, defaults to today
 ```
 
-### `daily_challenge.get_history`
+<details>
+<summary><code>daily_challenge.get_history</code> – values, targets and streak days of a range</summary>
 
 Returns values, targets and streak fulfilment for a date range (default: the whole
 challenge up to today).
@@ -222,6 +230,7 @@ fulfilled:
   "2026-11-02": false
   "2026-11-03": true
 ```
+</details>
 
 ## Reminder blueprint
 
@@ -233,7 +242,8 @@ and what should happen – by default a notification in Home Assistant. In your 
 notification you can use `{{ challenge }}`, `{{ done }}`, `{{ target }}`,
 `{{ remaining }}` and `{{ unit }}`, e.g. *"Still {{ remaining }} {{ unit }} to go today"*.
 
-## Example: evening reminder (YAML)
+<details>
+<summary>The same as a plain YAML automation</summary>
 
 ```yaml
 automation:
@@ -252,8 +262,36 @@ automation:
             Still {{ states('sensor.push_ups_today_s_target') | int
             - states('number.push_ups_today') | int }} push-ups to go today!
 ```
+</details>
 
-## Known limitations
+<details>
+<summary><b>How it works</b></summary>
+
+- **Target to date** is the sum of the daily targets from the start date up to and
+  including today. **Ahead / behind** is the total minus that target – so it is negative
+  in the morning until today's amount is done.
+- **Today's target** is the daily target. In **catch-up mode** it also includes what was
+  missing yesterday – only yesterday; older deficits are not carried along and a lead
+  never lowers it.
+- **Streaks:** a day counts if it meets the streak rule. Today never breaks the streak
+  while it is still running; it counts as soon as it is fulfilled. Without catch-up a
+  missed day ends the streak. In catch-up mode with the "daily target" rule, a missed day
+  still counts if the **following day** makes up both targets together – so yesterday can
+  be rescued today, but nothing older. While yesterday is still open, today only counts
+  once it reaches its target **including** yesterday's deficit. Working ahead does not
+  count for later days.
+- **Midnight:** nothing is reset. A new day simply reads a new date, so restarts, daylight
+  saving time and Home Assistant being off over midnight are no problem.
+- **Required per day** spreads what is still missing for the end goal over the days left,
+  today included. It goes down as soon as you log today's amount.
+- After the **end date** today's value and the buttons are unavailable; past days stay
+  editable through the actions.
+- Each challenge keeps its days in `.storage/daily_challenge.<entry_id>`; the entities are
+  calculated from it.
+</details>
+
+<details>
+<summary><b>Known limitations</b></summary>
 
 - There are no rest or skip days – "daily" means every day.
 - A day always ends at local midnight.
@@ -262,8 +300,10 @@ automation:
 - Only "at least" challenges: an upper limit such as "at most one coffee" is not
   supported yet.
 - Long-term statistics are not filled in retroactively when a past day is corrected.
+</details>
 
-## Troubleshooting
+<details>
+<summary><b>Troubleshooting</b></summary>
 
 - **The card is missing in the card picker or looks outdated:** reload the page. In the
   Companion app use *Settings → Companion app → Troubleshooting → Reset frontend cache*.
@@ -279,8 +319,10 @@ automation:
     logs:
       custom_components.daily_challenge: debug
   ```
+</details>
 
-## Removal
+<details>
+<summary><b>Removal</b></summary>
 
 1. **Settings → Devices & services → Daily Challenge**, then delete each challenge
    (**⋮ → Delete**). This also deletes its recorded data. The card resource is removed
@@ -288,14 +330,10 @@ automation:
 2. Remove the integration in HACS (**⋮ → Remove**), or delete
    `config/custom_components/daily_challenge/` for a manual installation.
 3. Restart Home Assistant.
+</details>
 
-## Translations
-
-The integration and the card are available in English, German, French and Italian.
-The French and Italian translations are new – **community review welcome!** Please
-open an issue or pull request if something reads oddly.
-
-## Development
+<details>
+<summary><b>Development</b></summary>
 
 ```bash
 python -m venv .venv
@@ -309,8 +347,29 @@ cd card && npm ci && npm run typecheck && npm test && npm run build
 
 The card bundle in `custom_components/daily_challenge/frontend/` is built from `card/` and
 committed. Deploy to your own Home Assistant instance with `scripts/deploy.sh`
-(see `.env.example`).
+(see `.env.example`); releases are made with `scripts/release.sh` (see
+[docs/releasing.md](docs/releasing.md)).
+</details>
+
+## Translations
+
+English and German are maintained by the author; French and Italian are new – community
+review is welcome.
+
+Missing your language? Open an
+[issue](https://github.com/Skylolerr/ha-daily-challenge/issues) and it will gladly be
+added. Translations and corrections from users are very welcome, as an issue or a pull
+request. The texts are in two places:
+
+- `custom_components/daily_challenge/translations/<language>.json` (setup, options,
+  entities, actions and messages; English base: `en.json`)
+- `card/src/translations/<language>.ts` (the card and its editor; English base: `en.ts`)
+
+Copy the English file, translate the texts and keep the keys and `{placeholders}` as they
+are. You do not need to build anything; registering the new language is done when it is
+merged.
 
 ## License
 
-[MIT](LICENSE) © Skylolerr
+MIT © Skylolerr – see [LICENSE](LICENSE). Changes are listed in the
+[changelog](CHANGELOG.md).
