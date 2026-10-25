@@ -14,11 +14,20 @@ import type {
 export const CARD_TYPE = "daily-challenge-card";
 export const LONG_PRESS_MS = 500;
 export const LOOKUP_RETRY_MS = 5000;
+/** How long the undo message stays. */
+export const UNDO_MS = 5000;
 
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const NOT_LOADED = Symbol("not loaded");
 const INACTIVE_STATES = new Set(["unknown", "unavailable"]);
+
+/** A message in Home Assistant's toast, optionally with an action button. */
+interface Toast {
+  message: string;
+  duration?: number;
+  action?: { text: string; action: () => void };
+}
 
 /** Find the "today" entity of the first challenge without a round trip. */
 export function findStubEntity(hass: HomeAssistant | undefined): string {
@@ -93,6 +102,9 @@ export class DailyChallengeCard extends LitElement {
 
   getCardSize(): number {
     // Rows of 50 px: header, ring (4), summary lines and buttons.
+    if (this._ended()) {
+      return 6;
+    }
     const summaryLines =
       Number(this._show("show_target_vs_actual")) +
       Number(this._show("show_remaining") || this._show("show_required_average"));
@@ -209,28 +221,70 @@ export class DailyChallengeCard extends LitElement {
     return Number.isFinite(value) ? value : undefined;
   }
 
+  /** Call a service; errors are shown as a message. Returns whether it worked. */
   private async _call(
     domain: string,
     service: string,
     data: Record<string, unknown>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       await this.hass?.callService(domain, service, data);
+      return true;
     } catch (err) {
-      this.dispatchEvent(
-        new CustomEvent("hass-notification", {
-          detail: { message: err instanceof Error ? err.message : String(err) },
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      this._notify({ message: err instanceof Error ? err.message : String(err) });
+      return false;
     }
   }
 
-  private _press(key: string): void {
-    const entityId = this._challenge?.entities[key];
-    if (entityId) {
-      void this._call("button", "press", { entity_id: entityId });
+  private _notify(toast: Toast): void {
+    this.dispatchEvent(
+      new CustomEvent("hass-notification", {
+        detail: toast,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  /** Show what changed with a button that takes it back. */
+  private _offerUndo(
+    challenge: ChallengeInfo,
+    change: string,
+    service: "add" | "set",
+    data: Record<string, number>,
+  ): void {
+    this._notify({
+      message: localize(this.hass, "change", { name: challenge.name, change }),
+      duration: UNDO_MS,
+      action: {
+        text: localize(this.hass, "undo"),
+        action: () =>
+          void this._call("daily_challenge", service, {
+            config_entry_id: challenge.entry_id,
+            ...data,
+          }),
+      },
+    });
+  }
+
+  private async _press(key: string): Promise<void> {
+    const challenge = this._challenge;
+    const entityId = challenge?.entities[key];
+    if (!challenge || !entityId) {
+      return;
+    }
+    const before = this._number("today");
+    const step =
+      key === "subtract"
+        ? -(addSteps(challenge.entities)[0] ?? 0)
+        : Number(key.slice("add_".length));
+    // The minus button never goes below 0, so it may take off less.
+    const change = before !== undefined && step < 0 ? Math.max(step, -before) : step;
+    if ((await this._call("button", "press", { entity_id: entityId })) && change) {
+      // Undo by the change, so quick presses in a row stay correct.
+      this._offerUndo(challenge, formatDelta(this.hass, change), "add", {
+        amount: -change,
+      });
     }
   }
 
@@ -292,9 +346,13 @@ export class DailyChallengeCard extends LitElement {
       input.value.trim() !== "" &&
       Number.isInteger(value) &&
       value >= 0 &&
-      value !== current
+      value !== current &&
+      (await this._call("number", "set_value", { entity_id: entityId, value })) &&
+      this._challenge
     ) {
-      await this._call("number", "set_value", { entity_id: entityId, value });
+      this._offerUndo(this._challenge, formatNumber(this.hass, value), "set", {
+        value: current,
+      });
     }
   }
 
@@ -343,15 +401,24 @@ export class DailyChallengeCard extends LitElement {
     </div>`;
   }
 
+  /** Whether the end date has passed (only challenges with one can end). */
+  private _ended(): boolean {
+    return this._number("days_left") === 0;
+  }
+
   /** Whether a part of the card is shown (all are by default). */
   private _show(option: DisplayOption): boolean {
     return this._config?.[option] !== false;
   }
 
   private _renderValue(challenge: ChallengeInfo) {
-    const value = this._number("today");
-    const target = this._number("today_target");
-    const reached = this._state("goal_reached_today") === "on";
+    // After the end the card shows the total against the end goal.
+    const ended = this._ended();
+    const value = this._number(ended ? "total" : "today");
+    const target = this._number(ended ? "target_to_date" : "today_target");
+    const reached = ended
+      ? value !== undefined && target !== undefined && value >= target
+      : this._state("goal_reached_today") === "on";
     const progress = reached
       ? 1
       : value !== undefined && target
@@ -374,7 +441,9 @@ export class DailyChallengeCard extends LitElement {
             transform="rotate(-90 60 60)"
           ></circle>`}
       </svg>
-      ${this._editing
+      ${ended
+        ? html`<div class="value">${this._renderFigures(value, target, unit)}</div>`
+        : this._editing
         ? html`<input
             class="value-input"
             type="number"
@@ -399,20 +468,45 @@ export class DailyChallengeCard extends LitElement {
             @contextmenu=${(ev: Event) => ev.preventDefault()}
             @keydown=${this._valueKeyDown}
           >
-            <span class="number"
-              >${value === undefined ? "–" : formatNumber(this.hass, value)}</span
-            >
-            <span class="target"
-              >/ ${target === undefined
-                ? "–"
-                : formatNumber(this.hass, target)}</span
-            >
-            <span class="unit">${unit}</span>
+            ${this._renderFigures(value, target, unit)}
           </div>`}
     </div>`;
   }
 
+  private _renderFigures(
+    value: number | undefined,
+    target: number | undefined,
+    unit: string,
+  ) {
+    const format = (figure: number | undefined) =>
+      figure === undefined ? "–" : formatNumber(this.hass, figure);
+    return html`<span class="number">${format(value)}</span>
+      <span class="target">/ ${format(target)}</span>
+      <span class="unit">${unit}</span>`;
+  }
+
+  /** "Challenge finished · 90 %", or the reached goal. */
+  private _renderFinished() {
+    const hass = this.hass;
+    const total = this._number("total");
+    const target = this._number("target_to_date");
+    if (total === undefined || target === undefined) {
+      return nothing;
+    }
+    // Rounded down, so 100 % only shows when the goal was really reached.
+    const message =
+      total >= target
+        ? localize(hass, "finished_goal_reached")
+        : localize(hass, "finished", {
+            percent: formatNumber(hass, target ? Math.floor((total / target) * 100) : 0),
+          });
+    return html`<div class="summary"><div class="finished">${message}</div></div>`;
+  }
+
   private _renderSummary() {
+    if (this._ended()) {
+      return this._renderFinished();
+    }
     const hass = this.hass;
     const total = this._number("total");
     const targetToDate = this._number("target_to_date");
@@ -469,10 +563,12 @@ export class DailyChallengeCard extends LitElement {
     if (this._show("show_catch_up") && catchUp) {
       lines.push(
         html`<div class="catch-up">
-          ${localize(hass, "catch_up", {
-            target: formatNumber(hass, dailyTarget),
-            deficit: formatNumber(hass, deficit),
-          })}
+          ${this._state("goal_reached_today") === "on"
+            ? localize(hass, "caught_up")
+            : localize(hass, "catch_up", {
+                target: formatNumber(hass, dailyTarget),
+                deficit: formatNumber(hass, deficit),
+              })}
         </div>`,
       );
     }
@@ -519,7 +615,7 @@ export class DailyChallengeCard extends LitElement {
   }
 
   private _renderButtons(challenge: ChallengeInfo) {
-    if (!this._show("show_buttons")) {
+    if (!this._show("show_buttons") || this._ended()) {
       return nothing;
     }
     // Disabled entities are listed by the backend but have no state.

@@ -335,6 +335,97 @@ describe("buttons", () => {
   });
 });
 
+describe("undo", () => {
+  type Toast = {
+    message: string;
+    duration?: number;
+    action?: { text: string; action: () => void };
+  };
+
+  function toasts(): Toast[] {
+    const list: Toast[] = [];
+    document.body.addEventListener("hass-notification", (ev) =>
+      list.push((ev as CustomEvent<Toast>).detail),
+    );
+    return list;
+  }
+
+  it("offers to undo a plus button by taking the step back", async () => {
+    const hass = makeHass();
+    const card = await createCard(hass);
+    const shown = toasts();
+    buttons(card)[2].click();
+    await settle(card);
+    expect(shown).toHaveLength(1);
+    expect(shown[0].message).toBe("Push-ups: +5");
+    expect(shown[0].action?.text).toBe("Undo");
+    shown[0].action?.action();
+    expect(hass.callService).toHaveBeenLastCalledWith("daily_challenge", "add", {
+      config_entry_id: "push_ups",
+      amount: -5,
+    });
+    // Undoing does not offer another undo.
+    await settle(card);
+    expect(shown).toHaveLength(1);
+  });
+
+  it("gives back only what the minus button took off", async () => {
+    const hass = makeHass({ today: "0" });
+    const card = await createCard(hass);
+    const shown = toasts();
+    buttons(card)[0].click();
+    await settle(card);
+    // Nothing changed at 0, so there is nothing to undo.
+    expect(shown).toEqual([]);
+
+    hass.states[ENTITIES.today] = entity(ENTITIES.today, "15");
+    card.hass = { ...hass };
+    await settle(card);
+    buttons(card)[0].click();
+    await settle(card);
+    expect(shown[0].message).toBe("Push-ups: −1");
+    shown[0].action?.action();
+    expect(hass.callService).toHaveBeenLastCalledWith("daily_challenge", "add", {
+      config_entry_id: "push_ups",
+      amount: 1,
+    });
+  });
+
+  it("offers to undo a typed value", async () => {
+    const hass = makeHass();
+    hass.locale = { language: "de" };
+    const card = await createCard(hass);
+    const shown = toasts();
+    vi.useFakeTimers();
+    root(card).querySelector(".value")?.dispatchEvent(new Event("pointerdown"));
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    vi.useRealTimers();
+    await settle(card);
+    const field = root(card).querySelector("input") as HTMLInputElement;
+    field.value = "30";
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    await settle(card);
+    expect(shown[0].message).toBe("Push-ups: 30");
+    expect(shown[0].action?.text).toBe("Rückgängig");
+    shown[0].action?.action();
+    expect(hass.callService).toHaveBeenLastCalledWith("daily_challenge", "set", {
+      config_entry_id: "push_ups",
+      value: 15,
+    });
+  });
+
+  it("offers no undo when the call failed", async () => {
+    const hass = makeHass();
+    hass.callService = vi.fn().mockRejectedValue(new Error("Not loaded"));
+    const card = await createCard(hass);
+    const shown = toasts();
+    buttons(card)[1].click();
+    await settle(card);
+    expect(shown.map((toast) => toast.message)).toEqual(["Not loaded"]);
+    expect(shown[0].action).toBeUndefined();
+  });
+});
+
 describe("direct input", () => {
   function value(card: DailyChallengeCard): HTMLElement {
     return root(card).querySelector(".value") as HTMLElement;
@@ -551,11 +642,61 @@ describe("summary", () => {
     );
   });
 
-  it("falls back to the plain remaining amount after the end", async () => {
-    const card = await createCard(
-      summaryHass({ remaining: "40", days_left: "0", required_per_day: "unknown" }),
-    );
-    expect(text(root(card).querySelector(".remaining"))).toBe("40 left to goal");
+  describe("ended challenge", () => {
+    const ENDED = {
+      today: "unavailable",
+      today_target: "unknown",
+      goal_reached_today: "unknown",
+      total: "1260",
+      target_to_date: "1400",
+      delta: "-140",
+      remaining: "140",
+      days_left: "0",
+      required_per_day: "unknown",
+      add_1: "unavailable",
+      add_5: "unavailable",
+      add_10: "unavailable",
+      subtract: "unavailable",
+    };
+
+    it("shows the total against the end goal instead of today", async () => {
+      const card = await createCard(summaryHass(ENDED));
+      expect(text(root(card).querySelector(".value"))).toBe(
+        "1,260 / 1,400 repetitions",
+      );
+      expect(ringOffset(card)).toBeCloseTo(CIRCUMFERENCE * 0.1);
+      expect(summary(card)).toBe("Challenge finished · 90%");
+      expect(buttons(card)).toEqual([]);
+      expect(root(card).querySelector(".value")?.getAttribute("role")).toBeNull();
+      // Header, ring and the summary line; no buttons.
+      expect(card.getCardSize()).toBe(6);
+    });
+
+    it("rounds the share down so 100 % means the goal was reached", async () => {
+      const card = await createCard(
+        summaryHass({ ...ENDED, total: "1399" }, undefined, "de"),
+      );
+      expect(summary(card)).toBe("Challenge abgeschlossen · 99 %");
+    });
+
+    it("celebrates a reached end goal", async () => {
+      const card = await createCard(
+        summaryHass({ ...ENDED, total: "1500", delta: "100", remaining: "0" }),
+      );
+      expect(summary(card)).toBe("Challenge finished · goal reached ✓");
+      expect(root(card).querySelector(".progress.reached")).not.toBeNull();
+      expect(ringOffset(card)).toBeCloseTo(0);
+    });
+
+    it("does not open the input after the end", async () => {
+      const card = await createCard(summaryHass(ENDED));
+      vi.useFakeTimers();
+      root(card).querySelector(".value")?.dispatchEvent(new Event("pointerdown"));
+      vi.advanceTimersByTime(LONG_PRESS_MS);
+      vi.useRealTimers();
+      await settle(card);
+      expect(root(card).querySelector("input")).toBeNull();
+    });
   });
 
   it("shows the average in German with decimals", async () => {
@@ -665,6 +806,19 @@ describe("summary", () => {
       "Today: 20 + 10 deficit",
     );
     expect(text(root(card).querySelector(".target"))).toBe("/ 30");
+  });
+
+  it("confirms a made-up deficit once today's goal is reached", async () => {
+    const card = await createCard(
+      summaryHass(
+        { today: "30", today_target: "30", goal_reached_today: "on" },
+        { daily_target: 20, deficit: 10 },
+        "de",
+      ),
+    );
+    expect(text(root(card).querySelector(".catch-up"))).toBe(
+      "Rückstand aufgeholt ✓",
+    );
   });
 
   it("does not mark a deficit that only is displayed", async () => {
