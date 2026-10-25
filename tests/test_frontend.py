@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -19,8 +21,16 @@ from custom_components.daily_challenge.frontend import card_hash
 from .conftest import make_options
 
 CARD_URL = "/daily_challenge/daily-challenge-card.js"
+VERSION = json.loads(
+    (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "daily_challenge"
+        / "manifest.json"
+    ).read_text(encoding="utf-8")
+)["version"]
 # Version from the manifest plus a hash of the bundle content.
-VERSIONED_URL = f"{CARD_URL}?v=0.1.0-{card_hash()}"
+VERSIONED_URL = f"{CARD_URL}?v={VERSION}-{card_hash()}"
 OTHER_RESOURCE = {"id": "other", "type": "module", "url": "/local/other-card.js"}
 
 
@@ -103,7 +113,9 @@ async def test_same_version_with_other_content_is_updated(
         "minor_version": 1,
         "key": "lovelace_resources",
         "data": {
-            "items": [{"id": "card", "type": "module", "url": f"{CARD_URL}?v=0.1.0"}]
+            "items": [
+                {"id": "card", "type": "module", "url": f"{CARD_URL}?v={VERSION}"}
+            ]
         },
     }
     config_entry.add_to_hass(hass)
@@ -111,7 +123,7 @@ async def test_same_version_with_other_content_is_updated(
     await hass.async_block_till_done()
 
     assert resources(hass) == [{"id": "card", "type": "module", "url": VERSIONED_URL}]
-    assert VERSIONED_URL.startswith(f"{CARD_URL}?v=0.1.0-")
+    assert VERSIONED_URL.startswith(f"{CARD_URL}?v={VERSION}-")
     assert len(VERSIONED_URL.rsplit("-", 1)[1]) == 8
 
 
