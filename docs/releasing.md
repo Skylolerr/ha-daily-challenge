@@ -15,20 +15,28 @@ attaches `daily_challenge.zip`.
 
 2. Set the version in `custom_components/daily_challenge/manifest.json` and
    `card/package.json`, rebuild the card (`cd card && npm run build`).
-3. In `CHANGELOG.md`, replace `unreleased` with the date (`YYYY-MM-DD`) and add the
-   compare link at the bottom. Mark breaking changes under **Breaking changes**.
-4. Commit (`Release vX.Y.Z`) and push.
-5. Create the release with the changelog section as notes. Releases are normal releases,
-   not pre-releases, so HACS shows them without the beta switch; the README says the
-   integration is in beta before 1.0.
+3. In `CHANGELOG.md`, move the entries from `[Unreleased]` into a new section
+   `## [X.Y.Z] - YYYY-MM-DD` and update the compare links at the bottom. Each section
+   starts with `> **Highlight:** …` (one sentence), uses the headings `### ✨ Added`,
+   `### 🔄 Changed`, `### 🐛 Fixed` (and **Breaking** where needed) and ends with
+   `*Tested with Home Assistant X · minimum Y*` – only name a release you really tested
+   with. The section is the text of the GitHub release that HACS and Home Assistant show.
+4. Commit (`Release vX.Y.Z`) and push, and wait for green Validate and Tests runs.
+5. Create the release:
 
    ```bash
-   VERSION=0.1.0
-   awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{found=0} found && !/^\[/" CHANGELOG.md > notes.md
-   gh release create "v${VERSION}" --title "v${VERSION}" --notes-file notes.md
-   rm notes.md
+   scripts/release.sh --dry-run   # checks and prints the notes
+   scripts/release.sh
    ```
 
+   The script checks that `main` is clean and pushed, the versions match, the changelog
+   section exists, the tag is new and CI is green. It joins wrapped lines (GitHub shows
+   every line break in release notes) and adds links to the documentation, issues and
+   all changes since the previous release. Releases are normal releases, not
+   pre-releases, so HACS shows them without the beta switch; the README says the
+   integration is in beta before 1.0. `scripts/release.sh --notes X.Y.Z` prints the
+   notes of any version, e.g. to update an existing release with
+   `gh release edit vX.Y.Z --notes-file …`.
 6. Check that `release.yml` succeeded and the release has `daily_challenge.zip`.
 7. Update via HACS on your own instance and restart Home Assistant.
 
