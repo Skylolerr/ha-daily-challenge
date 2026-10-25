@@ -5,6 +5,29 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Before 1.0, minor releases may contain
 breaking changes; they are always listed under **Breaking changes**.
 
+## [0.1.1] – 2026-10-25
+
+Small improvements after the first release.
+
+### Added
+
+- Card: an undo button in the message after every button press or typed value.
+- Card: after the end date the card shows the total against the end goal, e.g.
+  "Challenge finished · 90 %" or "goal reached ✓", instead of an empty day.
+- Card: in catch-up mode it says "Deficit made up ✓" once today's goal including
+  yesterday's deficit is reached.
+
+### Changed
+
+- Today's value and the buttons are unavailable before the start and after the end date
+  instead of rejecting input with an error. Past days stay editable through the actions.
+- The daily average sensor now has the unit `<unit>/d`, like the required average.
+
+### Fixed
+
+- Setting today's value to a fraction (e.g. 12.5) is rejected instead of cut off, and
+  actions no longer accept `true`/`false` as a number.
+
 ## [0.1.0] – 2026-10-25
 
 First public beta.
@@ -39,4 +62,5 @@ First public beta.
 - Translations: English, German, French and Italian (French and Italian open for
   community review).
 
+[0.1.1]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Skylolerr/ha-daily-challenge/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 {
   "name": "daily-challenge-card",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Lovelace card for the Daily Challenge Home Assistant integration",
   "license": "MIT",
   "private": true,
