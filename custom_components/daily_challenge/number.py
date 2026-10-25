@@ -32,6 +32,7 @@ class TodayNumber(DailyChallengeEntity, NumberEntity):
     _attr_native_max_value = MAX_DAY_VALUE
     _attr_native_step = 1
     _attr_mode = NumberMode.BOX
+    _only_while_active = True
 
     def __init__(self, coordinator: ChallengeCoordinator) -> None:
         """Initialize the entity."""

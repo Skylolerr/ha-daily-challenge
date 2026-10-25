@@ -6,12 +6,20 @@ from typing import Any
 
 import pytest
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, STATE_UNKNOWN, EntityCategory
+from homeassistant.const import (
+    ATTR_UNIT_OF_MEASUREMENT,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    EntityCategory,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 
 from custom_components.daily_challenge.const import DOMAIN
 
@@ -169,7 +177,7 @@ async def test_set_number_rejects_fractions(
         )
     assert err.value.translation_key == "not_whole_number"
     assert err.value.translation_placeholders == {"value": "12.5"}
-    assert state(hass, "number.push_ups_today") =="0"
+    assert state(hass, "number.push_ups_today") == "0"
 
 
 @pytest.mark.parametrize(
@@ -267,10 +275,21 @@ async def test_ended_challenge(
     assert state(hass, "sensor.push_ups_progress") == STATE_UNKNOWN
     assert state(hass, "sensor.push_ups_total") == "45"
     assert state(hass, "sensor.push_ups_remaining") == "0"
-
-    with pytest.raises(ServiceValidationError) as err:
-        await press(hass, "button.push_ups_add_1")
-    assert err.value.translation_key == "date_after_end"
+    # Today's value and the buttons cannot be used any more.
+    for entity_id in (
+        "number.push_ups_today",
+        "button.push_ups_add_1",
+        "button.push_ups_subtract",
+    ):
+        assert state(hass, entity_id) == STATE_UNAVAILABLE
+    # Past days stay editable through the actions.
+    await hass.services.async_call(
+        DOMAIN,
+        "set",
+        {"config_entry_id": loaded_entry.entry_id, "value": 30, "date": "2026-11-03"},
+        blocking=True,
+    )
+    assert state(hass, "sensor.push_ups_total") == "50"
 
 
 async def test_start_in_future_after_time_travel(
@@ -285,6 +304,11 @@ async def test_start_in_future_after_time_travel(
     assert await hass.config_entries.async_reload(loaded_entry.entry_id)
     await hass.async_block_till_done()
     assert state(hass, "sensor.push_ups_today_s_target") == STATE_UNKNOWN
-    with pytest.raises(ServiceValidationError) as err:
-        await press(hass, "button.push_ups_add_1")
-    assert err.value.translation_key == "date_before_start"
+    assert state(hass, "number.push_ups_today") == STATE_UNAVAILABLE
+    assert state(hass, "button.push_ups_add_1") == STATE_UNAVAILABLE
+    # The start day makes them available again.
+    freezer.move_to("2026-11-10 08:00:00+01:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert state(hass, "number.push_ups_today") == "0"
+    assert state(hass, "button.push_ups_add_1") == STATE_UNKNOWN

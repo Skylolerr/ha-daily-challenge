@@ -54,6 +54,7 @@ class AddButton(DailyChallengeEntity, ButtonEntity):
     """Add a fixed amount to today's value."""
 
     _attr_translation_key = "add"
+    _only_while_active = True
 
     def __init__(self, coordinator: ChallengeCoordinator, step: int) -> None:
         """Initialize the button."""
@@ -71,6 +72,7 @@ class SubtractButton(DailyChallengeEntity, ButtonEntity):
     """Subtract the smallest step from today's value, never below 0."""
 
     _attr_translation_key = "subtract"
+    _only_while_active = True
 
     def __init__(self, coordinator: ChallengeCoordinator, step: int) -> None:
         """Initialize the button."""
