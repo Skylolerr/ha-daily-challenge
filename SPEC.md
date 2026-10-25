@@ -423,7 +423,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - 3.e2 **(M)** PR an `hacs/default` vom Account `Skylolerr`, sobald HACS-Check und Release grün sind
 - 3.f **(M)** Installation über HACS «Custom Repository» verifizieren
 
-**Offene Zuarbeit des Maintainers bis v0.1.0** (Stand 2026-10-24; README, CHANGELOG und Issue-Templates sind fertig)
+**Offene Zuarbeit des Maintainers bis v0.1.0** (Stand 2026-10-25; README, CHANGELOG und Issue-Templates sind fertig)
 
 | # | Was | Wofür / Format |
 |---|---|---|
@@ -434,7 +434,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |
 | 6 | ~~Entscheidung Catch-up-Regel~~ – erledigt 2026-10-23: nur der Vortag kann aufgeholt werden, kein Vorarbeiten (§6) | – |
 | 7 | ~~GitHub-Einstellungen: Beschreibung, Topics, Issues~~ – erledigt 2026-10-23 per `gh` | `hacs/action`-Job wird beim Öffentlich-Schalten wieder eingeschaltet (er prüft nur öffentliche Repos) |
-| 8 | Repo öffentlich schalten, Release `v0.1.0` als normaler Release mit dem CHANGELOG-Text erstellen, danach PR an `hacs/default` | 3.e/3.e2; Tag-Check und ZIP laufen automatisch; PR nur nach ausdrücklichem OK |
+| 8 | ~~Repo öffentlich schalten, Release `v0.1.0` als normaler Release mit dem CHANGELOG-Text erstellen, danach PR an `hacs/default`~~ – erledigt 2026-10-25: Repo öffentlich, HACS-Check grün, Release v0.1.0 mit ZIP, PR hacs/default#12634 (alle Prüfungen grün, Review durch HACS ausstehend) | – |
 | 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |
 
 **Phase 4 – v0.2.0**
