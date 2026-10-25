@@ -226,7 +226,7 @@ Ein Device pro Challenge, mit Name = Challenge-Name und `entry_type: service`. A
 | sensor | `remaining` | Rest bis Endziel | nur wenn `end_date` gesetzt |
 | sensor | `days_left` | verbleibende Tage inkl. heute | Einheit `d`, nur wenn `end_date` gesetzt |
 | sensor | `required_per_day` | nötiger Schnitt pro Tag bis zum Endziel | Einheit `<unit>/d`, measurement, 1 Dezimalstelle, nur wenn `end_date` gesetzt |
-| sensor | `average` | Ø pro Tag | 1 Dezimalstelle |
+| sensor | `average` | Ø pro Tag | Einheit `<unit>/d`, 1 Dezimalstelle |
 | sensor | `best_day` | bester Tageswert | Attribut `date` |
 | sensor | `this_week` / `this_month` / `this_year` | Summen | – |
 | binary_sensor | `goal_reached_today` | Tagesziel erreicht | Basis für Erinnerungen |

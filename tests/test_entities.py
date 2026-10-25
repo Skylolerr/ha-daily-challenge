@@ -61,6 +61,8 @@ async def test_sensor_states(
     total = hass.states.get("sensor.push_ups_total")
     assert total.attributes[ATTR_UNIT_OF_MEASUREMENT] == "repetitions"
     assert total.attributes["state_class"] == "total"
+    average = hass.states.get("sensor.push_ups_daily_average").attributes
+    assert average[ATTR_UNIT_OF_MEASUREMENT] == "repetitions/d"
     assert (
         hass.states.get("sensor.push_ups_progress").attributes[ATTR_UNIT_OF_MEASUREMENT]
         == "%"

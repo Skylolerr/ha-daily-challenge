@@ -128,6 +128,7 @@ SENSORS: tuple[ChallengeSensorDescription, ...] = (
         translation_key="average",
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
+        unit_suffix=f"/{UnitOfTime.DAYS}",
         value_fn=lambda s: s.average_per_day,
     ),
     ChallengeSensorDescription(
