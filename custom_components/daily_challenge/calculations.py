@@ -295,12 +295,6 @@ def calculate(
     week_start = today - timedelta(days=today.weekday())
     in_period = list(zip(period, values, strict=True))
 
-    current = _current_streak(period, fulfilled, settings, status)
-    best = _best_streak(period, fulfilled)
-    # The current streak may bridge a still rescuable yesterday.
-    if current.length >= best.length:
-        best = current
-
     return ChallengeStats(
         status=status,
         value_today=value_today,
@@ -326,8 +320,8 @@ def calculate(
             if (day.year, day.month) == (today.year, today.month)
         ),
         this_year=sum(v for day, v in in_period if day.year == today.year),
-        current_streak=current.length,
-        best_streak=best,
+        current_streak=_current_streak(period, fulfilled, settings, status).length,
+        best_streak=_best_streak(period, fulfilled),
     )
 
 
