@@ -16,6 +16,13 @@ and Home Assistant show when they offer the update.
 - Daily Challenge is in the HACS default store: search for it in HACS, no custom
   repository needed.
 
+### 🐛 Fixed
+
+- Long figures such as 100,000 or a total in the millions shrink to stay inside the
+  card's ring, and a long unit is cut off with "…" instead of leaving it.
+- Undo takes back only what a button really added when the day hit its upper limit of
+  100,000.
+
 ## [0.1.1] - 2026-10-25
 
 > **Highlight:** undo for every tap, and a summary once a challenge has ended.

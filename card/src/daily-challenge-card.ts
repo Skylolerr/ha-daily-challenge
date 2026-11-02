@@ -278,8 +278,10 @@ export class DailyChallengeCard extends LitElement {
       key === "subtract"
         ? -(addSteps(challenge.entities)[0] ?? 0)
         : Number(key.slice("add_".length));
-    // The minus button never goes below 0, so it may take off less.
-    const change = before !== undefined && step < 0 ? Math.max(step, -before) : step;
+    // The day stays within its limits, so a press may change less than the step.
+    const max = Number(this.hass?.states[challenge.entities.today]?.attributes.max);
+    const room = before !== undefined && max >= before ? max - before : step;
+    const change = before !== undefined && step < 0 ? Math.max(step, -before) : Math.min(step, room);
     if ((await this._call("button", "press", { entity_id: entityId })) && change) {
       // Undo by the change, so quick presses in a row stay correct.
       this._offerUndo(challenge, formatDelta(this.hass, change), "add", {
@@ -480,9 +482,15 @@ export class DailyChallengeCard extends LitElement {
   ) {
     const format = (figure: number | undefined) =>
       figure === undefined ? "–" : formatNumber(this.hass, figure);
-    return html`<span class="number">${format(value)}</span>
+    const number = format(value);
+    // The default size fits five digits; longer figures shrink to fit the ring.
+    const size =
+      number.length > 5
+        ? `font-size: ${Math.max(1, 13 / number.length).toFixed(2)}em`
+        : nothing;
+    return html`<span class="number" style=${size}>${number}</span>
       <span class="target">/ ${format(target)}</span>
-      <span class="unit">${unit}</span>`;
+      <span class="unit" title=${unit}>${unit}</span>`;
   }
 
   /** "Challenge finished · 90 %", or the reached goal. */
@@ -728,6 +736,12 @@ export class DailyChallengeCard extends LitElement {
     .unit {
       color: var(--secondary-text-color);
       font-size: 0.9em;
+    }
+    .unit {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .value-input {
       box-sizing: border-box;

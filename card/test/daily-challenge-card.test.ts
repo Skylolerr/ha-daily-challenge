@@ -272,6 +272,18 @@ describe("view", () => {
     expect(root(card).querySelector(".progress.reached")).not.toBeNull();
   });
 
+  it("shrinks long figures so they stay inside the ring", async () => {
+    const number = (card: DailyChallengeCard) =>
+      root(card).querySelector(".number") as HTMLElement;
+    const short = await createCard(makeHass({ today: "9999" }));
+    expect(number(short).getAttribute("style")).toBeNull();
+    const long = await createCard(makeHass({ today: "100000" }));
+    expect(text(number(long))).toBe("100,000");
+    expect(number(long).style.fontSize).toBe("1.86em");
+    const huge = await createCard(makeHass({ today: "1234567890" }));
+    expect(number(huge).style.fontSize).toBe("1em");
+  });
+
   it("caps the ring at a full circle", async () => {
     const card = await createCard(makeHass({ today: "30" }));
     expect(ringOffset(card)).toBe(0);
@@ -367,6 +379,31 @@ describe("undo", () => {
     // Undoing does not offer another undo.
     await settle(card);
     expect(shown).toHaveLength(1);
+  });
+
+  it("takes back only what fitted below the upper limit", async () => {
+    const hass = makeHass({ today: "99995" });
+    hass.states[ENTITIES.today].attributes.max = 100000;
+    const card = await createCard(hass);
+    const shown = toasts();
+    buttons(card)[3].click();
+    await settle(card);
+    expect(shown[0].message).toBe("Push-ups: +5");
+    shown[0].action?.action();
+    expect(hass.callService).toHaveBeenLastCalledWith("daily_challenge", "add", {
+      config_entry_id: "push_ups",
+      amount: -5,
+    });
+  });
+
+  it("offers no undo when the upper limit is already reached", async () => {
+    const hass = makeHass({ today: "100000" });
+    hass.states[ENTITIES.today].attributes.max = 100000;
+    const card = await createCard(hass);
+    const shown = toasts();
+    buttons(card)[1].click();
+    await settle(card);
+    expect(shown).toEqual([]);
   });
 
   it("gives back only what the minus button took off", async () => {
