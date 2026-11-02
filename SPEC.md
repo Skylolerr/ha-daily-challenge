@@ -387,7 +387,7 @@ Ziel: **früh öffentlich gehen**, sobald die Basisfunktionen stabil laufen. Dan
    - CHANGELOG.md
    - Repo-Beschreibung, Topics (`home-assistant`, `hacs`, `integration`, `habit-tracker`, `challenge`), Issues aktiviert, Issue-Templates (Bug/Feature)
    - Repo öffentlich schalten, GitHub-Release v0.1.0 als **normaler Release** (kein Pre-Release, damit HACS ihn ohne Beta-Schalter anzeigt; der Beta-Hinweis steht im README)
-   - Direkt danach PR an `hacs/default` vom Account `Skylolerr` (die Prüfung dort dauert laut HACS Monate)
+   - Direkt danach PR an `hacs/default` vom Account `Skylolerr` (gemerged am 2026-11-02, nach 8 Tagen)
    - Erinnerungs-Blueprint `blueprints/automation/daily_challenge/reminder.yaml` auf Basis von `goal_reached_today` (vorgezogen aus «Später», 2026-10-23), mit Import-Button im README
    - Installation über HACS «Custom Repository» auf der eigenen Instanz verifizieren
 4. **Phase 4 – v0.2.0:** Heatmap, Dialog zum Bearbeiten vergangener Tage, Statistik-Zeile.
@@ -437,7 +437,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 | 5 | ~~CI-Status im Actions-Tab~~ – erledigt 2026-10-23: Validate (Hassfest, Ruff/mypy, Card) und Tests grün | – |
 | 6 | ~~Entscheidung Catch-up-Regel~~ – erledigt 2026-10-23: nur der Vortag kann aufgeholt werden, kein Vorarbeiten (§6) | – |
 | 7 | ~~GitHub-Einstellungen: Beschreibung, Topics, Issues~~ – erledigt 2026-10-23 per `gh` | `hacs/action`-Job wird beim Öffentlich-Schalten wieder eingeschaltet (er prüft nur öffentliche Repos) |
-| 8 | ~~Repo öffentlich schalten, Release `v0.1.0` als normaler Release mit dem CHANGELOG-Text erstellen, danach PR an `hacs/default`~~ – erledigt 2026-10-25: Repo öffentlich, HACS-Check grün, Release v0.1.0 mit ZIP, PR hacs/default#12634 (alle Prüfungen grün, Review durch HACS ausstehend) | – |
+| 8 | ~~Repo öffentlich schalten, Release `v0.1.0` als normaler Release mit dem CHANGELOG-Text erstellen, danach PR an `hacs/default`~~ – erledigt 2026-10-25: Repo öffentlich, HACS-Check grün, Release v0.1.0 mit ZIP, PR hacs/default#12634 (von frenck genehmigt und am 2026-11-02 gemerged; Daily Challenge ist im HACS-Standardstore) | – |
 | 9 | Installation über HACS «Custom Repository» auf der eigenen Instanz | 3.f; ersetzt die per `deploy.sh` kopierte Version |
 
 **v0.1.1 – kleine Verbesserungen** (vom Maintainer beauftragt 2026-10-25) – veröffentlicht 2026-10-25 als Release v0.1.1

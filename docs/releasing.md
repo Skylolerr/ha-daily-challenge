@@ -69,4 +69,5 @@ Before step 5 above:
    - Fork `hacs/default`, add `Skylolerr/ha-daily-challenge` alphabetically to the
      `integration` file on a new branch from `master`, and fill in the PR template
      completely.
-   - Review takes months; until then users install via "Custom repositories".
+   - Done for v0.1.0: merged on 2026-11-02 after 8 days (hacs/default#12634). The
+     repository appears in HACS within about 8 hours after the merge.

@@ -11,6 +11,11 @@ and Home Assistant show when they offer the update.
 
 ## [Unreleased]
 
+### 🔄 Changed
+
+- Daily Challenge is in the HACS default store: search for it in HACS, no custom
+  repository needed.
+
 ## [0.1.1] - 2026-10-25
 
 > **Highlight:** undo for every tap, and a summary once a challenge has ended.

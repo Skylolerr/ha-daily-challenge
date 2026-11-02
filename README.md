@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="https://hacs.xyz/docs/faq/custom_repositories"><img alt="HACS custom repository" src="https://img.shields.io/badge/HACS-custom-41BDF5?logo=homeassistantcommunitystore&logoColor=white"></a>
+  <a href="https://hacs.xyz"><img alt="In the HACS default store" src="https://img.shields.io/badge/HACS-default-41BDF5?logo=homeassistantcommunitystore&logoColor=white"></a>
   <a href="https://github.com/Skylolerr/ha-daily-challenge/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Skylolerr/ha-daily-challenge?sort=semver&color=0c63b8"></a>
   <img alt="Home Assistant 2026.10 or newer" src="https://img.shields.io/badge/Home%20Assistant-2026.10%2B-18BCF2?logo=homeassistant&logoColor=white">
   <a href="https://github.com/Skylolerr/ha-daily-challenge/actions/workflows/validate.yml"><img alt="Validate" src="https://github.com/Skylolerr/ha-daily-challenge/actions/workflows/validate.yml/badge.svg"></a>
@@ -77,10 +77,8 @@ optional catch-up mode and its own dashboard card.
 
 ## Installation
 
-1. **HACS:** click *Open this repository in HACS* above, or add
-   `https://github.com/Skylolerr/ha-daily-challenge` under HACS → ⋮ → **Custom
-   repositories** with type **Integration**. Download **Daily Challenge** and restart
-   Home Assistant.
+1. **HACS:** open HACS, search for **Daily Challenge** and download it, or click *Open
+   this repository in HACS* above. Then restart Home Assistant.
 2. **Set up:** click *Set up Daily Challenge* above, or Settings → Devices & services →
    **Add integration** → **Daily Challenge**. Each challenge is its own entry; add the
    integration again for another challenge.
