@@ -11,6 +11,11 @@ and Home Assistant show when they offer the update.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-02
+
+> **Highlight:** Daily Challenge is in the HACS default store, and big numbers now fit
+> the card.
+
 ### 🔄 Changed
 
 - Daily Challenge is in the HACS default store: search for it in HACS, no custom
@@ -22,6 +27,8 @@ and Home Assistant show when they offer the update.
   card's ring, and a long unit is cut off with "…" instead of leaving it.
 - Undo takes back only what a button really added when the day hit its upper limit of
   100,000.
+
+*Tested with Home Assistant 2026.10.2 · minimum 2026.10.0*
 
 ## [0.1.1] - 2026-10-25
 
@@ -84,6 +91,7 @@ and Home Assistant show when they offer the update.
 
 *Tested with Home Assistant 2026.10.2 · minimum 2026.10.0*
 
-[Unreleased]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Skylolerr/ha-daily-challenge/releases/tag/v0.1.0
