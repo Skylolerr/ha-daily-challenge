@@ -33,6 +33,16 @@ and Home Assistant show when they offer the update.
 - **Statistics row** in the card: total, average per day, best day and best streak.
 - The history (`get_history` and the card) lists yesterday under `rescuable` while it
   can still be made up in catch-up mode.
+- **Celebration** in the card: confetti when today's goal is reached and for every
+  milestone, with a short text such as "7 days in a row!". Switch it off with
+  `show_celebration: false`; with reduced motion only the text is shown.
+- **Device triggers** "Today's goal reached", "Milestone reached" and one per kind of
+  milestone, right in the automation editor.
+- **Quick add blueprint:** a button press or a scanned NFC tag adds an amount.
+- **Weekly summary blueprint:** on a chosen day, a message with the week's total,
+  fulfilled days and streak.
+- New action `daily_challenge.get_status` with today's figures and the sums of this
+  week, month and year, independent of the language of the entity IDs.
 
 ### 🔄 Changed
 

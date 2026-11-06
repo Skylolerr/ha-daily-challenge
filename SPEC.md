@@ -486,9 +486,9 @@ Vom Maintainer beauftragt am 2026-11-06. Die Entscheide unten sind fix. In welch
 - Neue Optionen in Config und Options Flow, in einem einklappbaren Abschnitt «Automatisch zählen»:
   - `source_entity` (optional): Entity-Selector für `sensor`, `number`, `input_number`, `counter`. Entities von Daily Challenge selbst sind nicht erlaubt (Fehler `source_is_challenge`), damit keine Schleifen entstehen.
   - `source_mode`: `daily` (Tageswert, z. B. «Schritte heute», jeden Tag ab 0) oder `counter` (Zählerstand, der immer weiter steigt, z. B. Velo-Kilometer). Default `daily`.
-- Gezählt wird nur, solange die Challenge läuft. Werte werden auf ganze Zahlen gerundet und auf 0 … 100000 begrenzt. `unknown`, `unavailable` und nicht numerische Zustände werden ignoriert.
-- **Modus `daily`** (Entscheid: «Sensor bestimmt heute»): Der heutige Wert ist immer der gerundete Sensorwert. Er wird bei jeder Zustandsänderung und beim Start übernommen. Die Buttons sind dann **nicht verfügbar**. Die `today`-Number bleibt sichtbar, damit der heutige Wert in Card, Verlauf und Automationen zu sehen ist, lehnt aber Eingaben mit `today_from_source` ab, ebenso die Actions `add`/`set`, `set_day` und Assist für den heutigen Tag. (Präzisiert 2026-11-06: Eine nicht verfügbare Number hätte den heutigen Wert versteckt.) Vergangene Tage bleiben korrigierbar.
-- **Modus `counter`:** Jede Zunahme seit dem letzten Stand wird zum heutigen Tag addiert. Nachkommastellen werden über einen Übertrag weitergetragen (3 × 0,4 km = 1 km). Sinkt der Stand um mehr als 10 %, gilt das als Zurücksetzen des Zählers, und der neue Stand zählt als Zunahme ab 0. Kleinere Rückgänge werden ignoriert. Der letzte Stand und der Übertrag werden im Store gespeichert, damit beim Neustart nichts doppelt oder gar nicht zählt; was während eines HA-Ausfalls dazukam, zählt für den Tag, an dem HA es wieder sieht. Die Buttons bleiben nutzbar.
+- Gezählt wird nur, solange die Challenge läuft. Werte werden kaufmännisch auf ganze Zahlen gerundet (2,5 → 3) und auf 0 … 100000 begrenzt. `unknown`, `unavailable` und nicht numerische Zustände werden ignoriert.
+- **Modus `daily`** (Entscheid: «Sensor bestimmt heute»): Der heutige Wert ist immer der gerundete Sensorwert. Er wird bei jeder Zustandsänderung und beim Start übernommen, aber nur, wenn sich der Sensorwert heute geändert hat (`last_changed`): Ein Tageszähler zeigt nach Mitternacht oft noch kurz den gestrigen Wert, bis er zurückgesetzt wird (gefunden im Bugtest 2026-11-06). Nach einem Neustart über Mitternacht stellt eine Quelle den gestrigen Wert oft mit neuem Zeitstempel wieder her; solange heute noch nichts erfasst ist, wird ein Wert gleich dem gestrigen deshalb nicht übernommen. Die Buttons sind dann **nicht verfügbar**. Die `today`-Number bleibt sichtbar, damit der heutige Wert in Card, Verlauf und Automationen zu sehen ist, lehnt aber Eingaben mit `today_from_source` ab, ebenso die Actions `add`/`set`, `set_day` und Assist für den heutigen Tag. (Präzisiert 2026-11-06: Eine nicht verfügbare Number hätte den heutigen Wert versteckt.) Vergangene Tage bleiben korrigierbar.
+- **Modus `counter`:** Jede Zunahme seit dem letzten Stand wird zum heutigen Tag addiert. Nachkommastellen werden über einen Übertrag weitergetragen (3 × 0,4 km = 1 km). Sinkt der Stand um mehr als 10 %, entscheidet die nächste Ablesung: Liegt sie wieder beim alten Stand (kurzer Aussetzer, z. B. 0 während eines Geräte-Neustarts), zählt nur die Zunahme darüber; bleibt sie tief, ohne zu steigen (z. B. mehrmals 0), wird weiter gewartet; steigt sie von dort, wurde der Zähler zurückgesetzt, und sie zählt ab 0 (präzisiert im Bugtest 2026-11-06). Kleinere Rückgänge werden ignoriert. Der letzte Stand und der Übertrag werden im Store gespeichert, damit beim Neustart nichts doppelt oder gar nicht zählt; was während eines HA-Ausfalls dazukam, zählt für den Tag, an dem HA es wieder sieht. Die Buttons bleiben nutzbar.
 - Wechselt die Quell-Entity oder der Modus, beginnt der Zähler neu (neuer Ausgangsstand, nichts wird addiert).
 - **Store:** `STORAGE_VERSION` bleibt 1, die Minor-Version steigt auf 2. Neuer Schlüssel `source` (`{"entity_id": …, "last": …, "carry": …}` oder leer). Die Migration ergänzt ihn leer.
 - README: Die Abgrenzung zu «HA Daily Counter» bleibt sinngemäss (zielbasiert, Sensor ist nur eine mögliche Quelle).
@@ -518,3 +518,35 @@ Vom Maintainer beauftragt am 2026-11-06. Die Entscheide unten sind fix. In welch
 - Konfiguration: `title` (optional), `entities` (optional, Liste von `today`-Numbers; leer = alle Challenges), `show_buttons` (Default `true`).
 - Pro Challenge eine Zeile: Icon, Name, heute / Tagesziel mit Einheit, Fortschrittsbalken, Streak und ein Button «+kleinster Schritt» (nur wenn die Buttons verfügbar sind). Antippen der Zeile öffnet den Mehr-Info-Dialog der `today`-Number. Beendete Challenges zeigen «Beendet».
 - Übersetzungen EN, DE, FR, IT wie die bestehende Card.
+
+---
+
+## 18. Weitere Erweiterungen für dasselbe Release (beauftragt 2026-11-06)
+
+Vom Maintainer am 2026-11-06 für dasselbe Release wie §17 und Phase 4 beauftragt.
+
+### 18.1 Action `daily_challenge.get_status`
+
+- Felder: `config_entry_id`. `supports_response: only`. Liefert die aktuellen Kennzahlen unabhängig von Sprache und Entity-IDs: `name`, `unit`, `status`, `today`, `target`, `daily_target`, `goal_reached`, `progress`, `current_streak`, `best_streak`, `total`, `this_week`, `week_target`, `week_fulfilled_days`, `week_goal_days`, `week_days`, `today_from_source`, `this_month`, `this_year`, `remaining`, `days_left`.
+- `week_target`: Summe der Tagesziele von Montag bis heute innerhalb der Laufzeit; `week_fulfilled_days` / `week_days`: für den Streak zählende bzw. vergangene Tage dieser Woche in der Laufzeit (heute zählt mit); `week_goal_days`: Tage, die ihr eigenes Ziel erreicht haben (für «Ziel erreicht an X von Y Tagen», ergänzt im Bugtest 2026-11-06).
+- Blueprints prüfen vor dem Hinzufügen mit `status` und `today_from_source`, ob es möglich ist, und verwenden den Gerätenamen (`name_by_user` oder `name`), damit alle denselben Namen zeigen. Der Voice-Blueprint antwortet auch für «läuft nicht», «zählt ein Sensor» und «Menge nicht verstanden» (Bugtest 2026-11-06).
+- Grund: Blueprints dürfen Entities nicht über ihre IDs suchen, weil HA diese in der Systemsprache anlegt (Fehler im Voice-Blueprint, gefunden 2026-11-06: der Streak war mit deutschen IDs immer 0). Der Voice-Blueprint nutzt deshalb `get_status`.
+
+### 18.2 Blueprint «Quick add» (`button.yaml`)
+
+- Ein frei wählbarer Auslöser (Trigger-Selector, z. B. Zigbee-Taster, NFC-Tag) addiert eine Menge (Default 1) zu einer Challenge. Optional eine Rückmeldung (Aktion, Default keine) mit `{{ challenge }}`, `{{ amount }}`, `{{ done }}`, `{{ target }}`, `{{ unit }}`.
+
+### 18.3 Blueprint «Wochenrückblick» (`weekly.yaml`)
+
+- Wochentag (Default Sonntag) und Uhrzeit (Default 20:00). Nachricht (Aktion, Default persistente Benachrichtigung) mit `{{ challenge }}`, `{{ done }}`, `{{ target }}`, `{{ unit }}`, `{{ fulfilled }}`, `{{ days }}`, `{{ streak }}` und einer fertigen englischen `{{ message }}`. Läuft nur, solange die Challenge läuft.
+
+### 18.4 Feier-Animation in der Card
+
+- Kurzes Konfetti über dem Ring, wenn das Tagesziel erreicht wird (Wechsel von nicht erreicht auf erreicht, während die Card offen ist) und bei jedem Meilenstein; bei Meilensteinen zusätzlich ein kurzer Text («7 Tage in Folge!»). Nie beim Laden der Card.
+- Mit `prefers-reduced-motion` kein Konfetti, nur der Text. Abschaltbar mit `show_celebration` (Default `true`, Schalter im Editor). Übersetzungen EN, DE, FR, IT.
+
+### 18.5 Geräte-Auslöser
+
+- `device_trigger.py` mit den Typen `goal_reached` (Tagesziel heute erreicht: `goal_reached_today` wechselt von `off` auf `on`) und `milestone` (jeder Meilenstein) sowie je einem Typ pro aktivierter Meilenstein-Art (`streak`, `best_streak`, `best_day`, `total`). Ohne Meilenstein-Entity gibt es nur `goal_reached`.
+- Die Entities werden über ihre `unique_id` gefunden, nicht über die Entity-ID. Trigger-Variablen: `kind`, `value` (bei Meilensteinen) und `description`.
+- Übersetzungen der Trigger-Typen in EN, DE, FR, IT.
