@@ -11,8 +11,9 @@ and Home Assistant show when they offer the update.
 
 ## [Unreleased]
 
-> **Highlight:** let a sensor count for you, celebrate milestones, talk to your
-> challenges with Assist and see them all on one card.
+> **Highlight:** see your days in a calendar and correct them there, let a sensor count
+> for you, celebrate milestones, talk to your challenges with Assist and see them all on
+> one card.
 
 ### ✨ Added
 
@@ -26,6 +27,12 @@ and Home Assistant show when they offer the update.
   entity is exposed; a new blueprint adds sentences for the built-in Assist.
 - **Overview card** `custom:daily-challenge-overview-card` with all challenges at a
   glance and a **+** button each.
+- **Calendar (heatmap)** in the card: one square per day for the last year, 6 or 3
+  months, coloured by how close the day came to its target. Tap a day to correct its
+  value, with undo.
+- **Statistics row** in the card: total, average per day, best day and best streak.
+- The history (`get_history` and the card) lists yesterday under `rescuable` while it
+  can still be made up in catch-up mode.
 
 ### 🔄 Changed
 

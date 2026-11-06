@@ -59,7 +59,7 @@ as your step counter count for you.
   and buttons.
 - **Target vs. actual over the whole runtime** – ahead or behind at a glance and, with an
   end date, what is left, in how many days and the average still needed per day.
-- **Correct any past day** with the actions (and, from v0.2.0, directly in the card).
+- **Correct any past day** right in the card's calendar, or with the actions.
 - **Automatic counting** – take today's value from a sensor (e.g. "steps today"), or add
   every increase of a counter that keeps rising (e.g. an odometer).
 
@@ -152,10 +152,13 @@ show_remaining: true            # what is left until the end goal, in how many d
 show_required_average: true     # the average still needed per day
 show_catch_up: true             # the deficit in today's target in catch-up mode
 show_buttons: true              # the − and + buttons
+show_stats: true                # total, Ø per day, best day and best streak
+show_heatmap: true              # the calendar of daily values
+heatmap_range: year             # year | 6months | 3months
 ```
 
-All parts are shown by default; the visual editor has a switch for each. Today's value
-and the progress ring are always shown.
+All parts are shown by default; the visual editor has a switch for each and a choice of
+the calendar range. Today's value and the progress ring are always shown.
 
 | To … | Do this |
 |---|---|
@@ -164,6 +167,8 @@ and the progress ring are always shown.
 | Type today's value | Long press (or Enter) on the value, type, Enter |
 | See yesterday's deficit | In catch-up mode the card shows *Today: 20 + 10 deficit*, then *Deficit made up ✓* |
 | See how a finished challenge went | After the end date the card shows the total against the end goal |
+| See your history | The calendar shows one square per day, weeks as columns and Monday on top: green when the day counts towards the streak, blue when it does not (stronger the closer to the target), a dashed orange outline for yesterday while it can still be made up, grey outside the challenge. Today has an outline. |
+| Correct a past day | Tap its square in the calendar, change the value, **Save** (with **Undo** afterwards) |
 
 <p align="center">
   <img alt="A finished challenge: 136 of 155 km, Challenge finished · 87 %" src="https://raw.githubusercontent.com/Skylolerr/ha-daily-challenge/main/docs/images/card-finished.png" width="340">
@@ -262,6 +267,7 @@ fulfilled:
   "2026-11-01": true
   "2026-11-02": false
   "2026-11-03": true
+rescuable: [] # catch-up: yesterday while it can still be made up today
 ```
 </details>
 
@@ -376,8 +382,6 @@ automation:
 
 - There are no rest or skip days – "daily" means every day.
 - A day always ends at local midnight.
-- Past days can be corrected with the actions; editing them in the card comes with
-  v0.2.0.
 - Only "at least" challenges: an upper limit such as "at most one coffee" is not
   supported yet.
 - Long-term statistics are not filled in retroactively when a past day is corrected.

@@ -290,6 +290,7 @@ show_remaining: true               # «Noch … in … Tagen» (nur mit Enddatum
 show_required_average: true        # «Ø …/Tag» nötiger Schnitt (nur mit Enddatum)
 show_catch_up: true                # «Heute: 20 + 10 Rückstand» (nur im Catch-up-Modus)
 show_buttons: true                 # Buttons − und +n
+show_stats: true                   # Statistik-Zeile (ab Phase 4)
 show_heatmap: true                 # ab Phase 4 (v0.2.0)
 heatmap_range: year                # year | 6months | 3months
 ```
@@ -315,7 +316,8 @@ heatmap_range: year                # year | 6months | 3months
 
 - **Heatmap** im GitHub-Stil, Wochen als Spalten, Montag oben. Die Farbintensität entspricht `value/target`. Erfüllte und unerfüllte Tage sind klar unterscheidbar. Tage ausserhalb der Laufzeit werden ausgegraut.
 - **Tag antippen** öffnet einen Dialog mit Datum, Wert und Ziel. Der Wert ist änderbar via `daily_challenge/set_day`.
-- Kompakte Statistik-Zeile: Total, Ø/Tag, bester Tag, bester Streak.
+- Kompakte Statistik-Zeile: Total, Ø/Tag, bester Tag, bester Streak. Ausblendbar mit `show_stats` (ergänzt 2026-11-06, wie alle Teile der Card).
+- Umsetzung (2026-11-06): Erfüllte Tage grün, unerfüllte blau, beide umso kräftiger, je näher der Wert am Ziel liegt; Tage ohne Wert in der Trennlinienfarbe; «gestern noch aufholbar» gestrichelt orange umrandet; heute umrandet; Monatsnamen über den Spalten. Die Historie (Action und WebSocket) liefert dafür zusätzlich `rescuable` (Liste, im Catch-up-Modus höchstens gestern). Der Dialog ist ein eigenes Overlay in der Card mit «Rückgängig» nach dem Speichern; bei einem Tageswert-Quell-Sensor ist heute dort nur lesbar.
 
 ### Übersetzungen der Card
 
