@@ -1,6 +1,7 @@
 import type { Translations } from "../localize";
 
 export const it: Translations = {
+  add_amount: "Aggiungi {amount}",
   best: "Record",
   card_description: "Mostra i progressi di oggi di una sfida giornaliera.",
   card_name: "Daily Challenge",
@@ -10,15 +11,20 @@ export const it: Translations = {
   change: "{name}: {change}",
   current_streak: "Serie attuale",
   edit_value: "Inserisci il valore di oggi",
+  entities: "Sfide (vuoto: tutte)",
   entity_not_found: "Entità non trovata: {entity}",
   finished: "Challenge conclusa · {percent} %",
   finished_goal_reached: "Challenge conclusa · obiettivo raggiunto ✓",
+  invalid_entities: "entities deve essere un elenco di entità.",
   left_in_days: "Ancora {remaining} in {days} giorni",
   left_to_goal: "Ancora {remaining} all'obiettivo",
   left_to_goal_last_day: "Ancora {remaining} nell'ultimo giorno",
   missing_entity: "Indica un'entità di una Daily Challenge.",
   no_challenges: "Nessuna Daily Challenge configurata.",
   not_a_challenge: "{entity} non appartiene a nessuna Daily Challenge.",
+  overview_description: "Tutte le sfide in un colpo d'occhio.",
+  overview_ended: "Terminata",
+  overview_name: "Daily Challenge – panoramica",
   required_per_day: "Ø {per_day}/giorno",
   show_buttons: "Mostra pulsanti",
   show_catch_up: "Mostra ritardo da recuperare",
@@ -27,5 +33,6 @@ export const it: Translations = {
   show_streak: "Mostra serie",
   show_target_vs_actual: "Mostra effettivo / obiettivo",
   target_vs_actual: "Effettivo {total} / Obiettivo {target}",
+  title: "Titolo",
   undo: "Annulla",
 };

@@ -1,6 +1,7 @@
 import type { Translations } from "../localize";
 
 export const de: Translations = {
+  add_amount: "{amount} hinzufügen",
   best: "Rekord",
   card_description: "Zeigt den heutigen Fortschritt einer täglichen Challenge.",
   card_name: "Daily Challenge",
@@ -10,15 +11,20 @@ export const de: Translations = {
   change: "{name}: {change}",
   current_streak: "Aktueller Streak",
   edit_value: "Heutigen Wert eingeben",
+  entities: "Challenges (leer: alle)",
   entity_not_found: "Entität nicht gefunden: {entity}",
   finished: "Challenge abgeschlossen · {percent} %",
   finished_goal_reached: "Challenge abgeschlossen · Ziel erreicht ✓",
+  invalid_entities: "entities muss eine Liste von Entitäten sein.",
   left_in_days: "Noch {remaining} in {days} Tagen",
   left_to_goal: "Noch {remaining} bis zum Ziel",
   left_to_goal_last_day: "Noch {remaining} am letzten Tag",
   missing_entity: "Bitte gib eine Entität einer Daily Challenge an.",
   no_challenges: "Noch keine Daily Challenge eingerichtet.",
   not_a_challenge: "{entity} gehört zu keiner Daily Challenge.",
+  overview_description: "Alle Challenges auf einen Blick.",
+  overview_ended: "Beendet",
+  overview_name: "Daily Challenge Übersicht",
   required_per_day: "Ø {per_day}/Tag",
   show_buttons: "Buttons anzeigen",
   show_catch_up: "Rückstand beim Aufholen anzeigen",
@@ -27,5 +33,6 @@ export const de: Translations = {
   show_streak: "Streak anzeigen",
   show_target_vs_actual: "Ist / Soll anzeigen",
   target_vs_actual: "Ist {total} / Soll {target}",
+  title: "Titel",
   undo: "Rückgängig",
 };

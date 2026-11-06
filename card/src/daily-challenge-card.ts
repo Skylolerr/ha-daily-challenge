@@ -1,6 +1,8 @@
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 
 import { EDITOR_TYPE } from "./editor";
+// The overview card ships in the same bundle.
+import "./overview-card";
 import { formatDelta, formatNumber, localize } from "./localize";
 import type {
   ChallengeHistory,
@@ -108,7 +110,8 @@ export class DailyChallengeCard extends LitElement {
     const summaryLines =
       Number(this._show("show_target_vs_actual")) +
       Number(this._show("show_remaining") || this._show("show_required_average"));
-    return 5 + summaryLines + Number(this._show("show_buttons"));
+    const buttons = this._show("show_buttons") && !this._challenge?.today_from_source;
+    return 5 + summaryLines + Number(buttons);
   }
 
   protected override willUpdate(_changed: PropertyValues): void {
@@ -311,6 +314,9 @@ export class DailyChallengeCard extends LitElement {
 
   private _startEdit(): void {
     this._clearPress();
+    if (this._challenge?.today_from_source) {
+      return;
+    }
     const value = this._number("today");
     if (value !== undefined) {
       this._editValue = String(value);
@@ -443,7 +449,7 @@ export class DailyChallengeCard extends LitElement {
             transform="rotate(-90 60 60)"
           ></circle>`}
       </svg>
-      ${ended
+      ${ended || challenge.today_from_source
         ? html`<div class="value">${this._renderFigures(value, target, unit)}</div>`
         : this._editing
         ? html`<input
@@ -623,7 +629,11 @@ export class DailyChallengeCard extends LitElement {
   }
 
   private _renderButtons(challenge: ChallengeInfo) {
-    if (!this._show("show_buttons") || this._ended()) {
+    if (
+      !this._show("show_buttons") ||
+      this._ended() ||
+      challenge.today_from_source
+    ) {
       return nothing;
     }
     // Disabled entities are listed by the backend but have no state.

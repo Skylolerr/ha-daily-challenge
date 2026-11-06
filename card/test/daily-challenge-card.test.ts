@@ -339,6 +339,22 @@ describe("buttons", () => {
     expect(notifications).toEqual(["Date is after the end"]);
   });
 
+  it("offers no buttons and no input when a source sets today's value", async () => {
+    const card = await createCard(
+      makeHass({}, [{ ...CHALLENGE, today_from_source: true }]),
+    );
+    expect(buttons(card)).toEqual([]);
+    const value = root(card).querySelector(".value") as HTMLElement;
+    expect(value.getAttribute("role")).toBeNull();
+    vi.useFakeTimers();
+    value.dispatchEvent(new Event("pointerdown"));
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    vi.useRealTimers();
+    await settle(card);
+    expect(root(card).querySelector("input")).toBeNull();
+    expect(card.getCardSize()).toBe(7);
+  });
+
   it("omits the minus button without steps", async () => {
     const card = await createCard(
       makeHass({}, [{ ...CHALLENGE, entities: { today: ENTITIES.today, subtract: ENTITIES.subtract } }]),

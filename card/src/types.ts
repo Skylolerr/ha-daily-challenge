@@ -58,6 +58,8 @@ export interface ChallengeInfo {
   name: string;
   icon: string;
   unit: string;
+  /** A source sensor sets today's value; there is no manual input. */
+  today_from_source?: boolean;
   /** Entity key (e.g. "today", "add_5") to entity ID. */
   entities: Record<string, string>;
 }
