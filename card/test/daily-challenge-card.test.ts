@@ -352,7 +352,7 @@ describe("buttons", () => {
     vi.useRealTimers();
     await settle(card);
     expect(root(card).querySelector("input")).toBeNull();
-    expect(card.getCardSize()).toBe(7);
+    expect(card.getCardSize()).toBe(11);
   });
 
   it("omits the minus button without steps", async () => {
@@ -1114,7 +1114,7 @@ describe("review fixes", () => {
 
   it("reports its size from the shown parts", async () => {
     const card = await createCard();
-    expect(card.getCardSize()).toBe(8);
+    expect(card.getCardSize()).toBe(12);
     card.setConfig({
       type: `custom:${CARD_TYPE}`,
       entity: ENTITIES.today,
@@ -1122,7 +1122,190 @@ describe("review fixes", () => {
       show_remaining: false,
       show_required_average: false,
       show_buttons: false,
+      show_stats: false,
+      show_heatmap: false,
     });
     expect(card.getCardSize()).toBe(5);
+  });
+});
+
+describe("statistics, heatmap and day dialog", () => {
+  const HEAT_HISTORY = {
+    days: { "2026-11-02": 20, "2026-11-03": 5, "2026-11-04": 15 },
+    targets: { "2026-11-02": 20, "2026-11-03": 20, "2026-11-04": 20 },
+    fulfilled: { "2026-11-02": true, "2026-11-03": false, "2026-11-04": false },
+    rescuable: ["2026-11-03"],
+  };
+  const EXTRA: Record<string, string> = {
+    average: "sensor.push_ups_daily_average",
+    best_day: "sensor.push_ups_best_day",
+  };
+
+  function heatHass(
+    challenge: ChallengeInfo = CHALLENGE,
+    setDay: (msg: Record<string, unknown>) => Promise<unknown> = async () => ({}),
+  ): HomeAssistant {
+    const hass = makeHass({}, [
+      { ...challenge, entities: { ...challenge.entities, ...EXTRA } },
+    ]);
+    hass.states[EXTRA.average] = entity(EXTRA.average, "12.5");
+    hass.states[EXTRA.best_day] = entity(EXTRA.best_day, "40");
+    hass.callWS = vi.fn(async (msg: { type: string }) => {
+      if (msg.type === "daily_challenge/list") {
+        return {
+          challenges: [{ ...challenge, entities: { ...challenge.entities, ...EXTRA } }],
+        };
+      }
+      if (msg.type === "daily_challenge/set_day") {
+        return setDay(msg as Record<string, unknown>);
+      }
+      return HEAT_HISTORY;
+    }) as unknown as HomeAssistant["callWS"];
+    return hass;
+  }
+
+  async function heatCard(
+    hass: HomeAssistant = heatHass(),
+    config: Partial<DailyChallengeCardConfig> = {},
+  ): Promise<DailyChallengeCard> {
+    const card = document.createElement(CARD_TYPE);
+    card.setConfig({
+      type: `custom:${CARD_TYPE}`,
+      entity: ENTITIES.today,
+      heatmap_range: "3months",
+      ...config,
+    });
+    card.hass = hass;
+    document.body.appendChild(card);
+    await settle(card);
+    return card;
+  }
+
+  function cell(card: DailyChallengeCard, date: string): SVGRectElement {
+    return root(card).querySelector(`rect[data-date="${date}"]`) as SVGRectElement;
+  }
+
+  function dialog(card: DailyChallengeCard): HTMLElement | null {
+    return root(card).querySelector(".dialog");
+  }
+
+  async function openDay(card: DailyChallengeCard, date: string): Promise<void> {
+    cell(card, date).dispatchEvent(new MouseEvent("click"));
+    await settle(card);
+  }
+
+  async function typeValue(card: DailyChallengeCard, value: string, key = "Enter") {
+    const input = root(card).querySelector(".day-input") as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event("input"));
+    await settle(card);
+    dialog(card)?.dispatchEvent(new KeyboardEvent("keydown", { key }));
+    await settle(card);
+  }
+
+  it("shows total, average, best day and best streak", async () => {
+    const card = await heatCard();
+    const stats = [...root(card).querySelectorAll(".stat")].map((item) => text(item));
+    expect(stats).toEqual(["60 Total", "12.5 Ø per day", "40 Best day", "7 Best streak"]);
+  });
+
+  it("draws the days with their state", async () => {
+    const card = await heatCard();
+    expect(root(card).querySelectorAll("rect")).toHaveLength(12 * 7 + 3);
+    expect(cell(card, "2026-11-02").getAttribute("class")).toContain("fulfilled");
+    expect(cell(card, "2026-11-03").getAttribute("class")).toContain("partial rescuable");
+    expect(cell(card, "2026-11-04").getAttribute("class")).toContain("last");
+    expect(cell(card, "2026-11-01").getAttribute("class")).toContain("outside");
+    expect(cell(card, "2026-11-03").textContent).toBe(
+      "Nov 3, 2026: 5 / 20 · can still be made up today",
+    );
+    expect(cell(card, "2026-11-02").textContent).toBe("Nov 2, 2026: 20 / 20 ✓");
+    expect(text(root(card).querySelector(".month"))).toBe("Aug");
+  });
+
+  it("hides statistics and heatmap on request", async () => {
+    const card = await heatCard(heatHass(), { show_stats: false, show_heatmap: false });
+    expect(root(card).querySelector(".stats")).toBeNull();
+    expect(root(card).querySelector(".heatmap")).toBeNull();
+  });
+
+  it("edits a past day with undo", async () => {
+    const setDay = vi.fn(async () => ({}));
+    const card = await heatCard(heatHass(CHALLENGE, setDay));
+    const toasts: { message: string; action?: { action: () => void } }[] = [];
+    document.body.addEventListener("hass-notification", (ev) =>
+      toasts.push((ev as CustomEvent).detail),
+    );
+    await openDay(card, "2026-11-03");
+    expect(text(root(card).querySelector(".dialog-title"))).toBe("Tuesday, November 3, 2026");
+    expect(text(root(card).querySelector(".dialog-info"))).toBe(
+      "Target 20 · can still be made up today",
+    );
+    expect((root(card).querySelector(".day-input") as HTMLInputElement).value).toBe("5");
+
+    await typeValue(card, "25");
+    expect(setDay).toHaveBeenCalledWith({
+      type: "daily_challenge/set_day",
+      entry_id: "push_ups",
+      date: "2026-11-03",
+      value: 25,
+    });
+    expect(dialog(card)).toBeNull();
+    expect(toasts[0].message).toBe("Push-ups: Nov 3, 2026: 25");
+    toasts[0].action?.action();
+    expect(setDay).toHaveBeenLastCalledWith(expect.objectContaining({ value: 5 }));
+  });
+
+  it("keeps the dialog open on invalid input or a rejected change", async () => {
+    const setDay = vi.fn().mockRejectedValue({ message: "Date is in the future" });
+    const card = await heatCard(heatHass(CHALLENGE, setDay));
+    await openDay(card, "2026-11-02");
+    await typeValue(card, "2.5");
+    expect(text(root(card).querySelector(".dialog-error"))).toBe(
+      "Enter a whole number from 0.",
+    );
+    expect(setDay).not.toHaveBeenCalled();
+    await typeValue(card, "3");
+    expect(text(root(card).querySelector(".dialog-error"))).toBe("Date is in the future");
+    expect(dialog(card)).not.toBeNull();
+  });
+
+  it("closes without saving", async () => {
+    const setDay = vi.fn(async () => ({}));
+    const card = await heatCard(heatHass(CHALLENGE, setDay));
+    await openDay(card, "2026-11-02");
+    await typeValue(card, "20");
+    expect(dialog(card)).toBeNull();
+    await openDay(card, "2026-11-02");
+    await typeValue(card, "30", "Escape");
+    expect(dialog(card)).toBeNull();
+    await openDay(card, "2026-11-02");
+    (root(card).querySelector(".backdrop") as HTMLElement).click();
+    await settle(card);
+    expect(dialog(card)).toBeNull();
+    await openDay(card, "2026-11-02");
+    (root(card).querySelector(".cancel") as HTMLElement).click();
+    await settle(card);
+    expect(dialog(card)).toBeNull();
+    // Days outside the challenge open nothing.
+    await openDay(card, "2026-11-01");
+    expect(dialog(card)).toBeNull();
+    expect(setDay).not.toHaveBeenCalled();
+  });
+
+  it("shows today read-only when a source sets it", async () => {
+    const card = await heatCard(heatHass({ ...CHALLENGE, today_from_source: true }));
+    await openDay(card, "2026-11-04");
+    const input = root(card).querySelector(".day-input") as HTMLInputElement;
+    expect(input.disabled).toBe(true);
+    expect(root(card).querySelector(".save")).toBeNull();
+    expect(text(root(card).querySelector(".dialog-note"))).toBe(
+      "Today's value comes from the source sensor.",
+    );
+    // Earlier days can still be edited.
+    (root(card).querySelector(".cancel") as HTMLElement).click();
+    await settle(card);
+    await openDay(card, "2026-11-03");
+    expect(root(card).querySelector(".save")).not.toBeNull();
   });
 });

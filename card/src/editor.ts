@@ -1,5 +1,6 @@
 import { html, LitElement, nothing, type PropertyValues } from "lit";
 
+import { HEATMAP_RANGES, type HeatmapRange } from "./heatmap";
 import { localize, type StringKey } from "./localize";
 import {
   type ChallengeInfo,
@@ -82,11 +83,26 @@ export class DailyChallengeCardEditor extends LitElement {
         name: option,
         selector: { boolean: {} },
       })),
+      {
+        name: "heatmap_range",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: HEATMAP_RANGES.map((range) => ({
+              value: range,
+              label: localize(this.hass, `range_${range}` as StringKey),
+            })),
+          },
+        },
+      },
     ];
   }
 
   private _formData(): Record<string, unknown> {
-    const data: Record<string, unknown> = { challenge: this._selected() };
+    const data: Record<string, unknown> = {
+      challenge: this._selected(),
+      heatmap_range: this._config?.heatmap_range ?? "year",
+    };
     for (const option of DISPLAY_OPTIONS) {
       data[option] = this._config?.[option] !== false;
     }
@@ -118,6 +134,13 @@ export class DailyChallengeCardEditor extends LitElement {
       } else {
         delete config[option];
       }
+    }
+    // A year is the default and is not written.
+    const range = value.heatmap_range as HeatmapRange | undefined;
+    if (range && range !== "year" && HEATMAP_RANGES.includes(range)) {
+      config.heatmap_range = range;
+    } else {
+      delete config.heatmap_range;
     }
     if (JSON.stringify(config) === JSON.stringify(this._config)) {
       return;

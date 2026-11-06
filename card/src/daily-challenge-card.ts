@@ -1,6 +1,7 @@
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 
 import { EDITOR_TYPE } from "./editor";
+import { buildHeatmap, cellOpacity, type HeatmapCell } from "./heatmap";
 // The overview card ships in the same bundle.
 import "./overview-card";
 import { formatDelta, formatNumber, localize } from "./localize";
@@ -25,6 +26,13 @@ const NOT_LOADED = Symbol("not loaded");
 const INACTIVE_STATES = new Set(["unknown", "unavailable"]);
 
 /** A message in Home Assistant's toast, optionally with an action button. */
+/** The past day being edited in the dialog. */
+interface DayDialog {
+  cell: HeatmapCell;
+  value: string;
+  error?: string;
+}
+
 interface Toast {
   message: string;
   duration?: number;
@@ -54,6 +62,7 @@ export class DailyChallengeCard extends LitElement {
     _challenge: { state: true },
     _editing: { state: true },
     _history: { state: true },
+    _dialog: { state: true },
   };
 
   static getConfigElement(): HTMLElement {
@@ -69,8 +78,9 @@ export class DailyChallengeCard extends LitElement {
   /** undefined while loading, null if the entity is not part of a challenge. */
   declare private _challenge?: ChallengeInfo | null;
   declare private _editing: boolean;
-  /** Daily values for the history views of later phases. */
+  /** Daily values for the heatmap. */
   declare private _history?: ChallengeHistory;
+  declare private _dialog?: DayDialog;
 
   private _entitiesSeen: unknown = NOT_LOADED;
   private _pressTimer?: ReturnType<typeof setTimeout>;
@@ -111,7 +121,8 @@ export class DailyChallengeCard extends LitElement {
       Number(this._show("show_target_vs_actual")) +
       Number(this._show("show_remaining") || this._show("show_required_average"));
     const buttons = this._show("show_buttons") && !this._challenge?.today_from_source;
-    return 5 + summaryLines + Number(buttons);
+    const heatmap = this._show("show_heatmap") ? 3 : 0;
+    return 5 + summaryLines + Number(buttons) + Number(this._show("show_stats")) + heatmap;
   }
 
   protected override willUpdate(_changed: PropertyValues): void {
@@ -126,10 +137,12 @@ export class DailyChallengeCard extends LitElement {
       this._entitiesSeen = this.hass.entities;
       void this._loadChallenge();
     }
-    // Every change of a day also changes the total: fetch the history again.
+    // Every change of a day also changes the total, and a new day moves the
+    // heatmap on: fetch the history again.
     const total = this._state("total");
-    if (this._challenge && total !== undefined && total !== this._historyTotal) {
-      this._historyTotal = total;
+    const key = `${total}|${new Date().toDateString()}`;
+    if (this._challenge && total !== undefined && key !== this._historyTotal) {
+      this._historyTotal = key;
       void this._loadHistory(this._challenge.entry_id);
     }
   }
@@ -155,6 +168,11 @@ export class DailyChallengeCard extends LitElement {
   }
 
   protected override updated(changed: PropertyValues): void {
+    if (changed.has("_dialog") && this._dialog && !changed.get("_dialog")) {
+      const input = this.renderRoot.querySelector<HTMLInputElement>(".day-input");
+      input?.focus();
+      input?.select();
+    }
     if (changed.has("_editing")) {
       if (this._editing) {
         const input = this.renderRoot.querySelector("input");
@@ -383,6 +401,7 @@ export class DailyChallengeCard extends LitElement {
     return html`<ha-card>
       ${this._renderHeader(this._challenge)} ${this._renderValue(this._challenge)}
       ${this._renderSummary()} ${this._renderButtons(this._challenge)}
+      ${this._renderStats()} ${this._renderHeatmap()} ${this._renderDialog()}
     </ha-card>`;
   }
 
@@ -667,6 +686,266 @@ export class DailyChallengeCard extends LitElement {
     </div>`;
   }
 
+  // --- statistics, heatmap and day dialog ----------------------------------
+
+  private _renderStats() {
+    if (!this._show("show_stats")) {
+      return nothing;
+    }
+    const hass = this.hass;
+    const figure = (key: string, suffix = "") => {
+      const value = this._number(key);
+      return value === undefined ? "–" : `${formatNumber(hass, value)}${suffix}`;
+    };
+    const items: [string, string][] = [
+      [localize(hass, "stat_total"), figure("total")],
+      [localize(hass, "stat_average"), figure("average")],
+      [localize(hass, "stat_best_day"), figure("best_day")],
+      [localize(hass, "stat_best_streak"), figure("best_streak")],
+    ];
+    return html`<div class="stats">
+      ${items.map(
+        ([label, value]) =>
+          html`<div class="stat">
+            <span class="stat-value">${value}</span>
+            <span class="stat-label">${label}</span>
+          </div>`,
+      )}
+    </div>`;
+  }
+
+  private _formatDate(iso: string, options: Intl.DateTimeFormatOptions): string {
+    const [year, month, day] = iso.split("-").map(Number);
+    try {
+      return new Intl.DateTimeFormat(this.hass?.locale.language || "en", {
+        ...options,
+        timeZone: "UTC",
+      }).format(new Date(Date.UTC(year, month - 1, day)));
+    } catch {
+      return iso;
+    }
+  }
+
+  private _cellTitle(cell: HeatmapCell): string {
+    const date = this._formatDate(cell.date, { dateStyle: "medium" });
+    if (!cell.inPeriod) {
+      return date;
+    }
+    const figures = `${formatNumber(this.hass, cell.value)} / ${formatNumber(this.hass, cell.target)}`;
+    const mark = cell.fulfilled ? " ✓" : cell.rescuable ? ` · ${localize(this.hass, "rescuable")}` : "";
+    return `${date}: ${figures}${mark}`;
+  }
+
+  private _renderHeatmap() {
+    const history = this._history;
+    if (!this._show("show_heatmap") || !history) {
+      return nothing;
+    }
+    const layout = buildHeatmap(history, this._config?.heatmap_range ?? "year");
+    if (!layout.weeks.length) {
+      return nothing;
+    }
+    const step = 13;
+    const width = layout.weeks.length * step - 3;
+    const height = 7 * step - 3;
+    const cells = layout.weeks.flatMap((week, column) =>
+      week.map((cell, row) => {
+        if (!cell) {
+          return nothing;
+        }
+        const kind = !cell.inPeriod
+          ? "outside"
+          : cell.value === 0
+            ? "empty"
+            : cell.fulfilled
+              ? "fulfilled"
+              : "partial";
+        const classes = [
+          "cell",
+          kind,
+          cell.rescuable ? "rescuable" : "",
+          cell.last ? "last" : "",
+        ].join(" ");
+        return svg`<rect
+          class=${classes}
+          x=${column * step}
+          y=${row * step}
+          width="10"
+          height="10"
+          rx="2"
+          opacity=${cellOpacity(cell)}
+          data-date=${cell.date}
+          @click=${() => this._openDay(cell)}
+        ><title>${this._cellTitle(cell)}</title></rect>`;
+      }),
+    );
+    // Month names as text, so they keep their size however wide the card is.
+    const months = layout.months.map(
+      (month) =>
+        html`<span class="month" style="left: ${((month.week * step) / width) * 100}%"
+          >${this._formatDate(month.date, { month: "short" })}</span
+        >`,
+    );
+    return html`<div class="heatmap">
+      <div class="heatmap-grid" style="max-width: ${layout.weeks.length * 22}px">
+        <div class="months">${months}</div>
+        <svg
+          viewBox="0 0 ${width} ${height}"
+          role="img"
+          aria-label=${localize(this.hass, "heatmap")}
+        >
+          ${cells}
+        </svg>
+      </div>
+    </div>`;
+  }
+
+  private _openDay(cell: HeatmapCell): void {
+    if (!cell.inPeriod) {
+      return;
+    }
+    this._dialog = { cell, value: String(cell.value) };
+  }
+
+  private _closeDay(): void {
+    this._dialog = undefined;
+  }
+
+  /** Whether the day of the dialog takes its value from a source sensor. */
+  private _dialogFromSource(cell: HeatmapCell): boolean {
+    return Boolean(this._challenge?.today_from_source && cell.last && !this._ended());
+  }
+
+  private async _saveDay(): Promise<void> {
+    const dialog = this._dialog;
+    const challenge = this._challenge;
+    if (!dialog || !challenge || !this.hass) {
+      return;
+    }
+    const raw = dialog.value.trim();
+    const value = Number(raw);
+    if (raw === "" || !Number.isInteger(value) || value < 0) {
+      this._dialog = { ...dialog, error: localize(this.hass, "invalid_value") };
+      return;
+    }
+    if (value === dialog.cell.value) {
+      this._closeDay();
+      return;
+    }
+    const setDay = (newValue: number) =>
+      this.hass?.callWS({
+        type: "daily_challenge/set_day",
+        entry_id: challenge.entry_id,
+        date: dialog.cell.date,
+        value: newValue,
+      });
+    try {
+      await setDay(value);
+    } catch (err) {
+      const message =
+        (err as { message?: string } | undefined)?.message ?? String(err);
+      this._dialog = { ...dialog, error: message };
+      return;
+    }
+    this._closeDay();
+    const previous = dialog.cell.value;
+    this._notify({
+      message: localize(this.hass, "change", {
+        name: challenge.name,
+        change: `${this._formatDate(dialog.cell.date, { dateStyle: "medium" })}: ${formatNumber(this.hass, value)}`,
+      }),
+      duration: UNDO_MS,
+      action: {
+        text: localize(this.hass, "undo"),
+        action: () => {
+          void Promise.resolve(setDay(previous)).catch((err: unknown) =>
+            this._notify({
+              message: (err as { message?: string } | undefined)?.message ?? String(err),
+            }),
+          );
+        },
+      },
+    });
+  }
+
+  private _dialogKeyDown(ev: KeyboardEvent): void {
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this._closeDay();
+    } else if (ev.key === "Enter") {
+      ev.preventDefault();
+      ev.stopPropagation();
+      void this._saveDay();
+    }
+  }
+
+  private _renderDialog() {
+    const dialog = this._dialog;
+    if (!dialog) {
+      return nothing;
+    }
+    const hass = this.hass;
+    const cell = dialog.cell;
+    const fromSource = this._dialogFromSource(cell);
+    const status = cell.fulfilled
+      ? localize(hass, "day_fulfilled")
+      : cell.rescuable
+        ? localize(hass, "rescuable")
+        : localize(hass, "day_not_fulfilled");
+    return html`<div class="backdrop" @click=${this._closeDay}>
+      <div
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="day-title"
+        @click=${(ev: Event) => ev.stopPropagation()}
+        @keydown=${this._dialogKeyDown}
+      >
+        <div id="day-title" class="dialog-title">
+          ${this._formatDate(cell.date, { dateStyle: "full" })}
+        </div>
+        <div class="dialog-info">
+          ${localize(hass, "day_target", { target: formatNumber(hass, cell.target) })} ·
+          ${status}
+        </div>
+        <label class="dialog-field">
+          <span>${localize(hass, "day_value")}</span>
+          <input
+            class="day-input"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            step="1"
+            .value=${dialog.value}
+            ?disabled=${fromSource}
+            @input=${(ev: Event) => {
+              this._dialog = {
+                ...dialog,
+                value: (ev.target as HTMLInputElement).value,
+                error: undefined,
+              };
+            }}
+          />
+        </label>
+        ${fromSource
+          ? html`<div class="dialog-note">${localize(hass, "day_from_source")}</div>`
+          : nothing}
+        ${dialog.error ? html`<div class="dialog-error">${dialog.error}</div>` : nothing}
+        <div class="dialog-actions">
+          <button class="cancel" @click=${this._closeDay}>
+            ${localize(hass, "cancel")}
+          </button>
+          ${fromSource
+            ? nothing
+            : html`<button class="save" @click=${() => this._saveDay()}>
+                ${localize(hass, "save")}
+              </button>`}
+        </div>
+      </div>
+    </div>`;
+  }
+
   static override styles = css`
     ha-card {
       display: block;
@@ -810,6 +1089,156 @@ export class DailyChallengeCard extends LitElement {
     }
     .warning {
       color: var(--error-color);
+    }
+    ha-card {
+      position: relative;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      margin-top: 16px;
+      text-align: center;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .stat-value {
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-label {
+      color: var(--secondary-text-color);
+      font-size: 0.8em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .heatmap {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .heatmap-grid {
+      width: 100%;
+    }
+    .heatmap svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+    .months {
+      position: relative;
+      height: 1.3em;
+      font-size: 0.75em;
+      color: var(--secondary-text-color);
+    }
+    .month {
+      position: absolute;
+      top: 0;
+      white-space: nowrap;
+    }
+    .cell {
+      cursor: pointer;
+    }
+    .cell.outside {
+      fill: var(--disabled-color, #bdbdbd);
+      opacity: 0.25;
+      cursor: default;
+    }
+    .cell.empty {
+      fill: var(--divider-color, #e0e0e0);
+    }
+    .cell.partial {
+      fill: var(--primary-color);
+    }
+    .cell.fulfilled {
+      fill: var(--success-color, #43a047);
+    }
+    .cell.rescuable {
+      stroke: var(--warning-color, #ffa600);
+      stroke-width: 1.5;
+      stroke-dasharray: 2 1.5;
+    }
+    .cell.last {
+      stroke: var(--primary-text-color);
+      stroke-width: 1.5;
+    }
+    .backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      border-radius: var(--ha-card-border-radius, 12px);
+      background: rgba(0, 0, 0, 0.4);
+    }
+    .dialog {
+      width: 100%;
+      max-width: 320px;
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--card-background-color, var(--ha-card-background, #fff));
+      color: var(--primary-text-color);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+    .dialog-title {
+      font-size: 1.1em;
+      font-weight: 500;
+    }
+    .dialog-info,
+    .dialog-note {
+      margin-top: 4px;
+      color: var(--secondary-text-color);
+    }
+    .dialog-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 12px;
+    }
+    .day-input {
+      font: inherit;
+      font-size: 1.4em;
+      padding: 6px 8px;
+      border: 1px solid var(--divider-color);
+      border-radius: 8px;
+      background: var(--secondary-background-color);
+      color: var(--primary-text-color);
+    }
+    .dialog-error {
+      margin-top: 8px;
+      color: var(--error-color);
+    }
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .dialog-actions button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 18px;
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .dialog-actions .cancel {
+      background: transparent;
+      color: var(--primary-color);
+    }
+    .dialog-actions .save {
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
     }
   `;
 }

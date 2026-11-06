@@ -78,6 +78,9 @@ describe("editor", () => {
       show_required_average: true,
       show_catch_up: true,
       show_buttons: true,
+      show_stats: true,
+      show_heatmap: true,
+      heatmap_range: "year",
     });
     expect(form(editor).computeLabel({ name: "challenge" })).toBe("Challenge");
     expect(form(editor).computeLabel({ name: "show_required_average" })).toBe(
@@ -91,7 +94,27 @@ describe("editor", () => {
       "show_required_average",
       "show_catch_up",
       "show_buttons",
+      "show_stats",
+      "show_heatmap",
+      "heatmap_range",
     ]);
+  });
+
+  it("writes a heatmap range other than a year", async () => {
+    const editor = await createEditor(makeHass([PUSH_UPS]), "number.push_ups_today");
+    const changes: Record<string, unknown>[] = [];
+    editor.addEventListener("config-changed", (ev) =>
+      changes.push((ev as CustomEvent).detail.config),
+    );
+    const send = (heatmap_range: string) =>
+      form(editor).dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: { ...form(editor).data, heatmap_range } },
+        }),
+      );
+    send("3months");
+    send("year");
+    expect(changes.map((config) => config.heatmap_range)).toEqual(["3months", undefined]);
   });
 
   it("writes only hidden parts into the config", async () => {

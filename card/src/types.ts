@@ -42,6 +42,8 @@ export const DISPLAY_OPTIONS = [
   "show_required_average",
   "show_catch_up",
   "show_buttons",
+  "show_stats",
+  "show_heatmap",
 ] as const;
 
 export type DisplayOption = (typeof DISPLAY_OPTIONS)[number];
@@ -50,6 +52,8 @@ export interface DailyChallengeCardConfig
   extends Partial<Record<DisplayOption, boolean>> {
   type: string;
   entity: string;
+  /** Weeks shown in the heatmap; a year by default. */
+  heatmap_range?: "year" | "6months" | "3months";
 }
 
 /** One challenge as returned by `daily_challenge/list`. */
@@ -73,4 +77,6 @@ export interface ChallengeHistory {
   days: Record<string, number>;
   targets: Record<string, number>;
   fulfilled: Record<string, boolean>;
+  /** Unfulfilled days that can still be made up today (catch-up). */
+  rescuable?: string[];
 }
