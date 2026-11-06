@@ -23,7 +23,7 @@ async def call(hass: HomeAssistant, service: str, **data: Any) -> dict[str, Any]
         service,
         data,
         blocking=True,
-        return_response=service == "get_history",
+        return_response=service in ("get_history", "get_status"),
     )
 
 
@@ -57,6 +57,37 @@ async def test_set(hass: HomeAssistant) -> None:
     await call(hass, "set", value=0, date=START)
     response = await call(hass, "get_history")
     assert response["days"] == {TODAY: 12}
+
+
+@pytest.mark.usefixtures("loaded_entry")
+async def test_get_status(hass: HomeAssistant) -> None:
+    """The status has today's figures and this week's sums."""
+    await call(hass, "set", value=20, date=START)
+    await call(hass, "set", value=5, date="2026-11-03")
+    await call(hass, "set", value=12)
+    assert await call(hass, "get_status") == {
+        "name": "Push-ups",
+        "unit": "repetitions",
+        "status": "active",
+        "today_from_source": False,
+        "today": 12,
+        "target": 20,
+        "daily_target": 20,
+        "goal_reached": False,
+        "progress": 60.0,
+        "current_streak": 0,
+        "best_streak": 1,
+        "total": 37,
+        "this_week": 37,
+        "week_target": 60,
+        "week_fulfilled_days": 1,
+        "week_goal_days": 1,
+        "week_days": 3,
+        "this_month": 37,
+        "this_year": 37,
+        "remaining": None,
+        "days_left": None,
+    }
 
 
 @pytest.mark.usefixtures("loaded_entry")

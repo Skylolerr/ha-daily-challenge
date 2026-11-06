@@ -12,6 +12,7 @@ try:
         MockConfigEntry,
         async_capture_events,
         async_fire_time_changed,
+        async_get_device_automations,
     )
     from pytest_homeassistant.typing import (
         ClientSessionGenerator,
@@ -22,6 +23,7 @@ except ImportError:  # Home Assistant before 2026.11
         MockConfigEntry,
         async_capture_events,
         async_fire_time_changed,
+        async_get_device_automations,
     )
     from pytest_homeassistant_custom_component.typing import (
         ClientSessionGenerator,
@@ -34,4 +36,5 @@ __all__ = [
     "WebSocketGenerator",
     "async_capture_events",
     "async_fire_time_changed",
+    "async_get_device_automations",
 ]

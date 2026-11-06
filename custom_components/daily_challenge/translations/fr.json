@@ -342,6 +342,26 @@
           "description": "Dernier jour à renvoyer. Par défaut aujourd'hui."
         }
       }
+    },
+    "get_status": {
+      "name": "Obtenir l'état",
+      "description": "Renvoie la valeur du jour, l'objectif, les séries et les sommes de la semaine, du mois et de l'année d'un défi.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Défi",
+          "description": "Le défi à lire."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "goal_reached": "Objectif du jour atteint",
+      "milestone": "Jalon atteint",
+      "streak": "Jalon de série atteint",
+      "best_streak": "Nouvelle meilleure série",
+      "best_day": "Nouveau meilleur jour",
+      "total": "Jalon de quantité totale atteint"
     }
   }
 }

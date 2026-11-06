@@ -24,10 +24,12 @@ from .const import (
     ATTR_END,
     ATTR_START,
     ATTR_VALUE,
+    CONF_UNIT,
     DOMAIN,
     MAX_DAY_VALUE,
     SERVICE_ADD,
     SERVICE_GET_HISTORY,
+    SERVICE_GET_STATUS,
     SERVICE_SET,
 )
 from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
@@ -64,6 +66,7 @@ SET_SCHEMA = vol.Schema(
         vol.Optional(ATTR_DATE): cv.date,
     }
 )
+GET_STATUS_SCHEMA = vol.Schema({vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string})
 GET_HISTORY_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
@@ -119,6 +122,36 @@ def history_response(
     }
 
 
+def status_response(coordinator: ChallengeCoordinator) -> dict[str, Any]:
+    """Return the current figures of a challenge, independent of entity IDs."""
+    stats = coordinator.data
+    entry = coordinator.config_entry
+    return {
+        "name": entry.title,
+        "unit": entry.options[CONF_UNIT],
+        "status": stats.status.value,
+        # Today's value comes from a source sensor and cannot be added to.
+        "today_from_source": coordinator.today_from_source,
+        "today": stats.value_today,
+        "target": stats.effective_target_today,
+        "daily_target": stats.target_today,
+        "goal_reached": stats.goal_reached_today,
+        "progress": stats.progress_today,
+        "current_streak": stats.current_streak,
+        "best_streak": stats.best_streak.length,
+        "total": stats.total,
+        "this_week": stats.this_week,
+        "week_target": stats.week_target,
+        "week_fulfilled_days": stats.week_fulfilled_days,
+        "week_goal_days": stats.week_goal_days,
+        "week_days": stats.week_days,
+        "this_month": stats.this_month,
+        "this_year": stats.this_year,
+        "remaining": stats.remaining,
+        "days_left": stats.days_left,
+    }
+
+
 @callback
 def async_setup_services(hass: HomeAssistant) -> None:
     """Register the actions."""
@@ -139,6 +172,17 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(DOMAIN, SERVICE_ADD, async_add, schema=ADD_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET, async_set, schema=SET_SCHEMA)
+
+    async def async_get_status(call: ServiceCall) -> ServiceResponse:
+        return status_response(get_coordinator(hass, call.data[ATTR_CONFIG_ENTRY_ID]))
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_STATUS,
+        async_get_status,
+        schema=GET_STATUS_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
     hass.services.async_register(
         DOMAIN,
         SERVICE_GET_HISTORY,

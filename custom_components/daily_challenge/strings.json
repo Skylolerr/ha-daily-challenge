@@ -342,6 +342,26 @@
           "description": "Last day to return. Defaults to today."
         }
       }
+    },
+    "get_status": {
+      "name": "Get status",
+      "description": "Returns today's value, target, streaks and the sums of this week, month and year of a challenge.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Challenge",
+          "description": "The challenge to read."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "goal_reached": "Today's goal reached",
+      "milestone": "Milestone reached",
+      "streak": "Streak milestone reached",
+      "best_streak": "New best streak",
+      "best_day": "New best day",
+      "total": "Total milestone reached"
     }
   }
 }

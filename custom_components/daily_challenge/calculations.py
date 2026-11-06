@@ -106,6 +106,12 @@ class ChallengeStats:
     # value of a day other than today.
     previous_best_streak: int = 0
     best_day_before_today: int = 0
+    # This week (Monday to today) within the period.
+    week_target: int = 0
+    week_fulfilled_days: int = 0
+    # Days of this week that reached their own target (not the streak rule).
+    week_goal_days: int = 0
+    week_days: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -331,6 +337,7 @@ def calculate(
     week_start = today - timedelta(days=today.weekday())
     in_period = list(zip(period, values, strict=True))
     current = _current_streak(period, fulfilled, settings, status)
+    in_week = [i for i, day in enumerate(period) if week_start <= day <= today]
 
     return ChallengeStats(
         status=status,
@@ -361,6 +368,10 @@ def calculate(
         best_streak=_best_streak(period, fulfilled),
         previous_best_streak=_best_streak_before(period, fulfilled, current.start),
         best_day_before_today=best_day_before_today,
+        week_target=sum(targets[i] for i in in_week),
+        week_fulfilled_days=sum(1 for i in in_week if fulfilled[i]),
+        week_goal_days=sum(1 for i in in_week if values[i] >= targets[i]),
+        week_days=len(in_week),
     )
 
 

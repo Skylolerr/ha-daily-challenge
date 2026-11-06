@@ -58,9 +58,12 @@ def async_challenges(hass: HomeAssistant, assistant: str | None) -> list[Challen
     return challenges
 
 
-@callback
-def async_setup_intents(hass: HomeAssistant) -> None:
-    """Register the intents."""
+async def async_setup_intents(hass: HomeAssistant) -> None:
+    """Register the intents.
+
+    This module is an `intent` platform: the intent integration calls this
+    once it is set up (conversation and every assistant depend on it).
+    """
     intent.async_register(hass, AddIntentHandler())
     intent.async_register(hass, SetIntentHandler())
     intent.async_register(hass, StatusIntentHandler())

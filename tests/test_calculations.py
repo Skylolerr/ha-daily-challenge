@@ -646,3 +646,39 @@ def test_build_history_rescuable_only_in_catch_up_while_running(
     days = {d(0): 20, d(1): 5}
     result = build_history(days, TARGETS_20, settings(**kwargs), today=d(2))
     assert result.rescuable == []
+
+
+def test_week_figures() -> None:
+    """Target, fulfilled and passed days of this week, Monday to today."""
+    # START is a Monday; today is the Thursday of that week.
+    days = {d(0): 20, d(1): 5, d(2): 25, d(3): 10}
+    stats = calculate(days, TARGETS_20, settings(), today=d(3))
+    assert stats.this_week == 60
+    assert stats.week_target == 80
+    assert stats.week_fulfilled_days == 2
+    assert stats.week_goal_days == 2
+    assert stats.week_days == 4
+
+
+def test_week_goal_days_follow_the_target_not_the_streak_rule() -> None:
+    """With the "any" rule every day with a value counts, the goal does not."""
+    days = {d(0): 5, d(1): 25, d(2): 5}
+    stats = calculate(
+        days, TARGETS_20, settings(streak_rule=StreakRule.ANY), today=d(2)
+    )
+    assert (stats.week_fulfilled_days, stats.week_goal_days) == (3, 1)
+
+
+def test_week_figures_start_within_the_week() -> None:
+    """Days before the start do not count, a new week starts on Monday."""
+    days = {d(2): 20, d(7): 20}
+    started = calculate(days, TARGETS_20, settings(start=d(2)), today=d(3))
+    assert (started.week_target, started.week_days) == (40, 2)
+    next_week = calculate(days, TARGETS_20, settings(start=d(2)), today=d(7))
+    assert (next_week.week_target, next_week.week_fulfilled_days) == (20, 1)
+
+
+def test_week_figures_before_the_start() -> None:
+    """Before the start there is nothing this week."""
+    stats = calculate({}, TARGETS_20, settings(start=d(10)), today=d(3))
+    assert (stats.week_target, stats.week_fulfilled_days, stats.week_days) == (0, 0, 0)

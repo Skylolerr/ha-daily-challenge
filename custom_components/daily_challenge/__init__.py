@@ -18,7 +18,6 @@ from .frontend import (
     async_register_static_path,
     async_unregister_card,
 )
-from .intent import async_setup_intents
 from .services import async_setup_services
 from .websocket import async_setup_websocket
 
@@ -36,7 +35,6 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up actions, WebSocket commands and the card (once per start)."""
     async_setup_services(hass)
-    async_setup_intents(hass)
     async_setup_websocket(hass)
     await async_register_static_path(hass)
     await async_register_card(hass)
@@ -86,6 +84,8 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: DailyChallengeConfigEntry
 ) -> bool:
     """Unload a challenge and write pending changes immediately."""
+    # No more readings, so nothing is changed after the final save.
+    entry.runtime_data.async_stop_source()
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         await entry.runtime_data.store.async_save()

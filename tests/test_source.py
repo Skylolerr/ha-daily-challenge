@@ -88,6 +88,52 @@ async def test_daily_source_ignores_invalid_states(
     assert total(hass) == "300"
 
 
+@pytest.mark.parametrize(
+    ("state", "expected"), [("2.5", "3"), ("0.5", "1"), ("2.49", "2")]
+)
+async def test_daily_source_rounds_half_up(
+    hass: HomeAssistant, state: str, expected: str
+) -> None:
+    """Halves are rounded up, as people expect."""
+    hass.states.async_set(SOURCE, state)
+    await setup_challenge(hass, "daily")
+    assert total(hass) == expected
+
+
+async def test_counter_glitch_to_zero_is_not_a_reset(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    hass_storage: dict[str, Any],
+) -> None:
+    """A device that reports 0 for a moment does not add its whole reading."""
+    hass.states.async_set(SOURCE, "12345")
+    await setup_challenge(hass, "counter")
+    await set_source(hass, "0")
+    await set_source(hass, "12350")
+    assert total(hass) == "5"
+    data = await saved(hass, freezer, hass_storage)
+    assert data["source"] == {"entity_id": SOURCE, "last": 12350.0, "carry": 0.0}
+    # Back a little below the old reading: the higher one stays the base.
+    await set_source(hass, "0")
+    await set_source(hass, "12340")
+    await set_source(hass, "12352")
+    assert total(hass) == "7"
+
+
+async def test_reading_on_the_last_day_after_midnight(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    """A reading right after the end, before the day rollover ran, is ignored."""
+    hass.states.async_set(SOURCE, "100")
+    await setup_challenge(hass, "counter", end_date="2026-11-04")
+    await set_source(hass, "110")
+    assert total(hass) == "10"
+    # Midnight has passed, but its timer has not run yet.
+    freezer.move_to("2026-11-05 00:00:01+01:00")
+    await set_source(hass, "120")
+    assert total(hass) == "10"
+
+
 async def test_daily_source_is_capped(hass: HomeAssistant) -> None:
     """Values are kept within 0 and the maximum."""
     hass.states.async_set(SOURCE, "-5")
@@ -173,9 +219,12 @@ async def test_counter_adds_increases_with_carry(
     await set_source(hass, "102.0")
     assert total(hass) == "2"
 
-    # A big drop is a reset: the new reading counts from 0.
+    # A big drop waits for the next reading: still low, so the counter was
+    # reset and counts from 0.
     await set_source(hass, "5.0")
-    assert total(hass) == "7"
+    assert total(hass) == "2"
+    await set_source(hass, "6.0")
+    assert total(hass) == "8"
 
 
 async def test_counter_keeps_buttons(hass: HomeAssistant) -> None:
@@ -315,3 +364,26 @@ async def test_old_store_is_migrated(
         "target_history": {START: 20},
         "source": None,
     }
+
+
+async def test_counter_glitch_with_several_zero_readings(hass: HomeAssistant) -> None:
+    """Several 0 readings in a row are still a glitch until the counter rises."""
+    hass.states.async_set(SOURCE, "12345")
+    await setup_challenge(hass, "counter")
+    await set_source(hass, "0")
+    hass.states.async_set(SOURCE, "0", {"again": True})
+    await hass.async_block_till_done()
+    await set_source(hass, "0.0")
+    await set_source(hass, "12350")
+    assert total(hass) == "5"
+
+
+async def test_counter_real_reset_counts_from_zero(hass: HomeAssistant) -> None:
+    """After a real reset the counter rises from 0 and every rise counts."""
+    hass.states.async_set(SOURCE, "500")
+    await setup_challenge(hass, "counter")
+    await set_source(hass, "0")
+    await set_source(hass, "0")
+    await set_source(hass, "3")
+    await set_source(hass, "10")
+    assert total(hass) == "10"

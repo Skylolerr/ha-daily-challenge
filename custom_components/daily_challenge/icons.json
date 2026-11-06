@@ -93,6 +93,9 @@
     },
     "get_history": {
       "service": "mdi:history"
+    },
+    "get_status": {
+      "service": "mdi:information-outline"
     }
   }
 }

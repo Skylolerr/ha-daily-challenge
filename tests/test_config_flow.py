@@ -296,6 +296,11 @@ async def test_source_must_not_be_a_challenge_entity(
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "source_is_challenge"}
+    # The section with the wrong field is open, so the error makes sense.
+    section_ = next(
+        value for key, value in result["data_schema"].schema.items() if key == "source"
+    )
+    assert section_.options["collapsed"] is False
 
 
 async def test_cleared_source_stays_cleared_after_an_error(

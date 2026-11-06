@@ -342,6 +342,26 @@
           "description": "Ultimo giorno da restituire. Predefinito: oggi."
         }
       }
+    },
+    "get_status": {
+      "name": "Ottieni stato",
+      "description": "Restituisce il valore di oggi, l'obiettivo, le serie e le somme di questa settimana, di questo mese e di quest'anno di una sfida.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sfida",
+          "description": "La sfida da leggere."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "goal_reached": "Obiettivo di oggi raggiunto",
+      "milestone": "Traguardo raggiunto",
+      "streak": "Traguardo della serie raggiunto",
+      "best_streak": "Nuova serie migliore",
+      "best_day": "Nuovo giorno migliore",
+      "total": "Traguardo della quantità totale raggiunto"
     }
   }
 }

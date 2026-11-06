@@ -51,3 +51,11 @@ get_history:
     end:
       selector:
         date:
+
+get_status:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: daily_challenge

@@ -342,6 +342,26 @@
           "description": "Letzter gelieferter Tag. Standard ist heute."
         }
       }
+    },
+    "get_status": {
+      "name": "Status abrufen",
+      "description": "Liefert den heutigen Wert, das Ziel, die Streaks und die Summen dieser Woche, dieses Monats und dieses Jahres einer Challenge.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Challenge",
+          "description": "Die Challenge, die gelesen wird."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "goal_reached": "Tagesziel heute erreicht",
+      "milestone": "Meilenstein erreicht",
+      "streak": "Streak-Meilenstein erreicht",
+      "best_streak": "Neuer bester Streak",
+      "best_day": "Neuer bester Tag",
+      "total": "Gesamtmenge erreicht"
     }
   }
 }

@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -70,6 +70,9 @@ class SourceData(TypedDict):
     last: float
     # Fraction not yet added, e.g. 0.4 of 1.4 km.
     carry: float
+    # The reading before a big drop; the next reading tells a reset from a
+    # short glitch (e.g. 0 while a device restarts).
+    reset_from: NotRequired[float]
 
 
 class StoreData(TypedDict):
@@ -202,7 +205,10 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         )
         self.store = ChallengeStore(hass, entry.entry_id)
         self._unsub_midnight: Callable[[], None] | None = None
+        self._unsub_source: Callable[[], None] | None = None
         self._milestone_listeners: list[MilestoneListener] = []
+        # The day the figures in `data` were calculated for.
+        self._calculated_for: date | None = None
 
     @property
     def today(self) -> date:
@@ -255,12 +261,18 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         """Follow the source sensor; called once the entities are set up."""
         if (entity_id := self.source_entity) is None:
             return
-        self.config_entry.async_on_unload(
-            async_track_state_change_event(
-                self.hass, [entity_id], self._async_source_changed
-            )
+        self._unsub_source = async_track_state_change_event(
+            self.hass, [entity_id], self._async_source_changed
         )
+        self.config_entry.async_on_unload(self.async_stop_source)
         self._async_source_state(self.hass.states.get(entity_id))
+
+    @callback
+    def async_stop_source(self) -> None:
+        """Stop following the source sensor (before the final save on unload)."""
+        if self._unsub_source is not None:
+            self._unsub_source()
+            self._unsub_source = None
 
     @callback
     def _async_source_changed(self, event: Event[EventStateChangedData]) -> None:
@@ -272,13 +284,39 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         reading = _reading(state)
         if state is None or reading is None:
             return
-        active = self._calculate().status is ChallengeStatus.ACTIVE
-        if self.source_mode is SourceMode.DAILY:
-            value = max(0, min(MAX_DAY_VALUE, round(reading)))
-            if active and value != self.value_on(self.today):
-                self.async_set_value(value, from_source=True)
+        # The figures are recalculated at midnight; a reading that arrives
+        # just before that recalculation must not use yesterday's status.
+        if self.data is None or self._calculated_for != self.today:
+            self.async_set_updated_data(self._calculate())
+        active = self.data.status is ChallengeStatus.ACTIVE
+        try:
+            if self.source_mode is SourceMode.DAILY:
+                self._async_daily_reading(state, reading, active=active)
+            else:
+                self._async_counter_reading(state.entity_id, reading, active=active)
+        except ServiceValidationError as err:
+            # E.g. the day just ended; nothing to count, nothing to break.
+            LOGGER.debug("Reading of %s not counted: %s", state.entity_id, err)
+
+    @callback
+    def _async_daily_reading(
+        self, state: State, reading: float, *, active: bool
+    ) -> None:
+        """Take the reading of a daily source as today's value."""
+        today = self.today
+        # A daily counter may still show yesterday's amount after midnight
+        # until it resets; only a reading that changed today is today's.
+        if dt_util.as_local(state.last_changed).date() != today:
             return
-        self._async_counter_reading(state.entity_id, reading, active=active)
+        # Rounded half up (Python's round() would make 2.5 → 2).
+        value = max(0, min(MAX_DAY_VALUE, math.floor(reading + 0.5)))
+        # After a restart, a source may restore yesterday's amount with a new
+        # time stamp: an untouched new day does not take yesterday's value.
+        yesterday = self.value_on(today - timedelta(days=1))
+        if self.value_on(today) == 0 and value > 0 and value == yesterday:
+            return
+        if active and value != self.value_on(today):
+            self.async_set_value(value, from_source=True)
 
     @callback
     def _async_counter_reading(
@@ -293,11 +331,30 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
             self.store.async_delay_save()
             return
         last = source["last"]
-        if reading >= last:
+        reset_from = source.get("reset_from")
+        if reset_from is not None:
+            # The reading after a big drop decides what the drop was.
+            if reading >= reset_from * (1 - COUNTER_RESET_SHARE):
+                # Back near the old reading: a glitch, only the rise counts.
+                increase = max(0.0, reading - reset_from)
+                current["last"] = max(reading, reset_from)
+            elif reading <= last:
+                # Still low and not rising (e.g. 0 again): wait longer.
+                current["reset_from"] = reset_from
+                current["carry"] = source["carry"]
+                self.store.async_delay_save()
+                return
+            else:
+                # Rising from the low reading: a real reset, it counts from 0.
+                increase = max(0.0, reading)
+        elif reading >= last:
             increase = reading - last
         elif reading < last * (1 - COUNTER_RESET_SHARE):
-            # The counter was reset and counts from 0 again.
-            increase = max(0.0, reading)
+            # A reset or a glitch; wait for the next reading to tell.
+            current["reset_from"] = last
+            current["carry"] = source["carry"]
+            self.store.async_delay_save()
+            return
         else:
             # A small drop, e.g. a correction: keep the higher reading.
             self.store.source = source
@@ -336,8 +393,10 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         return self._calculate()
 
     def _calculate(self) -> ChallengeStats:
+        today = self.today
+        self._calculated_for = today
         return calculate(
-            self.store.days, self.store.target_history, self.settings, self.today
+            self.store.days, self.store.target_history, self.settings, today
         )
 
     @callback

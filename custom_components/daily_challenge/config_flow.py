@@ -67,7 +67,9 @@ def _unit_suggestions(hass: HomeAssistant) -> list[str]:
     return UNIT_SUGGESTIONS.get(language, UNIT_SUGGESTIONS["en"])
 
 
-def _schema(hass: HomeAssistant, defaults: dict[str, Any]) -> vol.Schema:
+def _schema(
+    hass: HomeAssistant, defaults: dict[str, Any], *, open_source: bool = False
+) -> vol.Schema:
     """Build the form schema shared by the config and options flow."""
     return vol.Schema(
         {
@@ -139,7 +141,7 @@ def _schema(hass: HomeAssistant, defaults: dict[str, Any]) -> vol.Schema:
                         ),
                     }
                 ),
-                {"collapsed": not defaults.get(CONF_SOURCE_ENTITY)},
+                {"collapsed": not (open_source or defaults.get(CONF_SOURCE_ENTITY))},
             ),
             vol.Required(SECTION_MILESTONES, default={}): section(
                 vol.Schema(
@@ -294,7 +296,9 @@ class DailyChallengeConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_STREAK_RULE: StreakRule.TARGET.value,
             CONF_DEFICIT_MODE: DeficitMode.DISPLAY.value,
         }
-        schema = _schema(self.hass, defaults)
+        schema = _schema(
+            self.hass, defaults, open_source=errors.get("base") == "source_is_challenge"
+        )
         if user_input is not None:
             schema = self.add_suggested_values_to_schema(schema, _suggested(user_input))
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -331,7 +335,11 @@ class DailyChallengeOptionsFlow(OptionsFlow):
                 )
                 return self.async_create_entry(data=options)
 
-        schema = _schema(self.hass, {CONF_NAME: entry.title, **entry.options})
+        schema = _schema(
+            self.hass,
+            {CONF_NAME: entry.title, **entry.options},
+            open_source=errors.get("base") == "source_is_challenge",
+        )
         if user_input is not None:
             schema = self.add_suggested_values_to_schema(schema, _suggested(user_input))
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

@@ -29,8 +29,20 @@ TODAY = "number.push_ups_today"
 
 @pytest.fixture(autouse=True)
 async def setup_homeassistant(hass: HomeAssistant) -> None:
-    """Set up exposure handling."""
+    """Set up exposure handling and the intent integration (which loads intent.py)."""
     assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(hass, "intent", {})
+
+
+async def test_intents_register_once_without_errors(
+    hass: HomeAssistant, loaded_entry: MockConfigEntry, caplog: pytest.LogCaptureFixture
+) -> None:
+    """intent.py is an intent platform: registered once, no error, no warning."""
+    await hass.async_block_till_done()
+    types = [handler.intent_type for handler in intent.async_get(hass)]
+    assert types.count(INTENT_ADD) == 1
+    assert "is being overwritten" not in caplog.text
+    assert "TypeError" not in caplog.text
 
 
 async def handle(
