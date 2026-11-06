@@ -19,10 +19,11 @@
   <a href="https://my.home-assistant.io/redirect/config_flow_start/?domain=daily_challenge"><img alt="Set up Daily Challenge" src="https://my.home-assistant.io/badges/config_flow_start.svg"></a>
 </p>
 
-**Not a sensor-triggered counter – a goal-based daily challenge tracker.** Daily Challenge
-tracks amounts you want to reach every day – "20 push-ups", "30 minutes of reading",
-"8 glasses of water" – with streaks, target vs. actual over the whole challenge, an
-optional catch-up mode and its own dashboard card.
+**A goal-based daily challenge tracker, not just a counter.** Daily Challenge tracks
+amounts you want to reach every day – "20 push-ups", "30 minutes of reading",
+"10,000 steps" – with streaks, target vs. actual over the whole challenge, an optional
+catch-up mode, milestones and its own dashboard cards. Count by hand, or let a sensor such
+as your step counter count for you.
 
 > [!NOTE]
 > **Beta.** Breaking changes are possible before 1.0. They are always listed in the
@@ -59,6 +60,8 @@ optional catch-up mode and its own dashboard card.
 - **Target vs. actual over the whole runtime** – ahead or behind at a glance and, with an
   end date, what is left, in how many days and the average still needed per day.
 - **Correct any past day** with the actions (and, from v0.2.0, directly in the card).
+- **Automatic counting** – take today's value from a sensor (e.g. "steps today"), or add
+  every increase of a counter that keeps rising (e.g. an odometer).
 
 **Stay motivated**
 
@@ -66,12 +69,18 @@ optional catch-up mode and its own dashboard card.
   streak, best day, daily average and weekly, monthly and yearly sums.
 - **Optional catch-up mode** – yesterday's deficit raises today's target, so a missed day
   can be made up on the following day without breaking the streak.
+- **Milestones** – an event when the streak reaches 7, 14, 30 … days, for a new best
+  streak, a new best day or a total of 100, 250, 500 …, with a blueprint that
+  congratulates you. You choose which kinds count.
 - **Reminder blueprint** – a notification at 20:00 while today's goal is still open.
 
 **Fits into Home Assistant**
 
 - **Its own card** with a progress ring, quick buttons, undo, streak and target vs.
   actual, and a visual editor – installed and registered automatically.
+- **An overview card** with all challenges at a glance, one row each.
+- **Assist** – "Add 20 to push-ups" or "How many push-ups today?" by voice or chat: AI
+  assistants get tools for it, and a blueprint adds the sentences for the built-in Assist.
 - **Plain entities** that work just as well with Tile, Entities, Mushroom or ApexCharts.
 - **English, German, French and Italian**, light and dark theme, your number format.
 
@@ -109,6 +118,16 @@ Set when you add a challenge; all of them can be changed later via **Configure**
 | Steps | 1, 5, 10 | Up to 3 amounts in ascending order. Each gets a **+** button; the smallest one is also used for **−**. |
 | Streak rule | Daily target reached | When a day counts towards the streak: *daily target reached* or *any amount above 0*. |
 | Deficit handling | Only show the deficit | *Only show the deficit*, or *Catch up*: yesterday's deficit raises today's target. |
+| Automatic counting → Source | – | Optional sensor, number, input number or counter that feeds the challenge. |
+| Automatic counting → Source type | Daily value | *Daily value*: the source shows today's amount (e.g. steps today) and sets it; the buttons are not available then. *Counter*: the source keeps rising (e.g. an odometer) and every increase is added; the buttons stay. |
+| Milestones | all | Which milestones fire the milestone event: streak milestones, new best streak, new best day, total milestones. None: no milestone event. |
+
+**Automatic counting** only counts while the challenge runs and rounds to whole numbers.
+With a *daily value* source, today's value always follows the sensor; past days stay
+editable through the actions. With a *counter*, fractions are carried over (3 × 0.4 km
+make 1 km), a drop of more than 10 % counts as a reset of the counter, and what was added
+while Home Assistant was off counts on the day it sees it again. Changing the source or
+its type starts the counter afresh.
 
 <details>
 <summary>The setup form</summary>
@@ -152,6 +171,21 @@ and the progress ring are always shown.
 
 The card follows your theme, language and number format.
 
+### Overview card
+
+All challenges at a glance, one row each with today's value, the target, a progress bar,
+the streak and a **+** button for the smallest step. Tap a row for the details. Add it as
+**Daily Challenge overview** or in YAML:
+
+```yaml
+type: custom:daily-challenge-overview-card
+title: My challenges            # optional
+entities:                       # optional, the "Today" entities; empty shows all
+  - number.push_ups_today
+  - number.steps_today
+show_buttons: true              # the + button of the smallest step
+```
+
 ## Entities
 
 One device per challenge with these entities (example IDs for a challenge named
@@ -160,7 +194,7 @@ they look like `number.push_ups_heute` or `sensor.push_ups_notig_pro_tag`.
 
 | Entity | Example ID | Description |
 |---|---|---|
-| Today | `number.push_ups_today` | Today's value, directly settable. Unavailable before the start and after the end date. |
+| Today | `number.push_ups_today` | Today's value, directly settable (not with a *daily value* source). Unavailable before the start and after the end date. |
 | +n / −n | `button.push_ups_add_5`, `button.push_ups_subtract` | Add a step or subtract the smallest step (never below 0). |
 | Today's target | `sensor.push_ups_today_s_target` | Effective target of today. Attributes `daily_target` and `deficit`. |
 | Progress | `sensor.push_ups_progress` | Today's progress in % (up to 999 %). |
@@ -173,6 +207,7 @@ they look like `number.push_ups_heute` or `sensor.push_ups_notig_pro_tag`.
 | Required per day | `sensor.push_ups_required_per_day` | Average still needed per day to reach the end goal (only with an end date). |
 | Best day | `sensor.push_ups_best_day` | Highest daily value, attribute `date`. |
 | Goal reached today | `binary_sensor.push_ups_goal_reached_today` | On once today's target is reached. |
+| Milestone | `event.push_ups_milestone` | Fires `streak`, `best_streak`, `best_day` or `total` with the attribute `value` (see [Milestones](#milestones)). Not created without milestones. |
 | Target to date, Daily average, This week, This month, This year | `sensor.push_ups_target_to_date`, … | Diagnostic sensors. Weeks start on Monday. |
 
 The quantity sensors use the unit of the challenge; the averages use it per day.
@@ -230,6 +265,52 @@ fulfilled:
 ```
 </details>
 
+## Milestones
+
+[![Open your Home Assistant instance and import the milestone blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FSkylolerr%2Fha-daily-challenge%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fdaily_challenge%2Fmilestone.yaml)
+
+The **Milestone** event of a challenge fires when today's value makes the challenge reach
+a milestone:
+
+| Event type | When | `value` |
+|---|---|---|
+| `streak` | The streak reaches 7, 14, 30, 50, 100, 150, 200, 250, 300, 365, 500, 750, 1000 days, then every 500 days | Days |
+| `best_streak` | The streak beats the best one of an earlier run (once per run) | Days |
+| `best_day` | Today beats the best other day (once per day) | Today's value |
+| `total` | The total reaches 100, 250, 500, 1000, 2500, 5000, 10,000 … | The milestone |
+
+Only changes of today count – not recalculations at midnight or on a restart, and not
+corrections of past days. A change that is undone and made again fires again. Choose the
+kinds in the options of the challenge.
+
+The blueprint congratulates you on each milestone – by default with a notification in
+Home Assistant. In your own action you can use `{{ challenge }}`, `{{ kind }}`,
+`{{ value }}`, `{{ unit }}` and `{{ message }}`, a ready-made sentence such as
+*"7 days in a row!"*.
+
+## Voice commands (Assist)
+
+**With an AI assistant** (e.g. OpenAI, Google Gemini or Anthropic Claude as conversation
+agent with the Assist API): expose the challenge's **Today** entity to Assist
+(*Settings → Voice assistants → Expose*). The assistant can then add to, set and read
+your challenges in any language – "I just did 20 push-ups", "How am I doing with
+reading?".
+
+**With the built-in Assist**:
+
+[![Open your Home Assistant instance and import the voice blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FSkylolerr%2Fha-daily-challenge%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fdaily_challenge%2Fvoice.yaml)
+
+The blueprint adds sentences for all challenges, such as *"Add 20 to push-ups"* and
+*"How many push-ups today"*. `{challenge}` is the name of the challenge and `{amount}` a
+number. The sentences and answers are English by default; replace them with your
+language, for example:
+
+| Language | To add | To ask | Answer after adding |
+|---|---|---|---|
+| German | `füge {amount} zu {challenge} hinzu` | `wie viele {challenge} heute` | `Erledigt. {{ done }} von {{ target }} {{ unit }} heute.` |
+| French | `ajoute {amount} à {challenge}` | `combien de {challenge} aujourd'hui` | `C'est fait. {{ done }} sur {{ target }} {{ unit }} aujourd'hui.` |
+| Italian | `aggiungi {amount} a {challenge}` | `quanti {challenge} oggi` | `Fatto. {{ done }} su {{ target }} {{ unit }} oggi.` |
+
 ## Reminder blueprint
 
 [![Open your Home Assistant instance and import the reminder blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FSkylolerr%2Fha-daily-challenge%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fdaily_challenge%2Freminder.yaml)
@@ -284,6 +365,8 @@ automation:
   today included. It goes down as soon as you log today's amount.
 - After the **end date** today's value and the buttons are unavailable; past days stay
   editable through the actions.
+- With a **daily value source**, today's value follows the sensor and cannot be changed
+  by hand; the actions reject today but accept past days.
 - Each challenge keeps its days in `.storage/daily_challenge.<entry_id>`; the entities are
   calculated from it.
 </details>

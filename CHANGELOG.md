@@ -11,6 +11,27 @@ and Home Assistant show when they offer the update.
 
 ## [Unreleased]
 
+> **Highlight:** let a sensor count for you, celebrate milestones, talk to your
+> challenges with Assist and see them all on one card.
+
+### ✨ Added
+
+- **Automatic counting:** a challenge can take today's value from a sensor such as
+  "steps today", or add every increase of a counter that keeps rising, such as an
+  odometer. Set it under *Automatic counting* in the options.
+- **Milestones:** a new *Milestone* event per challenge fires for streak milestones
+  (7, 14, 30 … days), a new best streak, a new best day and total milestones (100, 250,
+  500 …). Choose the kinds in the options. A new blueprint congratulates you.
+- **Assist:** AI assistants can add to, set and read your challenges once their *Today*
+  entity is exposed; a new blueprint adds sentences for the built-in Assist.
+- **Overview card** `custom:daily-challenge-overview-card` with all challenges at a
+  glance and a **+** button each.
+
+### 🔄 Changed
+
+- The data of a challenge gets a new field for the counter source; existing data is
+  migrated automatically.
+
 ## [0.1.2] - 2026-11-02
 
 > **Highlight:** Daily Challenge is in the HACS default store, and big numbers now fit
