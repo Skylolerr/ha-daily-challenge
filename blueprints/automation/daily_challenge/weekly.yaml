@@ -1,0 +1,98 @@
+blueprint:
+  name: Daily Challenge weekly summary
+  description: >-
+    Sums up the week of a Daily Challenge on a chosen day and time (default
+    Sunday 20:00), e.g. "This week: 140 of 140 push-ups, goal reached on 7 of
+    7 days. Streak: 12 days." In the action you can use `{{ challenge }}`,
+    `{{ done }}`, `{{ target }}`, `{{ unit }}`, `{{ fulfilled }}`,
+    `{{ days }}`, `{{ streak }}` and `{{ message }}` (that sentence).
+    `{{ fulfilled }}` counts the days that reached their target. The week runs
+    from Monday to the day of the summary, so pick Sunday for a whole week;
+    nothing is sent while the challenge is not running.
+  domain: automation
+  author: Skylolerr
+  source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/weekly.yaml
+  homeassistant:
+    min_version: "2026.10.0"
+  input:
+    today_entity:
+      name: Challenge
+      description: The "Today" entity of the challenge.
+      selector:
+        entity:
+          filter:
+            - integration: daily_challenge
+              domain: number
+    weekday:
+      name: Day
+      default: sun
+      selector:
+        select:
+          options:
+            - label: Monday
+              value: mon
+            - label: Tuesday
+              value: tue
+            - label: Wednesday
+              value: wed
+            - label: Thursday
+              value: thu
+            - label: Friday
+              value: fri
+            - label: Saturday
+              value: sat
+            - label: Sunday
+              value: sun
+    summary_time:
+      name: Time
+      default: "20:00:00"
+      selector:
+        time: {}
+    notify_action:
+      name: Summary
+      description: >-
+        What should happen, e.g. a notification to your phone. Defaults to a
+        persistent notification in Home Assistant.
+      default:
+        - action: persistent_notification.create
+          data:
+            title: "{{ challenge }}"
+            message: "{{ message }}"
+      selector:
+        action: {}
+
+triggers:
+  - trigger: time
+    at: !input summary_time
+
+conditions:
+  - condition: time
+    weekday: !input weekday
+
+variables:
+  today_entity: !input today_entity
+
+actions:
+  - action: daily_challenge.get_status
+    data:
+      config_entry_id: "{{ config_entry_id(today_entity) }}"
+    response_variable: status
+  - condition: template
+    value_template: "{{ status.status == 'active' }}"
+  - variables:
+      challenge: >-
+        {{ device_attr(device_id(today_entity), 'name_by_user')
+           or device_attr(device_id(today_entity), 'name') }}
+      done: "{{ status.this_week }}"
+      target: "{{ status.week_target }}"
+      unit: "{{ status.unit }}"
+      fulfilled: "{{ status.week_goal_days }}"
+      days: "{{ status.week_days }}"
+      streak: "{{ status.current_streak }}"
+      message: >-
+        This week: {{ done }} of {{ target }} {{ unit }}, goal reached on
+        {{ fulfilled }} of {{ days }} days. Streak: {{ streak }}
+        {{ 'day' if streak | int == 1 else 'days' }}.
+  - sequence: !input notify_action
+
+mode: single

@@ -1,0 +1,80 @@
+blueprint:
+  name: Daily Challenge quick add
+  description: >-
+    Adds an amount to a Daily Challenge whenever something happens: a press of
+    a Zigbee or Z-Wave button, a scanned NFC tag, a door that opens … Pick
+    the trigger, the challenge and the amount. An optional feedback, e.g. a
+    notification, can use `{{ challenge }}`, `{{ amount }}`, `{{ done }}`,
+    `{{ target }}` and `{{ unit }}`. Nothing happens while the challenge is
+    not running or counts by itself from a daily source sensor.
+  domain: automation
+  author: Skylolerr
+  source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/button.yaml
+  homeassistant:
+    min_version: "2026.10.0"
+  input:
+    add_trigger:
+      name: Trigger
+      description: >-
+        What adds the amount, e.g. "Device → button pressed" or "Tag scanned".
+      selector:
+        trigger: {}
+    today_entity:
+      name: Challenge
+      description: The "Today" entity of the challenge.
+      selector:
+        entity:
+          filter:
+            - integration: daily_challenge
+              domain: number
+    amount:
+      name: Amount
+      description: Added on each trigger. Negative amounts subtract.
+      default: 1
+      selector:
+        number:
+          min: -100000
+          max: 100000
+          step: 1
+          mode: box
+    feedback_action:
+      name: Feedback
+      description: Optional, e.g. a short notification. Nothing by default.
+      default: []
+      selector:
+        action: {}
+
+triggers: !input add_trigger
+
+variables:
+  today_entity: !input today_entity
+  amount: !input amount
+
+actions:
+  - action: daily_challenge.get_status
+    data:
+      config_entry_id: "{{ config_entry_id(today_entity) }}"
+    response_variable: before
+  # Adding would be rejected; skip it instead of logging an error per press.
+  - condition: template
+    value_template: "{{ before.status == 'active' and not before.today_from_source }}"
+  - action: daily_challenge.add
+    data:
+      config_entry_id: "{{ config_entry_id(today_entity) }}"
+      amount: "{{ amount | int }}"
+  - action: daily_challenge.get_status
+    data:
+      config_entry_id: "{{ config_entry_id(today_entity) }}"
+    response_variable: status
+  - variables:
+      challenge: >-
+        {{ device_attr(device_id(today_entity), 'name_by_user')
+           or device_attr(device_id(today_entity), 'name') }}
+      done: "{{ status.today }}"
+      target: "{{ status.target }}"
+      unit: "{{ status.unit }}"
+  - sequence: !input feedback_action
+
+# Quick presses in a row all count.
+mode: queued
+max: 20

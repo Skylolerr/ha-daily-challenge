@@ -51,18 +51,21 @@ variables:
        or device_attr(device_id(milestone_entity), 'name') }}
   kind: "{{ trigger.to_state.attributes.event_type }}"
   value: "{{ trigger.to_state.attributes.value }}"
-  # The unit of today's number, the only number entity of the challenge.
-  unit: >-
-    {{ expand(device_entities(device_id(milestone_entity)))
-       | selectattr('domain', 'eq', 'number')
-       | map(attribute='attributes.unit_of_measurement') | first | default('') }}
-  message: >-
-    {% if kind == 'streak' %}{{ value }} days in a row!
-    {%- elif kind == 'best_streak' %}New best streak: {{ value }} days!
-    {%- elif kind == 'best_day' %}New best day: {{ value }} {{ unit }}!
-    {%- else %}{{ value }} {{ unit }} in total!{% endif %}
 
-actions: !input notify_action
+actions:
+  # The unit through the action: the "Today" entity may be disabled.
+  - action: daily_challenge.get_status
+    data:
+      config_entry_id: "{{ config_entry_id(milestone_entity) }}"
+    response_variable: status
+  - variables:
+      unit: "{{ status.unit }}"
+      message: >-
+        {% if kind == 'streak' %}{{ value }} days in a row!
+        {%- elif kind == 'best_streak' %}New best streak: {{ value }} days!
+        {%- elif kind == 'best_day' %}New best day: {{ value }} {{ unit }}!
+        {%- else %}{{ value }} {{ unit }} in total!{% endif %}
+  - sequence: !input notify_action
 
 # Several milestones can be reached at once; each gets its own run.
 mode: queued

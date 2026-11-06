@@ -7,7 +7,8 @@ blueprint:
     number. The sentences and answers are in English by default; replace
     them with sentences in your language. In the answers you can use
     `{{ challenge }}`, `{{ amount }}`, `{{ done }}`, `{{ target }}`,
-    `{{ unit }}` and `{{ streak }}`.
+    `{{ unit }}` and `{{ streak }}`. A challenge that counts by itself from a
+    daily source sensor can only be asked, not added to.
   domain: automation
   author: Skylolerr
   source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/voice.yaml
@@ -50,6 +51,21 @@ blueprint:
       default: "I don't know a challenge called {{ challenge }}."
       selector:
         text: {}
+    not_running_answer:
+      name: Answer when the challenge is not running
+      default: "{{ challenge }} is not running today."
+      selector:
+        text: {}
+    source_answer:
+      name: Answer when a sensor counts
+      default: "{{ challenge }} counts by itself from its sensor today."
+      selector:
+        text: {}
+    no_amount_answer:
+      name: Answer for an amount that is not a whole number
+      default: "Sorry, I did not get the amount."
+      selector:
+        text: {}
 
 triggers:
   - trigger: conversation
@@ -60,9 +76,6 @@ triggers:
     command: !input status_sentences
 
 variables:
-  add_answer: !input add_answer
-  status_answer: !input status_answer
-  unknown_answer: !input unknown_answer
   wanted: "{{ trigger.slots.challenge | default('') | trim | lower }}"
   # Today's number of the challenge with that name (empty if there is none).
   today_entity: >-
@@ -78,37 +91,60 @@ variables:
 actions:
   - variables:
       challenge: "{{ trigger.slots.challenge | default('') | trim }}"
-      amount: "{{ trigger.slots.amount | default(0) | int(0) }}"
+      raw_amount: "{{ trigger.slots.amount | default('') | string | trim }}"
+      amount: "{{ raw_amount | int(0) }}"
   - if:
       - condition: template
         value_template: "{{ today_entity == '' }}"
     then:
       - set_conversation_response: !input unknown_answer
       - stop: Unknown challenge
+  - variables:
+      challenge: >-
+        {{ device_attr(device_id(today_entity), 'name_by_user')
+           or device_attr(device_id(today_entity), 'name') }}
+  # Read the figures through the action: entity IDs depend on the language.
+  - action: daily_challenge.get_status
+    data:
+      config_entry_id: "{{ config_entry_id(today_entity) }}"
+    response_variable: before
+  - if:
+      - condition: template
+        value_template: "{{ before.status != 'active' }}"
+    then:
+      - set_conversation_response: !input not_running_answer
+      - stop: Not running
   - if:
       - condition: trigger
         id: add
     then:
+      - if:
+          - condition: template
+            value_template: "{{ before.today_from_source }}"
+        then:
+          - set_conversation_response: !input source_answer
+          - stop: Counted by a sensor
+      # Number words ("twenty") and fractions are not taken as amounts.
+      - if:
+          - condition: template
+            value_template: >-
+              {{ amount == 0 or (raw_amount | float(0)) != amount }}
+        then:
+          - set_conversation_response: !input no_amount_answer
+          - stop: No amount
       - action: daily_challenge.add
         data:
           config_entry_id: "{{ config_entry_id(today_entity) }}"
           amount: "{{ amount }}"
+  - action: daily_challenge.get_status
+    data:
+      config_entry_id: "{{ config_entry_id(today_entity) }}"
+    response_variable: status
   - variables:
-      challenge_entities: "{{ device_entities(device_id(today_entity)) }}"
-      challenge: >-
-        {{ device_attr(device_id(today_entity), 'name_by_user')
-           or device_attr(device_id(today_entity), 'name') }}
-      done: "{{ states(today_entity) }}"
-      unit: "{{ state_attr(today_entity, 'unit_of_measurement') }}"
-      # Today's target is the sensor that carries the "deficit" attribute.
-      target: >-
-        {{ expand(challenge_entities) | selectattr('attributes.deficit', 'defined')
-           | map(attribute='state') | first | default('') }}
-      # The current streak is the sensor in days without attributes of its own.
-      streak: >-
-        {{ expand(challenge_entities)
-           | selectattr('entity_id', 'search', '_current_streak$')
-           | map(attribute='state') | first | default(0) }}
+      done: "{{ status.today }}"
+      target: "{{ status.target }}"
+      unit: "{{ status.unit }}"
+      streak: "{{ status.current_streak }}"
   - choose:
       - conditions:
           - condition: trigger
