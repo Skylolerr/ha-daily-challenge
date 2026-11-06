@@ -1,0 +1,68 @@
+blueprint:
+  name: Daily Challenge milestone
+  description: >-
+    Congratulates you when a Daily Challenge reaches a milestone: a streak of
+    7, 14, 30 … days, a new best streak, a new best day or a total of 100,
+    250, 500 … In the action you can use the variables `{{ challenge }}`
+    (name), `{{ kind }}` (`streak`, `best_streak`, `best_day` or `total`),
+    `{{ value }}`, `{{ unit }}` and `{{ message }}` (a ready-made English
+    sentence). Which milestones fire is set in the options of the challenge.
+  domain: automation
+  author: Skylolerr
+  source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/milestone.yaml
+  homeassistant:
+    min_version: "2026.10.0"
+  input:
+    milestone_entity:
+      name: Challenge
+      description: The "Milestone" event of the challenge.
+      selector:
+        entity:
+          filter:
+            - integration: daily_challenge
+              domain: event
+    notify_action:
+      name: Congratulation
+      description: >-
+        What should happen, e.g. a notification to your phone. Defaults to a
+        persistent notification in Home Assistant.
+      default:
+        - action: persistent_notification.create
+          data:
+            title: "{{ challenge }}"
+            message: "{{ message }}"
+      selector:
+        action: {}
+
+triggers:
+  # Every milestone changes the state of the event entity. Coming back from
+  # "unavailable" (a restart) is no new milestone.
+  - trigger: state
+    entity_id: !input milestone_entity
+    not_from: unavailable
+    not_to:
+      - unavailable
+      - unknown
+
+variables:
+  milestone_entity: !input milestone_entity
+  challenge: >-
+    {{ device_attr(device_id(milestone_entity), 'name_by_user')
+       or device_attr(device_id(milestone_entity), 'name') }}
+  kind: "{{ trigger.to_state.attributes.event_type }}"
+  value: "{{ trigger.to_state.attributes.value }}"
+  # The unit of today's number, the only number entity of the challenge.
+  unit: >-
+    {{ expand(device_entities(device_id(milestone_entity)))
+       | selectattr('domain', 'eq', 'number')
+       | map(attribute='attributes.unit_of_measurement') | first | default('') }}
+  message: >-
+    {% if kind == 'streak' %}{{ value }} days in a row!
+    {%- elif kind == 'best_streak' %}New best streak: {{ value }} days!
+    {%- elif kind == 'best_day' %}New best day: {{ value }} {{ unit }}!
+    {%- else %}{{ value }} {{ unit }} in total!{% endif %}
+
+actions: !input notify_action
+
+# Several milestones can be reached at once; each gets its own run.
+mode: queued

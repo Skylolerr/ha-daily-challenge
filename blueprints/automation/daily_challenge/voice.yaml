@@ -1,0 +1,121 @@
+blueprint:
+  name: Daily Challenge voice commands
+  description: >-
+    Lets you update and check your Daily Challenges with Assist, e.g. "Add 20
+    to push-ups" or "How many push-ups today". One automation covers all
+    challenges; `{challenge}` is the name of the challenge and `{amount}` a
+    number. The sentences and answers are in English by default; replace
+    them with sentences in your language. In the answers you can use
+    `{{ challenge }}`, `{{ amount }}`, `{{ done }}`, `{{ target }}`,
+    `{{ unit }}` and `{{ streak }}`.
+  domain: automation
+  author: Skylolerr
+  source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/voice.yaml
+  homeassistant:
+    min_version: "2026.10.0"
+  input:
+    add_sentences:
+      name: Sentences to add
+      description: Must contain `{amount}` and `{challenge}`.
+      default:
+        - "add {amount} to {challenge}"
+        - "log {amount} for {challenge}"
+      selector:
+        text:
+          multiple: true
+    add_answer:
+      name: Answer after adding
+      default: "Done. {{ done }} of {{ target }} {{ unit }} today."
+      selector:
+        text: {}
+    status_sentences:
+      name: Sentences to ask
+      description: Must contain `{challenge}`.
+      default:
+        - "how many {challenge} today"
+        - "how much {challenge} today"
+        - "{challenge} status"
+      selector:
+        text:
+          multiple: true
+    status_answer:
+      name: Answer to a question
+      default: >-
+        {{ challenge }}: {{ done }} of {{ target }} {{ unit }} today, streak
+        {{ streak }} {{ 'day' if streak | int == 1 else 'days' }}.
+      selector:
+        text: {}
+    unknown_answer:
+      name: Answer for an unknown challenge
+      default: "I don't know a challenge called {{ challenge }}."
+      selector:
+        text: {}
+
+triggers:
+  - trigger: conversation
+    id: add
+    command: !input add_sentences
+  - trigger: conversation
+    id: status
+    command: !input status_sentences
+
+variables:
+  add_answer: !input add_answer
+  status_answer: !input status_answer
+  unknown_answer: !input unknown_answer
+  wanted: "{{ trigger.slots.challenge | default('') | trim | lower }}"
+  # Today's number of the challenge with that name (empty if there is none).
+  today_entity: >-
+    {% set ns = namespace(found='') %}
+    {% for entity_id in integration_entities('daily_challenge')
+       if entity_id.startswith('number.') %}
+      {% set device = device_id(entity_id) %}
+      {% set name = device_attr(device, 'name_by_user')
+         or device_attr(device, 'name') %}
+      {% if name | lower == wanted %}{% set ns.found = entity_id %}{% endif %}
+    {% endfor %}{{ ns.found }}
+
+actions:
+  - variables:
+      challenge: "{{ trigger.slots.challenge | default('') | trim }}"
+      amount: "{{ trigger.slots.amount | default(0) | int(0) }}"
+  - if:
+      - condition: template
+        value_template: "{{ today_entity == '' }}"
+    then:
+      - set_conversation_response: !input unknown_answer
+      - stop: Unknown challenge
+  - if:
+      - condition: trigger
+        id: add
+    then:
+      - action: daily_challenge.add
+        data:
+          config_entry_id: "{{ config_entry_id(today_entity) }}"
+          amount: "{{ amount }}"
+  - variables:
+      challenge_entities: "{{ device_entities(device_id(today_entity)) }}"
+      challenge: >-
+        {{ device_attr(device_id(today_entity), 'name_by_user')
+           or device_attr(device_id(today_entity), 'name') }}
+      done: "{{ states(today_entity) }}"
+      unit: "{{ state_attr(today_entity, 'unit_of_measurement') }}"
+      # Today's target is the sensor that carries the "deficit" attribute.
+      target: >-
+        {{ expand(challenge_entities) | selectattr('attributes.deficit', 'defined')
+           | map(attribute='state') | first | default('') }}
+      # The current streak is the sensor in days without attributes of its own.
+      streak: >-
+        {{ expand(challenge_entities)
+           | selectattr('entity_id', 'search', '_current_streak$')
+           | map(attribute='state') | first | default(0) }}
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: add
+        sequence:
+          - set_conversation_response: !input add_answer
+    default:
+      - set_conversation_response: !input status_answer
+
+mode: parallel
