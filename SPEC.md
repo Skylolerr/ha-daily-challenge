@@ -392,6 +392,7 @@ Ziel: **früh öffentlich gehen**, sobald die Basisfunktionen stabil laufen. Dan
    - Erinnerungs-Blueprint `blueprints/automation/daily_challenge/reminder.yaml` auf Basis von `goal_reached_today` (vorgezogen aus «Später», 2026-10-23), mit Import-Button im README
    - Installation über HACS «Custom Repository» auf der eigenen Instanz verifizieren
 4. **Phase 4 – v0.2.0:** Heatmap, Dialog zum Bearbeiten vergangener Tage, Statistik-Zeile.
+4b. **Erweiterungen (beauftragt 2026-11-06, siehe §17):** automatisches Zählen über einen Quell-Sensor, Meilensteine, Assist, Übersichts-Card. In welches Release sie kommen, entscheidet der Maintainer später.
 5. **Phase 5 – v1.0.0:** Stabilisierung auf Basis von Feedback/Issues, keine Breaking Changes mehr ab hier. (Der PR an `hacs/default` ist auf Phase 3 vorgezogen, Entscheid des Maintainers vom 2026-10-23.)
 
 **Versionierung:** SemVer. Vor 1.0 dürfen Minor-Releases Breaking Changes enthalten. Diese werden im CHANGELOG klar markiert. Store-Format-Änderungen laufen immer über eine Store-Migration, Nutzerdaten gehen nie verloren.
@@ -471,3 +472,47 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - Calendar-Entity
 - Challenge einer HA-Person zuordnen (Mehrbenutzer)
 - Personal Bests / Podium, Habit-Score
+
+---
+
+## 17. Erweiterungen (beauftragt 2026-11-06, Release offen)
+
+Vom Maintainer beauftragt am 2026-11-06. Die Entscheide unten sind fix. In welches Release die Erweiterungen kommen, entscheidet der Maintainer, wenn sie fertig sind.
+
+### 17.1 Automatisch zählen (Quell-Sensor)
+
+- Neue Optionen in Config und Options Flow, in einem einklappbaren Abschnitt «Automatisch zählen»:
+  - `source_entity` (optional): Entity-Selector für `sensor`, `number`, `input_number`, `counter`. Entities von Daily Challenge selbst sind nicht erlaubt (Fehler `source_is_challenge`), damit keine Schleifen entstehen.
+  - `source_mode`: `daily` (Tageswert, z. B. «Schritte heute», jeden Tag ab 0) oder `counter` (Zählerstand, der immer weiter steigt, z. B. Velo-Kilometer). Default `daily`.
+- Gezählt wird nur, solange die Challenge läuft. Werte werden auf ganze Zahlen gerundet und auf 0 … 100000 begrenzt. `unknown`, `unavailable` und nicht numerische Zustände werden ignoriert.
+- **Modus `daily`** (Entscheid: «Sensor bestimmt heute»): Der heutige Wert ist immer der gerundete Sensorwert. Er wird bei jeder Zustandsänderung und beim Start übernommen. Die Buttons sind dann **nicht verfügbar**. Die `today`-Number bleibt sichtbar, damit der heutige Wert in Card, Verlauf und Automationen zu sehen ist, lehnt aber Eingaben mit `today_from_source` ab, ebenso die Actions `add`/`set`, `set_day` und Assist für den heutigen Tag. (Präzisiert 2026-11-06: Eine nicht verfügbare Number hätte den heutigen Wert versteckt.) Vergangene Tage bleiben korrigierbar.
+- **Modus `counter`:** Jede Zunahme seit dem letzten Stand wird zum heutigen Tag addiert. Nachkommastellen werden über einen Übertrag weitergetragen (3 × 0,4 km = 1 km). Sinkt der Stand um mehr als 10 %, gilt das als Zurücksetzen des Zählers, und der neue Stand zählt als Zunahme ab 0. Kleinere Rückgänge werden ignoriert. Der letzte Stand und der Übertrag werden im Store gespeichert, damit beim Neustart nichts doppelt oder gar nicht zählt; was während eines HA-Ausfalls dazukam, zählt für den Tag, an dem HA es wieder sieht. Die Buttons bleiben nutzbar.
+- Wechselt die Quell-Entity oder der Modus, beginnt der Zähler neu (neuer Ausgangsstand, nichts wird addiert).
+- **Store:** `STORAGE_VERSION` bleibt 1, die Minor-Version steigt auf 2. Neuer Schlüssel `source` (`{"entity_id": …, "last": …, "carry": …}` oder leer). Die Migration ergänzt ihn leer.
+- README: Die Abgrenzung zu «HA Daily Counter» bleibt sinngemäss (zielbasiert, Sensor ist nur eine mögliche Quelle).
+
+### 17.2 Meilensteine
+
+- Neue **Event-Entity** `milestone` pro Challenge (`translation_key` `milestone`). Sie erscheint im Logbuch und ist in Automationen nutzbar.
+- Neue Option `milestones` (Mehrfachauswahl, Abschnitt «Meilensteine»). Default: alle vier Arten. Ohne Auswahl gibt es keine Event-Entity (eine vorhandene wird aus der Registry entfernt).
+- Event-Typen und Daten (`value`):
+  - `streak`: Streak erreicht 7, 14, 30, 50, 100, 150, 200, 250, 300, 365, 500, 750, 1000 Tage, danach alle 500 Tage
+  - `best_streak`: Der aktuelle Streak übertrifft den bisher besten einer früheren Serie (einmal pro Serie; nicht für die allererste Serie)
+  - `best_day`: Der heutige Wert übertrifft den bisher besten Tag eines anderen Tages (einmal pro Tag; nicht, solange es noch keinen besten Tag gab)
+  - `total`: Gesamtmenge erreicht 100, 250, 500, 1000, 2500, 5000, 10 000, 25 000 … (Folge 1 / 2,5 / 5 × 10ⁿ)
+- Ausgelöst wird nur durch Änderungen am **heutigen** Wert (Hand, Action, Quell-Sensor), nicht durch Neuberechnungen beim Start oder um Mitternacht und nicht durch Korrekturen vergangener Tage. Wird ein Wert rückgängig gemacht und erneut erreicht, löst der Meilenstein erneut aus (bewusst einfach, kein Speicher).
+- Blueprint `blueprints/automation/daily_challenge/milestone.yaml`: Glückwunsch-Nachricht bei Meilensteinen, Aktion frei wählbar (Default: persistente Benachrichtigung), mit Import-Button im README.
+
+### 17.3 Assist
+
+- Entscheid: **Befehle für KI-Assistenten plus Blueprint** für den satzbasierten Assist.
+- Intents `DailyChallengeAdd` (Slots `challenge`, `amount`), `DailyChallengeSet` (`challenge`, `value`) und `DailyChallengeStatus` (`challenge`). `challenge` ist der Name (ohne Gross/Klein); gibt es nur eine Challenge, ist er optional. Es gelten nur Challenges, deren `today`-Number für den Assistenten freigegeben ist. Antwort mit Wert, Tagesziel, Einheit und Streak.
+- Über die `llm`-Plattform (`llm.py`, vorhanden ab der Mindestversion 2026.10) als Werkzeuge der Assist-API angeboten, solange mindestens eine Challenge freigegeben ist.
+- Blueprint `blueprints/automation/daily_challenge/voice.yaml` mit Satz-Auslöser: hinzufügen und Stand abfragen, Sätze und Antworten als Eingaben (Default Englisch). README mit Beispielsätzen auf DE, FR, IT.
+
+### 17.4 Übersichts-Card `custom:daily-challenge-overview-card`
+
+- Im selben Bundle wie die bestehende Card, automatisch registriert, mit visuellem Editor.
+- Konfiguration: `title` (optional), `entities` (optional, Liste von `today`-Numbers; leer = alle Challenges), `show_buttons` (Default `true`).
+- Pro Challenge eine Zeile: Icon, Name, heute / Tagesziel mit Einheit, Fortschrittsbalken, Streak und ein Button «+kleinster Schritt» (nur wenn die Buttons verfügbar sind). Antippen der Zeile öffnet den Mehr-Info-Dialog der `today`-Number. Beendete Challenges zeigen «Beendet».
+- Übersetzungen EN, DE, FR, IT wie die bestehende Card.
