@@ -45,7 +45,11 @@ export class DailyChallengeOverviewCardEditor extends LitElement {
       return;
     }
     const value = ev.detail.value;
-    const config: OverviewCardConfig = { type: this._config.type };
+    // Keep everything else, e.g. grid_options or visibility.
+    const config: OverviewCardConfig = { ...this._config };
+    delete config.title;
+    delete config.entities;
+    delete config.show_buttons;
     const title = typeof value.title === "string" ? value.title.trim() : "";
     if (title) {
       config.title = title;

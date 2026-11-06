@@ -125,3 +125,28 @@ describe("formatDelta", () => {
     expect(formatDelta(hass("de"), 0)).toBe("±0");
   });
 });
+
+describe("robustness", () => {
+  it("works without a locale", async () => {
+    const { localize: loc, formatNumber: fmt } = await import("../src/localize");
+    const hass = { states: {} } as unknown as Parameters<typeof loc>[0];
+    expect(loc(hass, "undo")).toBe("Undo");
+    expect(fmt(hass, 1240)).toMatch(/1.?240/);
+  });
+
+  it("reads messages of plain error objects", async () => {
+    const { errorMessage } = await import("../src/localize");
+    expect(errorMessage({ code: "x", message: "Not running" })).toBe("Not running");
+    expect(errorMessage(new Error("Boom"))).toBe("Boom");
+    expect(errorMessage("plain")).toBe("plain");
+    expect(errorMessage({ message: "" })).toBe("[object Object]");
+  });
+
+  it("formats dates independent of the browser's zone", async () => {
+    const { formatDate } = await import("../src/localize");
+    const hass = { locale: { language: "de" } } as unknown as Parameters<typeof formatDate>[0];
+    expect(formatDate(hass, "2026-11-04", { dateStyle: "medium" })).toBe("04.11.2026");
+    expect(formatDate(hass, "2026-11-04", { dateStyle: "medium" })).toBe("04.11.2026");
+    expect(formatDate(hass, "not-a-date", { dateStyle: "medium" })).toBe("not-a-date");
+  });
+});

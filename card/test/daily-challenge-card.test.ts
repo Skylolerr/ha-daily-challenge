@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   CARD_TYPE,
+  CELEBRATION_MS,
   DailyChallengeCard,
   LONG_PRESS_MS,
   LOOKUP_RETRY_MS,
@@ -324,6 +325,21 @@ describe("buttons", () => {
     expect(hass.callService).toHaveBeenNthCalledWith(2, "button", "press", {
       entity_id: "button.push_ups_subtract",
     });
+  });
+
+  it("shows the message of a plain error object", async () => {
+    const hass = makeHass();
+    hass.callService = vi
+      .fn()
+      .mockRejectedValue({ code: "service_validation_error", message: "Not running" });
+    const card = await createCard(hass);
+    const notifications: string[] = [];
+    document.body.addEventListener("hass-notification", (ev) =>
+      notifications.push((ev as CustomEvent).detail.message),
+    );
+    buttons(card)[1].click();
+    await settle(card);
+    expect(notifications).toEqual(["Not running"]);
   });
 
   it("reports failed calls as notification", async () => {
@@ -722,7 +738,7 @@ describe("summary", () => {
       expect(buttons(card)).toEqual([]);
       expect(root(card).querySelector(".value")?.getAttribute("role")).toBeNull();
       // Header, ring and the summary line; no buttons.
-      expect(card.getCardSize()).toBe(6);
+      expect(card.getCardSize()).toBe(10);
     });
 
     it("rounds the share down so 100 % means the goal was reached", async () => {
@@ -1199,7 +1215,9 @@ describe("statistics, heatmap and day dialog", () => {
     input.value = value;
     input.dispatchEvent(new Event("input"));
     await settle(card);
-    dialog(card)?.dispatchEvent(new KeyboardEvent("keydown", { key }));
+    (root(card).querySelector(".day-input") as HTMLInputElement).dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true }),
+    );
     await settle(card);
   }
 
@@ -1307,5 +1325,374 @@ describe("statistics, heatmap and day dialog", () => {
     await settle(card);
     await openDay(card, "2026-11-03");
     expect(root(card).querySelector(".save")).not.toBeNull();
+  });
+
+  it("does not save on Enter at the cancel button", async () => {
+    const setDay = vi.fn(async () => ({}));
+    const card = await heatCard(heatHass(CHALLENGE, setDay));
+    await openDay(card, "2026-11-02");
+    const input = root(card).querySelector(".day-input") as HTMLInputElement;
+    input.value = "30";
+    input.dispatchEvent(new Event("input"));
+    await settle(card);
+    (root(card).querySelector(".cancel") as HTMLElement).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+    await settle(card);
+    expect(setDay).not.toHaveBeenCalled();
+  });
+
+  it("saves only once while a save is on its way", async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    const setDay = vi.fn(() => new Promise((resolve) => (finish = resolve)));
+    const card = await heatCard(heatHass(CHALLENGE, setDay));
+    await openDay(card, "2026-11-02");
+    await typeValue(card, "30");
+    (root(card).querySelector(".day-input") as HTMLInputElement).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+    await settle(card);
+    finish({});
+    await settle(card);
+    expect(setDay).toHaveBeenCalledTimes(1);
+    expect(dialog(card)).toBeNull();
+  });
+
+  it("reports an error that arrives after the dialog was closed", async () => {
+    let fail: (reason: unknown) => void = () => undefined;
+    const setDay = vi.fn(() => new Promise((_, reject) => (fail = reject)));
+    const card = await heatCard(heatHass(CHALLENGE, setDay));
+    const messages: string[] = [];
+    document.body.addEventListener("hass-notification", (ev) =>
+      messages.push((ev as CustomEvent).detail.message),
+    );
+    await openDay(card, "2026-11-02");
+    await typeValue(card, "30");
+    (root(card).querySelector(".cancel") as HTMLElement).click();
+    await settle(card);
+    fail({ message: "Not allowed" });
+    await settle(card);
+    expect(dialog(card)).toBeNull();
+    expect(messages).toEqual(["Not allowed"]);
+  });
+
+  it("shows the latest value after the history reloads and undoes to it", async () => {
+    const setDay = vi.fn(async () => ({}));
+    const hass = heatHass(CHALLENGE, setDay);
+    let history = HEAT_HISTORY;
+    const callWS = hass.callWS;
+    hass.callWS = vi.fn(async (msg: { type: string }) =>
+      msg.type === "daily_challenge/history" ? history : callWS(msg),
+    ) as unknown as HomeAssistant["callWS"];
+    const card = await heatCard(hass);
+    const toasts: { action?: { action: () => void } }[] = [];
+    document.body.addEventListener("hass-notification", (ev) =>
+      toasts.push((ev as CustomEvent).detail),
+    );
+    await openDay(card, "2026-11-04");
+    expect((root(card).querySelector(".day-input") as HTMLInputElement).value).toBe("15");
+
+    // Another device adds 5 while the dialog is open.
+    history = { ...HEAT_HISTORY, days: { ...HEAT_HISTORY.days, "2026-11-04": 20 } };
+    card.hass = {
+      ...hass,
+      states: { ...hass.states, [ENTITIES.total]: entity(ENTITIES.total, "65") },
+    };
+    await settle(card);
+    expect((root(card).querySelector(".day-input") as HTMLInputElement).value).toBe("20");
+
+    await typeValue(card, "30");
+    toasts[0].action?.action();
+    expect(setDay).toHaveBeenLastCalledWith(expect.objectContaining({ value: 20 }));
+  });
+
+  it("reloads the history on a new day in Home Assistant", async () => {
+    const target = "sensor.push_ups_target_to_date";
+    const hass = heatHass({ ...CHALLENGE, entities: { ...ENTITIES, target_to_date: target } });
+    hass.states[target] = entity(target, "60");
+    const card = await heatCard(hass);
+    const before = vi.mocked(card.hass!.callWS).mock.calls.length;
+    card.hass = { ...card.hass!, states: { ...card.hass!.states, [target]: entity(target, "80") } };
+    await settle(card);
+    const calls = vi.mocked(card.hass!.callWS).mock.calls.slice(before);
+    expect(calls.filter(([msg]) => msg.type === "daily_challenge/history")).toHaveLength(1);
+  });
+
+  it("retries a failed history load later", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const hass = heatHass();
+    const callWS = hass.callWS;
+    let fail = true;
+    hass.callWS = vi.fn(async (msg: { type: string }) => {
+      if (msg.type === "daily_challenge/history" && fail) {
+        throw new Error("starting");
+      }
+      return callWS(msg);
+    }) as unknown as HomeAssistant["callWS"];
+    const card = await heatCard(hass);
+    expect(root(card).querySelector(".heatmap")).toBeNull();
+    fail = false;
+    vi.setSystemTime(Date.now() + LOOKUP_RETRY_MS + 1);
+    card.hass = { ...hass, states: { ...hass.states } };
+    await settle(card);
+    expect(root(card).querySelector(".heatmap")).not.toBeNull();
+  });
+
+  it("moves through the calendar with the keyboard", async () => {
+    const card = await heatCard();
+    const focusable = () =>
+      [...root(card).querySelectorAll("rect")].filter((rect) => rect.getAttribute("tabindex") === "0");
+    expect(focusable().map((rect) => rect.dataset.date)).toEqual(["2026-11-04"]);
+    const key = async (name: string) => {
+      focusable()[0].dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true }));
+      await settle(card);
+    };
+    await key("ArrowUp");
+    expect(focusable()[0].dataset.date).toBe("2026-11-03");
+    await key("ArrowLeft");
+    expect(focusable()[0].dataset.date).toBe("2026-10-27");
+    await key("ArrowRight");
+    await key("ArrowDown");
+    await key("ArrowDown");
+    // There is no day after the last one: focus stays.
+    expect(focusable()[0].dataset.date).toBe("2026-11-04");
+    await key("Home");
+    await key("End");
+    await key("ArrowUp");
+    await key("Tab");
+    await key("Enter");
+    expect(text(root(card).querySelector(".dialog-title"))).toBe("Tuesday, November 3, 2026");
+    expect(cell(card, "2026-11-03").getAttribute("role")).toBe("button");
+    expect(cell(card, "2026-10-01").getAttribute("role")).toBe("presentation");
+  });
+
+  it("drops the dialog and the celebration when the card changes", async () => {
+    const card = await heatCard();
+    await openDay(card, "2026-11-02");
+    card.setConfig({ type: `custom:${CARD_TYPE}`, entity: "number.other_today" });
+    await settle(card);
+    expect(dialog(card)).toBeNull();
+  });
+
+  it("focuses the dialog input after a click on another day", async () => {
+    const card = await heatCard();
+    await openDay(card, "2026-11-02");
+    const active = (card.shadowRoot as ShadowRoot).activeElement;
+    expect(active?.classList.contains("day-input")).toBe(true);
+  });
+
+  it("colours a made-up day without a value as fulfilled", async () => {
+    const hass = heatHass();
+    const callWS = hass.callWS;
+    hass.callWS = vi.fn(async (msg: { type: string }) =>
+      msg.type === "daily_challenge/history"
+        ? {
+            ...HEAT_HISTORY,
+            days: { "2026-11-03": 40 },
+            fulfilled: { ...HEAT_HISTORY.fulfilled, "2026-11-02": true },
+          }
+        : callWS(msg),
+    ) as unknown as HomeAssistant["callWS"];
+    const card = await heatCard(hass);
+    expect(cell(card, "2026-11-02").getAttribute("class")).toContain("fulfilled");
+  });
+
+  it("skips renders for changes of other entities", async () => {
+    const card = await heatCard();
+    const before = card.renderRoot.querySelector(".heatmap");
+    const builds = vi.spyOn(card as unknown as { _buildHeatmap: () => unknown }, "_buildHeatmap");
+    const renders = vi.spyOn(card as unknown as { render: () => unknown }, "render");
+    card.hass = {
+      ...card.hass!,
+      states: { ...card.hass!.states, "sensor.power": entity("sensor.power", "5") },
+    };
+    await settle(card);
+    expect(renders).not.toHaveBeenCalled();
+    expect(card.renderRoot.querySelector(".heatmap")).toBe(before);
+    // A change of the challenge renders again.
+    card.hass = {
+      ...card.hass!,
+      states: { ...card.hass!.states, [ENTITIES.today]: entity(ENTITIES.today, "16") },
+    };
+    await settle(card);
+    expect(text(root(card).querySelector(".number"))).toBe("16");
+    // Same history: the calendar comes from the cache.
+    expect(renders).toHaveBeenCalled();
+    expect(builds).not.toHaveBeenCalled();
+  });
+
+  it("looks the challenge up again after it was reloaded", async () => {
+    const card = await heatCard();
+    const lists = () =>
+      vi.mocked(card.hass!.callWS).mock.calls.filter(([msg]) => msg.type === "daily_challenge/list")
+        .length;
+    const before = lists();
+    const set = async (state: string) => {
+      card.hass = {
+        ...card.hass!,
+        states: { ...card.hass!.states, [ENTITIES.today]: entity(ENTITIES.today, state) },
+      };
+      await settle(card);
+    };
+    await set("unavailable");
+    await set("15");
+    expect(lists()).toBe(before + 1);
+  });
+
+  it("offers grid options for the sections view", async () => {
+    const card = await heatCard();
+    expect(card.getGridOptions()).toEqual({ columns: 6, min_columns: 6, rows: "auto" });
+  });
+});
+
+describe("celebration", () => {
+  const MILESTONE = "event.push_ups_milestone";
+  const WITH_MILESTONE: ChallengeInfo = {
+    ...CHALLENGE,
+    entities: { ...ENTITIES, milestone: MILESTONE },
+  };
+
+  function milestoneState(state: string, attributes: Record<string, unknown> = {}) {
+    return { entity_id: MILESTONE, state, attributes };
+  }
+
+  async function update(
+    card: DailyChallengeCard,
+    states: Record<string, HassEntity>,
+  ): Promise<void> {
+    card.hass = { ...(card.hass as HomeAssistant), states: { ...card.hass?.states, ...states } };
+    await settle(card);
+  }
+
+  async function celebrationCard(
+    config: Partial<DailyChallengeCardConfig> = {},
+  ): Promise<DailyChallengeCard> {
+    const hass = makeHass({}, [WITH_MILESTONE]);
+    hass.states[MILESTONE] = milestoneState("unknown", { event_type: null });
+    const card = document.createElement(CARD_TYPE);
+    card.setConfig({ type: `custom:${CARD_TYPE}`, entity: ENTITIES.today, ...config });
+    card.hass = hass;
+    document.body.appendChild(card);
+    await settle(card);
+    await update(card, {});
+    return card;
+  }
+
+  function celebration(card: DailyChallengeCard): Element | null {
+    return root(card).querySelector(".celebration");
+  }
+
+  it("throws confetti when today's goal is reached, then clears it", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const card = await celebrationCard();
+    expect(celebration(card)).toBeNull();
+    await update(card, {
+      [ENTITIES.goal_reached_today]: entity(ENTITIES.goal_reached_today, "on"),
+    });
+    expect(root(card).querySelectorAll(".confetti")).toHaveLength(24);
+    expect(root(card).querySelector(".celebration-message")).toBeNull();
+    vi.advanceTimersByTime(CELEBRATION_MS);
+    await settle(card);
+    expect(celebration(card)).toBeNull();
+  });
+
+  it("names the milestone", async () => {
+    const card = await celebrationCard();
+    await update(card, {
+      [MILESTONE]: milestoneState("2026-11-04T11:00:00+00:00", {
+        event_type: "streak",
+        value: 7,
+      }),
+    });
+    expect(text(root(card).querySelector(".celebration-message"))).toBe(
+      "7 days in a row!",
+    );
+    await update(card, {
+      [MILESTONE]: milestoneState("2026-11-04T11:00:01+00:00", {
+        event_type: "best_day",
+        value: 1250,
+      }),
+    });
+    expect(text(root(card).querySelector(".celebration-message"))).toBe(
+      "New best day: 1,250 repetitions!",
+    );
+    for (const [kind, message] of [
+      ["best_streak", "New best streak: 9 days!"],
+      ["total", "9 repetitions in total!"],
+    ]) {
+      await update(card, {
+        [MILESTONE]: milestoneState(`2026-11-04T11:00:0${kind.length}+00:00`, {
+          event_type: kind,
+          value: 9,
+        }),
+      });
+      expect(text(root(card).querySelector(".celebration-message"))).toBe(message);
+    }
+  });
+
+  it("does not celebrate on load, after a restart or when switched off", async () => {
+    const hass = makeHass({ goal_reached_today: "on" }, [WITH_MILESTONE]);
+    hass.states[MILESTONE] = milestoneState("2026-11-04T10:00:00+00:00", {
+      event_type: "streak",
+      value: 7,
+    });
+    const card = document.createElement(CARD_TYPE);
+    card.setConfig({ type: `custom:${CARD_TYPE}`, entity: ENTITIES.today });
+    card.hass = hass;
+    document.body.appendChild(card);
+    await settle(card);
+    expect(celebration(card)).toBeNull();
+
+    await update(card, { [MILESTONE]: milestoneState("unavailable") });
+    await update(card, {
+      [MILESTONE]: milestoneState("2026-11-04T10:00:00+00:00", { event_type: "streak", value: 7 }),
+    });
+    expect(celebration(card)).toBeNull();
+
+    const off = await celebrationCard({ show_celebration: false });
+    await update(off, {
+      [ENTITIES.goal_reached_today]: entity(ENTITIES.goal_reached_today, "on"),
+    });
+    expect(celebration(off)).toBeNull();
+  });
+
+  it("stops a celebration when the card leaves the page", async () => {
+    const card = await celebrationCard();
+    await update(card, {
+      [ENTITIES.goal_reached_today]: entity(ENTITIES.goal_reached_today, "on"),
+    });
+    expect(celebration(card)).not.toBeNull();
+    card.remove();
+    document.body.appendChild(card);
+    await settle(card);
+    expect(celebration(card)).toBeNull();
+  });
+
+  it("does not celebrate what happened while the card was away", async () => {
+    const card = await celebrationCard();
+    card.remove();
+    card.hass = {
+      ...(card.hass as HomeAssistant),
+      states: {
+        ...card.hass?.states,
+        [ENTITIES.goal_reached_today]: entity(ENTITIES.goal_reached_today, "on"),
+      },
+    };
+    document.body.appendChild(card);
+    await settle(card);
+    expect(celebration(card)).toBeNull();
+  });
+
+  it("ignores a milestone without a value or of an unknown kind", async () => {
+    const card = await celebrationCard();
+    await update(card, {
+      [MILESTONE]: milestoneState("2026-11-04T11:00:00+00:00", { event_type: "other", value: 3 }),
+    });
+    expect(root(card).querySelector(".celebration-message")).toBeNull();
+    expect(celebration(card)).not.toBeNull();
+    await update(card, {
+      [MILESTONE]: milestoneState("2026-11-04T11:00:01+00:00", { event_type: "streak" }),
+    });
+    expect(root(card).querySelector(".celebration-message")).toBeNull();
   });
 });

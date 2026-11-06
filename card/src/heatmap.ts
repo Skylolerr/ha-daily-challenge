@@ -47,6 +47,11 @@ function isoDate(dayNo: number): string {
   return new Date(dayNo * DAY_MS).toISOString().slice(0, 10);
 }
 
+/** The ISO date `days` days after `iso` (negative: before). */
+export function addDays(iso: string, days: number): string {
+  return isoDate(dayNumber(iso) + days);
+}
+
 /** Monday = 0 … Sunday = 6. */
 function weekday(dayNo: number): number {
   // 1970-01-01 was a Thursday.

@@ -80,6 +80,7 @@ describe("editor", () => {
       show_buttons: true,
       show_stats: true,
       show_heatmap: true,
+      show_celebration: true,
       heatmap_range: "year",
     });
     expect(form(editor).computeLabel({ name: "challenge" })).toBe("Challenge");
@@ -96,6 +97,7 @@ describe("editor", () => {
       "show_buttons",
       "show_stats",
       "show_heatmap",
+      "show_celebration",
       "heatmap_range",
     ]);
   });

@@ -1,6 +1,6 @@
 import { css, html, LitElement, nothing, type PropertyValues } from "lit";
 
-import { formatNumber, localize } from "./localize";
+import { errorMessage, formatNumber, localize } from "./localize";
 import { OVERVIEW_EDITOR_TYPE } from "./overview-editor";
 import type { ChallengeInfo, ChallengeList, HomeAssistant } from "./types";
 
@@ -50,7 +50,13 @@ export class DailyChallengeOverviewCard extends LitElement {
   }
 
   getCardSize(): number {
-    return Number(Boolean(this._config?.title)) + Math.max(1, this._visible().length);
+    // Before the challenges are loaded, guess from the configured list.
+    const rows = this._challenges ? this._visible().length : (this._config?.entities?.length ?? 3);
+    return Number(Boolean(this._config?.title)) + Math.max(1, rows);
+  }
+
+  getGridOptions(): { columns: number; min_columns: number; rows: string } {
+    return { columns: 6, min_columns: 4, rows: "auto" };
   }
 
   protected override willUpdate(_changed: PropertyValues): void {
@@ -147,7 +153,7 @@ export class DailyChallengeOverviewCard extends LitElement {
     } catch (err) {
       this.dispatchEvent(
         new CustomEvent("hass-notification", {
-          detail: { message: err instanceof Error ? err.message : String(err) },
+          detail: { message: errorMessage(err) },
           bubbles: true,
           composed: true,
         }),
@@ -171,7 +177,14 @@ export class DailyChallengeOverviewCard extends LitElement {
       <div class="rows">
         ${challenges.length
           ? challenges.map((challenge) => this._renderRow(challenge))
-          : html`<div class="empty">${localize(this.hass, "no_challenges")}</div>`}
+          : html`<div class="empty">
+              ${localize(
+                this.hass,
+                this._challenges.length && this._config.entities?.length
+                  ? "overview_missing"
+                  : "no_challenges",
+              )}
+            </div>`}
       </div>
     </ha-card>`;
   }
@@ -230,6 +243,7 @@ export class DailyChallengeOverviewCard extends LitElement {
         ? nothing
         : html`<button
             class="add"
+            ?disabled=${target === undefined}
             aria-label=${localize(hass, "add_amount", { amount: String(step) })}
             @click=${(ev: Event) => this._add(ev, challenge, step)}
             @keydown=${(ev: KeyboardEvent) => ev.stopPropagation()}
@@ -323,6 +337,10 @@ export class DailyChallengeOverviewCard extends LitElement {
       font: inherit;
       font-weight: 500;
       cursor: pointer;
+    }
+    .add:disabled {
+      opacity: 0.5;
+      cursor: default;
     }
     .add:focus-visible {
       outline: 2px solid var(--primary-text-color);

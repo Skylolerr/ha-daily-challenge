@@ -1,10 +1,10 @@
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 
 import { EDITOR_TYPE } from "./editor";
-import { buildHeatmap, cellOpacity, type HeatmapCell } from "./heatmap";
+import { addDays, buildHeatmap, cellOpacity, type HeatmapCell } from "./heatmap";
 // The overview card ships in the same bundle.
 import "./overview-card";
-import { formatDelta, formatNumber, localize } from "./localize";
+import { errorMessage, formatDate, formatDelta, formatNumber, localize } from "./localize";
 import type {
   ChallengeHistory,
   ChallengeInfo,
@@ -19,6 +19,15 @@ export const LONG_PRESS_MS = 500;
 export const LOOKUP_RETRY_MS = 5000;
 /** How long the undo message stays. */
 export const UNDO_MS = 8000;
+/** How long a celebration stays. */
+export const CELEBRATION_MS = 3000;
+const CONFETTI_PIECES = 24;
+const CONFETTI_COLORS = [
+  "var(--success-color, #43a047)",
+  "var(--primary-color, #03a9f4)",
+  "var(--warning-color, #ffa600)",
+  "var(--accent-color, #ff9800)",
+];
 
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -26,11 +35,20 @@ const NOT_LOADED = Symbol("not loaded");
 const INACTIVE_STATES = new Set(["unknown", "unavailable"]);
 
 /** A message in Home Assistant's toast, optionally with an action button. */
+/** A running celebration: confetti and, for milestones, a short text. */
+interface Celebration {
+  id: number;
+  message?: string;
+  pieces: { x: number; y: number; rotate: number; delay: number; color: string }[];
+}
+
 /** The past day being edited in the dialog. */
 interface DayDialog {
   cell: HeatmapCell;
   value: string;
   error?: string;
+  /** A save is on its way; further saves wait for it. */
+  saving?: boolean;
 }
 
 interface Toast {
@@ -63,6 +81,8 @@ export class DailyChallengeCard extends LitElement {
     _editing: { state: true },
     _history: { state: true },
     _dialog: { state: true },
+    _celebration: { state: true },
+    _focusDate: { state: true },
   };
 
   static getConfigElement(): HTMLElement {
@@ -81,6 +101,19 @@ export class DailyChallengeCard extends LitElement {
   /** Daily values for the heatmap. */
   declare private _history?: ChallengeHistory;
   declare private _dialog?: DayDialog;
+  declare private _celebration?: Celebration;
+  /** Last seen states; undefined until the first look, so loading never celebrates. */
+  private _lastGoal?: string;
+  private _lastMilestone?: string;
+  private _celebrationTimer?: ReturnType<typeof setTimeout>;
+  /** The calendar day that keyboard focus is on (roving tabindex). */
+  declare private _focusDate?: string;
+  /** After a failed history load, retry no earlier than this. */
+  private _historyRetryAt = 0;
+  /** Last seen state of today's number, to notice a reload of the challenge. */
+  private _todaySeen?: string;
+  /** The heatmap of the last render and what it was built from. */
+  private _heatmapCache?: { key: unknown[]; template: unknown };
 
   private _entitiesSeen: unknown = NOT_LOADED;
   private _pressTimer?: ReturnType<typeof setTimeout>;
@@ -104,6 +137,12 @@ export class DailyChallengeCard extends LitElement {
       throw new Error(localize(this.hass, "missing_entity"));
     }
     if (config.entity !== this._config?.entity) {
+      this._lastGoal = undefined;
+      this._lastMilestone = undefined;
+      this._dialog = undefined;
+      this._focusDate = undefined;
+      this._historyRetryAt = 0;
+      this._todaySeen = undefined;
       this._challenge = undefined;
       this._history = undefined;
       this._historyTotal = undefined;
@@ -114,15 +153,38 @@ export class DailyChallengeCard extends LitElement {
 
   getCardSize(): number {
     // Rows of 50 px: header, ring (4), summary lines and buttons.
+    const extras = Number(this._show("show_stats")) + (this._show("show_heatmap") ? 3 : 0);
     if (this._ended()) {
-      return 6;
+      return 6 + extras;
     }
     const summaryLines =
       Number(this._show("show_target_vs_actual")) +
       Number(this._show("show_remaining") || this._show("show_required_average"));
     const buttons = this._show("show_buttons") && !this._challenge?.today_from_source;
-    const heatmap = this._show("show_heatmap") ? 3 : 0;
-    return 5 + summaryLines + Number(buttons) + Number(this._show("show_stats")) + heatmap;
+    return 5 + summaryLines + Number(buttons) + extras;
+  }
+
+  /** Size in the sections view: half the width at least, height from the content. */
+  getGridOptions(): { columns: number; min_columns: number; rows: string } {
+    return { columns: 6, min_columns: 6, rows: "auto" };
+  }
+
+  /**
+   * Home Assistant replaces `hass` on every state change anywhere. Only
+   * changes of this challenge's entities, the registry or the locale matter.
+   */
+  protected override shouldUpdate(changed: PropertyValues): boolean {
+    if (changed.size !== 1 || !changed.has("hass") || !this._challenge || !this._history) {
+      return true;
+    }
+    const old = changed.get("hass") as HomeAssistant | undefined;
+    const hass = this.hass;
+    if (!old || !hass || old.entities !== hass.entities || old.locale !== hass.locale) {
+      return true;
+    }
+    return Object.values(this._challenge.entities).some(
+      (entityId) => old.states[entityId] !== hass.states[entityId],
+    );
   }
 
   protected override willUpdate(_changed: PropertyValues): void {
@@ -137,11 +199,31 @@ export class DailyChallengeCard extends LitElement {
       this._entitiesSeen = this.hass.entities;
       void this._loadChallenge();
     }
-    // Every change of a day also changes the total, and a new day moves the
-    // heatmap on: fetch the history again.
+    this._watchCelebrations();
+    // An options change reloads the challenge (unavailable, then back): its
+    // name or source may have changed, so look it up again.
+    const todayState = this._state("today");
+    if (
+      this._challenge &&
+      this._todaySeen === "unavailable" &&
+      todayState !== undefined &&
+      todayState !== "unavailable"
+    ) {
+      void this._loadChallenge();
+    }
+    this._todaySeen = todayState;
+    // Every change of a day also changes the total, and a new day in Home
+    // Assistant raises the target to date: fetch the history again. (The
+    // browser's date is only a fallback; its zone may differ from HA's.)
     const total = this._state("total");
-    const key = `${total}|${new Date().toDateString()}`;
-    if (this._challenge && total !== undefined && key !== this._historyTotal) {
+    const day = this._state("target_to_date") ?? new Date().toDateString();
+    const key = `${total}|${day}`;
+    if (
+      this._challenge &&
+      total !== undefined &&
+      key !== this._historyTotal &&
+      Date.now() >= this._historyRetryAt
+    ) {
       this._historyTotal = key;
       void this._loadHistory(this._challenge.entry_id);
     }
@@ -161,10 +243,36 @@ export class DailyChallengeCard extends LitElement {
       });
       if (id === this._historyId && entryId === this._challenge?.entry_id) {
         this._history = history;
+        this._refreshDialog();
       }
     } catch {
-      // Keep the last known history; the next change retries.
+      // Keep the last known history and try again with a later update.
+      if (id === this._historyId) {
+        this._historyTotal = undefined;
+        this._historyRetryAt = Date.now() + LOOKUP_RETRY_MS;
+      }
     }
+  }
+
+  /** Show the latest figures of the day in an open dialog. */
+  private _refreshDialog(): void {
+    const dialog = this._dialog;
+    const history = this._history;
+    if (!dialog || !history || dialog.saving) {
+      return;
+    }
+    const date = dialog.cell.date;
+    const value = history.days[date] ?? 0;
+    const cell: HeatmapCell = {
+      ...dialog.cell,
+      value,
+      target: history.targets[date] ?? dialog.cell.target,
+      fulfilled: history.fulfilled[date] === true,
+      rescuable: (history.rescuable ?? []).includes(date),
+    };
+    // Keep what the user typed; otherwise show the new value.
+    const edited = dialog.value !== String(dialog.cell.value);
+    this._dialog = { ...dialog, cell, value: edited ? dialog.value : String(value) };
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -172,6 +280,17 @@ export class DailyChallengeCard extends LitElement {
       const input = this.renderRoot.querySelector<HTMLInputElement>(".day-input");
       input?.focus();
       input?.select();
+    }
+    // Keyboard focus follows the calendar day, also back from the dialog
+    // (but not while the dialog is open: its input has the focus then).
+    if (
+      (changed.has("_focusDate") || (changed.has("_dialog") && !this._dialog)) &&
+      this._focusDate &&
+      !this._dialog
+    ) {
+      this.renderRoot
+        .querySelector<SVGRectElement>(`rect[data-date="${this._focusDate}"]`)
+        ?.focus();
     }
     if (changed.has("_editing")) {
       if (this._editing) {
@@ -189,6 +308,11 @@ export class DailyChallengeCard extends LitElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    clearTimeout(this._celebrationTimer);
+    this._celebration = undefined;
+    // What happens while the card is away is not celebrated on its return.
+    this._lastGoal = undefined;
+    this._lastMilestone = undefined;
     document.removeEventListener("pointerdown", this._outsidePointer, true);
     this._clearPress();
   }
@@ -252,7 +376,7 @@ export class DailyChallengeCard extends LitElement {
       await this.hass?.callService(domain, service, data);
       return true;
     } catch (err) {
-      this._notify({ message: err instanceof Error ? err.message : String(err) });
+      this._notify({ message: errorMessage(err) });
       return false;
     }
   }
@@ -401,7 +525,8 @@ export class DailyChallengeCard extends LitElement {
     return html`<ha-card>
       ${this._renderHeader(this._challenge)} ${this._renderValue(this._challenge)}
       ${this._renderSummary()} ${this._renderButtons(this._challenge)}
-      ${this._renderStats()} ${this._renderHeatmap()} ${this._renderDialog()}
+      ${this._renderStats()} ${this._renderHeatmap()} ${this._renderCelebration()}
+      ${this._renderDialog()}
     </ha-card>`;
   }
 
@@ -686,6 +811,104 @@ export class DailyChallengeCard extends LitElement {
     </div>`;
   }
 
+  // --- celebration ------------------------------------------------------------
+
+  /** Celebrate today's goal and milestones that happen while the card is open. */
+  private _watchCelebrations(): void {
+    const challenge = this._challenge;
+    if (!challenge || !this.hass) {
+      return;
+    }
+    const goal = this._state("goal_reached_today");
+    const milestoneId = challenge.entities.milestone;
+    const milestone = milestoneId ? this.hass.states[milestoneId] : undefined;
+    const wanted = this._show("show_celebration");
+    if (wanted && this._lastGoal === "off" && goal === "on") {
+      this._celebrate();
+    }
+    if (
+      wanted &&
+      milestone &&
+      this._lastMilestone !== undefined &&
+      this._lastMilestone !== "unavailable" &&
+      milestone.state !== this._lastMilestone &&
+      !INACTIVE_STATES.has(milestone.state)
+    ) {
+      this._celebrate(this._milestoneMessage(milestone.attributes));
+    }
+    this._lastGoal = goal;
+    this._lastMilestone = milestone?.state;
+  }
+
+  private _milestoneMessage(attributes: Record<string, unknown>): string | undefined {
+    const kind = attributes.event_type;
+    const value = Number(attributes.value);
+    if (!Number.isFinite(value)) {
+      return undefined;
+    }
+    const unit =
+      (this.hass?.states[this._challenge?.entities.today ?? ""]?.attributes
+        .unit_of_measurement as string | undefined) ??
+      this._challenge?.unit ??
+      "";
+    const placeholders = { value: formatNumber(this.hass, value), unit };
+    switch (kind) {
+      case "streak":
+        return localize(this.hass, "celebrate_streak", placeholders);
+      case "best_streak":
+        return localize(this.hass, "celebrate_best_streak", placeholders);
+      case "best_day":
+        return localize(this.hass, "celebrate_best_day", placeholders);
+      case "total":
+        return localize(this.hass, "celebrate_total", placeholders);
+      default:
+        return undefined;
+    }
+  }
+
+  private _celebrate(message?: string): void {
+    const id = (this._celebration?.id ?? 0) + 1;
+    // A goal and a milestone at once: keep the milestone's text.
+    const text = message ?? this._celebration?.message;
+    const pieces = Array.from({ length: CONFETTI_PIECES }, (_, i) => {
+      const angle = (i / CONFETTI_PIECES) * 2 * Math.PI + Math.random() * 0.4;
+      const distance = 70 + Math.random() * 60;
+      return {
+        x: Math.round(Math.cos(angle) * distance),
+        y: Math.round(Math.sin(angle) * distance),
+        rotate: Math.round(Math.random() * 720 - 360),
+        delay: Math.round(Math.random() * 150),
+        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      };
+    });
+    this._celebration = { id, message: text, pieces };
+    clearTimeout(this._celebrationTimer);
+    this._celebrationTimer = setTimeout(() => {
+      if (this._celebration?.id === id) {
+        this._celebration = undefined;
+      }
+    }, CELEBRATION_MS);
+  }
+
+  private _renderCelebration() {
+    const celebration = this._celebration;
+    if (!celebration) {
+      return nothing;
+    }
+    return html`<div class="celebration" aria-live="polite">
+      ${celebration.pieces.map(
+        (piece) =>
+          html`<span
+            class="confetti"
+            style="--x: ${piece.x}px; --y: ${piece.y}px; --r: ${piece.rotate}deg; --delay: ${piece.delay}ms; background: ${piece.color}"
+          ></span>`,
+      )}
+      ${celebration.message
+        ? html`<div class="celebration-message">${celebration.message}</div>`
+        : nothing}
+    </div>`;
+  }
+
   // --- statistics, heatmap and day dialog ----------------------------------
 
   private _renderStats() {
@@ -715,15 +938,7 @@ export class DailyChallengeCard extends LitElement {
   }
 
   private _formatDate(iso: string, options: Intl.DateTimeFormatOptions): string {
-    const [year, month, day] = iso.split("-").map(Number);
-    try {
-      return new Intl.DateTimeFormat(this.hass?.locale.language || "en", {
-        ...options,
-        timeZone: "UTC",
-      }).format(new Date(Date.UTC(year, month - 1, day)));
-    } catch {
-      return iso;
-    }
+    return formatDate(this.hass, iso, options);
   }
 
   private _cellTitle(cell: HeatmapCell): string {
@@ -741,6 +956,24 @@ export class DailyChallengeCard extends LitElement {
     if (!this._show("show_heatmap") || !history) {
       return nothing;
     }
+    // Rebuilding a year of cells is the most expensive part of a render.
+    const key = [
+      history,
+      this._config?.heatmap_range,
+      this._focusDate,
+      this.hass?.locale?.language,
+      this.hass?.locale?.number_format,
+    ];
+    const cached = this._heatmapCache;
+    if (cached && cached.key.every((part, index) => part === key[index])) {
+      return cached.template;
+    }
+    const template = this._buildHeatmap(history);
+    this._heatmapCache = { key, template };
+    return template;
+  }
+
+  private _buildHeatmap(history: ChallengeHistory) {
     const layout = buildHeatmap(history, this._config?.heatmap_range ?? "year");
     if (!layout.weeks.length) {
       return nothing;
@@ -748,17 +981,22 @@ export class DailyChallengeCard extends LitElement {
     const step = 13;
     const width = layout.weeks.length * step - 3;
     const height = 7 * step - 3;
+    const days = layout.weeks.flat().filter((cell): cell is HeatmapCell => cell !== null);
+    const focusDate =
+      days.find((cell) => cell.date === this._focusDate)?.date ?? days[days.length - 1]?.date;
     const cells = layout.weeks.flatMap((week, column) =>
       week.map((cell, row) => {
         if (!cell) {
           return nothing;
         }
+        const title = this._cellTitle(cell);
+        // A day without a value can still count (catch-up made it up).
         const kind = !cell.inPeriod
           ? "outside"
-          : cell.value === 0
-            ? "empty"
-            : cell.fulfilled
-              ? "fulfilled"
+          : cell.fulfilled
+            ? "fulfilled"
+            : cell.value === 0
+              ? "empty"
               : "partial";
         const classes = [
           "cell",
@@ -775,8 +1013,11 @@ export class DailyChallengeCard extends LitElement {
           rx="2"
           opacity=${cellOpacity(cell)}
           data-date=${cell.date}
+          role=${cell.inPeriod ? "button" : "presentation"}
+          tabindex=${cell.date === focusDate ? 0 : -1}
+          aria-label=${title}
           @click=${() => this._openDay(cell)}
-        ><title>${this._cellTitle(cell)}</title></rect>`;
+        ><title>${title}</title></rect>`;
       }),
     );
     // Month names as text, so they keep their size however wide the card is.
@@ -791,8 +1032,9 @@ export class DailyChallengeCard extends LitElement {
         <div class="months">${months}</div>
         <svg
           viewBox="0 0 ${width} ${height}"
-          role="img"
+          role="group"
           aria-label=${localize(this.hass, "heatmap")}
+          @keydown=${(ev: KeyboardEvent) => this._heatmapKeyDown(ev, days)}
         >
           ${cells}
         </svg>
@@ -800,10 +1042,46 @@ export class DailyChallengeCard extends LitElement {
     </div>`;
   }
 
+  /** Arrow keys move between days (weeks are columns), Enter opens one. */
+  private _heatmapKeyDown(ev: KeyboardEvent, days: HeatmapCell[]): void {
+    const date = (ev.target as Element | null)?.getAttribute?.("data-date");
+    const cell = days.find((item) => item.date === date);
+    if (!cell) {
+      return;
+    }
+    if (ev.key === "Enter" || ev.key === " ") {
+      ev.preventDefault();
+      this._openDay(cell);
+      return;
+    }
+    const moves: Record<string, number> = {
+      ArrowLeft: -7,
+      ArrowRight: 7,
+      ArrowUp: -1,
+      ArrowDown: 1,
+      Home: -Infinity,
+      End: Infinity,
+    };
+    if (!(ev.key in moves)) {
+      return;
+    }
+    ev.preventDefault();
+    const move = moves[ev.key];
+    const target = Number.isFinite(move)
+      ? days.find((item) => item.date === addDays(cell.date, move))
+      : move < 0
+        ? days[0]
+        : days[days.length - 1];
+    if (target) {
+      this._focusDate = target.date;
+    }
+  }
+
   private _openDay(cell: HeatmapCell): void {
     if (!cell.inPeriod) {
       return;
     }
+    this._focusDate = cell.date;
     this._dialog = { cell, value: String(cell.value) };
   }
 
@@ -819,7 +1097,7 @@ export class DailyChallengeCard extends LitElement {
   private async _saveDay(): Promise<void> {
     const dialog = this._dialog;
     const challenge = this._challenge;
-    if (!dialog || !challenge || !this.hass) {
+    if (!dialog || dialog.saving || !challenge || !this.hass) {
       return;
     }
     const raw = dialog.value.trim();
@@ -828,7 +1106,9 @@ export class DailyChallengeCard extends LitElement {
       this._dialog = { ...dialog, error: localize(this.hass, "invalid_value") };
       return;
     }
-    if (value === dialog.cell.value) {
+    // Compare with and undo to the latest known value of the day.
+    const previous = this._history?.days[dialog.cell.date] ?? dialog.cell.value;
+    if (value === previous) {
       this._closeDay();
       return;
     }
@@ -839,16 +1119,23 @@ export class DailyChallengeCard extends LitElement {
         date: dialog.cell.date,
         value: newValue,
       });
+    const saving: DayDialog = { ...dialog, saving: true, error: undefined };
+    this._dialog = saving;
     try {
       await setDay(value);
     } catch (err) {
-      const message =
-        (err as { message?: string } | undefined)?.message ?? String(err);
-      this._dialog = { ...dialog, error: message };
+      const message = errorMessage(err);
+      // Only if the dialog is still open (it may have been closed meanwhile).
+      if (this._dialog === saving) {
+        this._dialog = { ...dialog, error: message };
+      } else {
+        this._notify({ message });
+      }
       return;
     }
-    this._closeDay();
-    const previous = dialog.cell.value;
+    if (this._dialog === saving) {
+      this._closeDay();
+    }
     this._notify({
       message: localize(this.hass, "change", {
         name: challenge.name,
@@ -859,9 +1146,7 @@ export class DailyChallengeCard extends LitElement {
         text: localize(this.hass, "undo"),
         action: () => {
           void Promise.resolve(setDay(previous)).catch((err: unknown) =>
-            this._notify({
-              message: (err as { message?: string } | undefined)?.message ?? String(err),
-            }),
+            this._notify({ message: errorMessage(err) }),
           );
         },
       },
@@ -873,7 +1158,11 @@ export class DailyChallengeCard extends LitElement {
       ev.preventDefault();
       ev.stopPropagation();
       this._closeDay();
-    } else if (ev.key === "Enter") {
+    } else if (
+      ev.key === "Enter" &&
+      (ev.target as Element | null)?.classList?.contains("day-input")
+    ) {
+      // Only in the field: Enter on a button is that button's click.
       ev.preventDefault();
       ev.stopPropagation();
       void this._saveDay();
@@ -1115,9 +1404,8 @@ export class DailyChallengeCard extends LitElement {
     .stat-label {
       color: var(--secondary-text-color);
       font-size: 0.8em;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
     }
     .heatmap {
       margin-top: 16px;
@@ -1135,6 +1423,7 @@ export class DailyChallengeCard extends LitElement {
     }
     .months {
       position: relative;
+      overflow: hidden;
       height: 1.3em;
       font-size: 0.75em;
       color: var(--secondary-text-color);
@@ -1147,6 +1436,10 @@ export class DailyChallengeCard extends LitElement {
     .cell {
       cursor: pointer;
     }
+    .cell:focus {
+      outline: none;
+    }
+
     .cell.outside {
       fill: var(--disabled-color, #bdbdbd);
       opacity: 0.25;
@@ -1169,6 +1462,80 @@ export class DailyChallengeCard extends LitElement {
     .cell.last {
       stroke: var(--primary-text-color);
       stroke-width: 1.5;
+    }
+    /* After the outlines above, so the focus wins on today and yesterday too. */
+    .heatmap .cell:focus-visible {
+      stroke: var(--primary-color);
+      stroke-width: 2.5;
+      stroke-dasharray: none;
+    }
+    .celebration {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+      pointer-events: none;
+      border-radius: var(--ha-card-border-radius, 12px);
+    }
+    .confetti {
+      position: absolute;
+      top: 120px;
+      left: 50%;
+      width: 8px;
+      height: 12px;
+      border-radius: 2px;
+      opacity: 0;
+      animation: dc-burst 1.4s ease-out var(--delay) forwards;
+    }
+    @keyframes dc-burst {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y) + 40px))
+          rotate(var(--r));
+      }
+    }
+    .celebration-message {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      max-width: calc(100% - 32px);
+      padding: 6px 14px;
+      border-radius: 16px;
+      background: var(--success-color, #43a047);
+      color: #fff;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transform: translateX(-50%);
+      animation: dc-pop 3s ease forwards;
+    }
+    @keyframes dc-pop {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -6px);
+      }
+      10%,
+      85% {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, 0);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .confetti {
+        display: none;
+      }
+      .celebration-message {
+        animation: none;
+      }
     }
     .backdrop {
       position: absolute;

@@ -44,6 +44,7 @@ export const DISPLAY_OPTIONS = [
   "show_buttons",
   "show_stats",
   "show_heatmap",
+  "show_celebration",
 ] as const;
 
 export type DisplayOption = (typeof DISPLAY_OPTIONS)[number];

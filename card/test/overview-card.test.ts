@@ -199,8 +199,40 @@ describe("overview card", () => {
     ]);
     expect(text(rows(card)[1].querySelector(".figures"))).toBe("Finished");
 
+    const waiting = await createCard(
+      makeHass([PUSH_UPS], { push_ups: { today_target: "unavailable" } }),
+    );
+    expect(rows(waiting)[0].querySelector("button")?.disabled).toBe(true);
+
     const hidden = await createCard(makeHass([PUSH_UPS]), { show_buttons: false });
     expect(rows(hidden)[0].querySelector("button")).toBeNull();
+  });
+
+  it("says when the chosen challenges are gone", async () => {
+    const card = await createCard(makeHass(), { entities: ["number.removed_today"] });
+    expect(text(root(card).querySelector(".empty"))).toBe(
+      "None of the chosen challenges exists any more.",
+    );
+  });
+
+  it("reports the message of a plain error object", async () => {
+    const hass = makeHass();
+    hass.callService = vi.fn().mockRejectedValue({ code: "x", message: "Not running" });
+    const card = await createCard(hass);
+    const messages: string[] = [];
+    card.addEventListener("hass-notification", (ev) =>
+      messages.push((ev as CustomEvent).detail.message),
+    );
+    (rows(card)[0].querySelector("button") as HTMLButtonElement).click();
+    await settle(card);
+    expect(messages).toEqual(["Not running"]);
+  });
+
+  it("guesses its size before loading and offers grid options", () => {
+    const card = document.createElement(OVERVIEW_TYPE);
+    card.setConfig({ type: "x", entities: ["number.a", "number.b"] });
+    expect(card.getCardSize()).toBe(2);
+    expect(card.getGridOptions()).toEqual({ columns: 6, min_columns: 4, rows: "auto" });
   });
 
   it("tells when there are no challenges and retries a failed lookup", async () => {
@@ -260,6 +292,22 @@ describe("overview editor", () => {
     expect(form(editor).computeLabel({ name: "entities" })).toBe(
       "Challenges (empty: all)",
     );
+  });
+
+  it("keeps other parts of the card config", async () => {
+    const editor = await createEditor({ grid_options: { columns: 6 } });
+    const changes: Record<string, unknown>[] = [];
+    editor.addEventListener("config-changed", (ev) =>
+      changes.push((ev as CustomEvent).detail.config),
+    );
+    form(editor).dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: { title: "Mine", entities: [], show_buttons: true } },
+      }),
+    );
+    expect(changes).toEqual([
+      { type: `custom:${OVERVIEW_TYPE}`, grid_options: { columns: 6 }, title: "Mine" },
+    ]);
   });
 
   it("writes only what differs from the defaults", async () => {
