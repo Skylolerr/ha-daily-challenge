@@ -24,6 +24,30 @@
           "steps": "Jusqu'à 3 quantités par ordre croissant. Chacune obtient un bouton + ; la plus petite sert aussi pour le bouton −.",
           "streak_rule": "Quand un jour compte pour votre série.",
           "deficit_mode": "Ce qui se passe quand vous prenez du retard."
+        },
+        "sections": {
+          "source": {
+            "name": "Comptage automatique",
+            "description": "Reprendre la valeur du jour d'une autre entité, par exemple un podomètre.",
+            "data": {
+              "source_entity": "Source",
+              "source_mode": "Type de source"
+            },
+            "data_description": {
+              "source_entity": "Facultatif. Laisser vide pour compter à la main.",
+              "source_mode": "Valeur du jour : la source indique la quantité du jour et la définit ; les boutons ne sont alors pas disponibles. Compteur : la source augmente sans cesse et chaque hausse est ajoutée."
+            }
+          },
+          "milestone_settings": {
+            "name": "Jalons",
+            "description": "Déclenche un événement lorsque le défi atteint un jalon.",
+            "data": {
+              "milestones": "Jalons"
+            },
+            "data_description": {
+              "milestones": "Sans sélection, il n'y a pas d'événement de jalon."
+            }
+          }
         }
       }
     },
@@ -35,7 +59,8 @@
       "start_in_future": "La date de début ne peut pas être dans le futur.",
       "end_before_start": "La date de fin doit être postérieure à la date de début.",
       "invalid_steps": "Saisissez 1 à 3 nombres entiers de 1 à 100000.",
-      "steps_not_ascending": "Les paliers doivent être uniques et croissants."
+      "steps_not_ascending": "Les paliers doivent être uniques et croissants.",
+      "source_is_challenge": "Une entité de Daily Challenge ne peut pas être la source."
     }
   },
   "options": {
@@ -63,6 +88,30 @@
           "steps": "Jusqu'à 3 quantités par ordre croissant. Chacune obtient un bouton + ; la plus petite sert aussi pour le bouton −.",
           "streak_rule": "Quand un jour compte pour votre série.",
           "deficit_mode": "Ce qui se passe quand vous prenez du retard."
+        },
+        "sections": {
+          "source": {
+            "name": "Comptage automatique",
+            "description": "Reprendre la valeur du jour d'une autre entité, par exemple un podomètre.",
+            "data": {
+              "source_entity": "Source",
+              "source_mode": "Type de source"
+            },
+            "data_description": {
+              "source_entity": "Facultatif. Laisser vide pour compter à la main.",
+              "source_mode": "Valeur du jour : la source indique la quantité du jour et la définit ; les boutons ne sont alors pas disponibles. Compteur : la source augmente sans cesse et chaque hausse est ajoutée."
+            }
+          },
+          "milestone_settings": {
+            "name": "Jalons",
+            "description": "Déclenche un événement lorsque le défi atteint un jalon.",
+            "data": {
+              "milestones": "Jalons"
+            },
+            "data_description": {
+              "milestones": "Sans sélection, il n'y a pas d'événement de jalon."
+            }
+          }
         }
       }
     },
@@ -74,7 +123,8 @@
       "start_in_future": "La date de début ne peut pas être dans le futur.",
       "end_before_start": "La date de fin doit être postérieure à la date de début.",
       "invalid_steps": "Saisissez 1 à 3 nombres entiers de 1 à 100000.",
-      "steps_not_ascending": "Les paliers doivent être uniques et croissants."
+      "steps_not_ascending": "Les paliers doivent être uniques et croissants.",
+      "source_is_challenge": "Une entité de Daily Challenge ne peut pas être la source."
     }
   },
   "selector": {
@@ -88,6 +138,20 @@
       "options": {
         "display": "Afficher seulement le retard",
         "catch_up": "Rattrapage : le retard d'hier augmente l'objectif du jour"
+      }
+    },
+    "source_mode": {
+      "options": {
+        "daily": "Valeur du jour (p. ex. pas du jour)",
+        "counter": "Compteur qui augmente sans cesse (p. ex. compteur kilométrique)"
+      }
+    },
+    "milestones": {
+      "options": {
+        "streak": "Jalons de série (7, 14, 30 … jours)",
+        "best_streak": "Nouvelle meilleure série",
+        "best_day": "Nouveau meilleur jour",
+        "total": "Jalons de quantité totale (100, 250, 500 …)"
       }
     }
   },
@@ -103,6 +167,25 @@
       },
       "subtract": {
         "name": "−{amount}"
+      }
+    },
+    "event": {
+      "milestone": {
+        "name": "Jalon",
+        "state_attributes": {
+          "event_type": {
+            "name": "Jalon",
+            "state": {
+              "streak": "Jalon de série",
+              "best_streak": "Nouvelle meilleure série",
+              "best_day": "Nouveau meilleur jour",
+              "total": "Jalon de quantité totale"
+            }
+          },
+          "value": {
+            "name": "Valeur"
+          }
+        }
       }
     },
     "number": {
@@ -200,6 +283,9 @@
     },
     "not_whole_number": {
       "message": "{value} n'est pas un nombre entier."
+    },
+    "today_from_source": {
+      "message": "La valeur du jour provient de {entity_id} et ne peut pas être modifiée à la main."
     }
   },
   "services": {

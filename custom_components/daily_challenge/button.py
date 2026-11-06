@@ -55,6 +55,7 @@ class AddButton(DailyChallengeEntity, ButtonEntity):
 
     _attr_translation_key = "add"
     _only_while_active = True
+    _blocked_by_daily_source = True
 
     def __init__(self, coordinator: ChallengeCoordinator, step: int) -> None:
         """Initialize the button."""
@@ -73,6 +74,7 @@ class SubtractButton(DailyChallengeEntity, ButtonEntity):
 
     _attr_translation_key = "subtract"
     _only_while_active = True
+    _blocked_by_daily_source = True
 
     def __init__(self, coordinator: ChallengeCoordinator, step: int) -> None:
         """Initialize the button."""

@@ -13,7 +13,17 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
-from .const import ATTR_DATE, ATTR_END, ATTR_START, ATTR_VALUE, CONF_UNIT, DOMAIN
+from .const import (
+    ATTR_DATE,
+    ATTR_END,
+    ATTR_START,
+    ATTR_VALUE,
+    CONF_SOURCE_ENTITY,
+    CONF_SOURCE_MODE,
+    CONF_UNIT,
+    DOMAIN,
+    SourceMode,
+)
 from .services import DAY_VALUE, get_coordinator, history_response
 
 ATTR_ENTRY_ID = "entry_id"
@@ -50,6 +60,10 @@ def websocket_list(
                 "name": entry.title,
                 "icon": entry.options[CONF_ICON],
                 "unit": entry.options[CONF_UNIT],
+                # A daily source sets today's value; the card offers no input.
+                "today_from_source": bool(entry.options.get(CONF_SOURCE_ENTITY))
+                and entry.options.get(CONF_SOURCE_MODE, SourceMode.DAILY)
+                == SourceMode.DAILY,
                 "entities": dict(sorted(entities.items())),
             }
         )

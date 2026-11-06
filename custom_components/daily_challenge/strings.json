@@ -24,6 +24,30 @@
           "steps": "Up to 3 amounts in ascending order. Each one gets a + button; the smallest one is also used for the − button.",
           "streak_rule": "When a day counts towards your streak.",
           "deficit_mode": "What happens when you fall behind."
+        },
+        "sections": {
+          "source": {
+            "name": "Automatic counting",
+            "description": "Take today's value from another entity, for example a step counter.",
+            "data": {
+              "source_entity": "Source",
+              "source_mode": "Source type"
+            },
+            "data_description": {
+              "source_entity": "Optional. Leave empty to count by hand.",
+              "source_mode": "Daily value: the source shows today's amount and sets it; the buttons are not available then. Counter: the source keeps rising and every increase is added."
+            }
+          },
+          "milestone_settings": {
+            "name": "Milestones",
+            "description": "Fire an event when the challenge reaches a milestone.",
+            "data": {
+              "milestones": "Milestones"
+            },
+            "data_description": {
+              "milestones": "Without a selection there is no milestone event."
+            }
+          }
         }
       }
     },
@@ -35,7 +59,8 @@
       "start_in_future": "The start date cannot be in the future.",
       "end_before_start": "The end date must be after the start date.",
       "invalid_steps": "Enter 1 to 3 whole numbers from 1 to 100000.",
-      "steps_not_ascending": "Steps must be unique and in ascending order."
+      "steps_not_ascending": "Steps must be unique and in ascending order.",
+      "source_is_challenge": "An entity of Daily Challenge cannot be the source."
     }
   },
   "options": {
@@ -63,6 +88,30 @@
           "steps": "Up to 3 amounts in ascending order. Each one gets a + button; the smallest one is also used for the − button.",
           "streak_rule": "When a day counts towards your streak.",
           "deficit_mode": "What happens when you fall behind."
+        },
+        "sections": {
+          "source": {
+            "name": "Automatic counting",
+            "description": "Take today's value from another entity, for example a step counter.",
+            "data": {
+              "source_entity": "Source",
+              "source_mode": "Source type"
+            },
+            "data_description": {
+              "source_entity": "Optional. Leave empty to count by hand.",
+              "source_mode": "Daily value: the source shows today's amount and sets it; the buttons are not available then. Counter: the source keeps rising and every increase is added."
+            }
+          },
+          "milestone_settings": {
+            "name": "Milestones",
+            "description": "Fire an event when the challenge reaches a milestone.",
+            "data": {
+              "milestones": "Milestones"
+            },
+            "data_description": {
+              "milestones": "Without a selection there is no milestone event."
+            }
+          }
         }
       }
     },
@@ -74,7 +123,8 @@
       "start_in_future": "The start date cannot be in the future.",
       "end_before_start": "The end date must be after the start date.",
       "invalid_steps": "Enter 1 to 3 whole numbers from 1 to 100000.",
-      "steps_not_ascending": "Steps must be unique and in ascending order."
+      "steps_not_ascending": "Steps must be unique and in ascending order.",
+      "source_is_challenge": "An entity of Daily Challenge cannot be the source."
     }
   },
   "selector": {
@@ -88,6 +138,20 @@
       "options": {
         "display": "Only show the deficit",
         "catch_up": "Catch up: yesterday's deficit raises today's target"
+      }
+    },
+    "source_mode": {
+      "options": {
+        "daily": "Daily value (e.g. steps today)",
+        "counter": "Counter that keeps rising (e.g. an odometer)"
+      }
+    },
+    "milestones": {
+      "options": {
+        "streak": "Streak milestones (7, 14, 30 … days)",
+        "best_streak": "New best streak",
+        "best_day": "New best day",
+        "total": "Total milestones (100, 250, 500 …)"
       }
     }
   },
@@ -103,6 +167,25 @@
       },
       "subtract": {
         "name": "−{amount}"
+      }
+    },
+    "event": {
+      "milestone": {
+        "name": "Milestone",
+        "state_attributes": {
+          "event_type": {
+            "name": "Milestone",
+            "state": {
+              "streak": "Streak milestone",
+              "best_streak": "New best streak",
+              "best_day": "New best day",
+              "total": "Total milestone"
+            }
+          },
+          "value": {
+            "name": "Value"
+          }
+        }
       }
     },
     "number": {
@@ -200,6 +283,9 @@
     },
     "not_whole_number": {
       "message": "{value} is not a whole number."
+    },
+    "today_from_source": {
+      "message": "Today's value comes from {entity_id} and cannot be changed by hand."
     }
   },
   "services": {

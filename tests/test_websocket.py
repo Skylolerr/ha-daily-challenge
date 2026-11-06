@@ -45,14 +45,17 @@ async def test_list(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -> 
     assert entities["add_5"] == "button.push_ups_add_5"
     assert entities["subtract"] == "button.push_ups_subtract"
     assert entities["goal_reached_today"] == "binary_sensor.push_ups_goal_reached_today"
-    # 1 number, 4 buttons, 12 sensors (no end date), 1 binary sensor
-    assert len(entities) == 18
+    assert entities["milestone"] == "event.push_ups_milestone"
+    # 1 number, 4 buttons, 12 sensors (no end date), 1 binary sensor, 1 event
+    assert len(entities) == 19
     # Not set up yet, so no entities are registered.
+    assert push_ups["today_from_source"] is False
     assert squats == {
         "entry_id": "squats",
         "name": "Squats",
         "icon": "mdi:human",
         "unit": "reps",
+        "today_from_source": False,
         "entities": {},
     }
 

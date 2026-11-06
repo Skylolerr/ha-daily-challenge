@@ -15,8 +15,12 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import section
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     DateSelector,
+    EntitySelector,
+    EntitySelectorConfig,
     IconSelector,
     NumberSelector,
     NumberSelectorConfig,
@@ -30,11 +34,14 @@ from homeassistant.helpers.selector import (
 )
 from homeassistant.util import dt as dt_util
 
-from .calculations import DeficitMode, StreakRule
+from .calculations import DeficitMode, MilestoneType, StreakRule
 from .const import (
     CONF_DAILY_TARGET,
     CONF_DEFICIT_MODE,
     CONF_END_DATE,
+    CONF_MILESTONES,
+    CONF_SOURCE_ENTITY,
+    CONF_SOURCE_MODE,
     CONF_START_DATE,
     CONF_STEPS,
     CONF_STREAK_RULE,
@@ -45,7 +52,11 @@ from .const import (
     DOMAIN,
     MAX_DAY_VALUE,
     MAX_STEPS,
+    SECTION_MILESTONES,
+    SECTION_SOURCE,
+    SOURCE_DOMAINS,
     UNIT_SUGGESTIONS,
+    SourceMode,
 )
 from .coordinator import ChallengeStore, DailyChallengeConfigEntry
 
@@ -106,8 +117,68 @@ def _schema(hass: HomeAssistant, defaults: dict[str, Any]) -> vol.Schema:
                     mode=SelectSelectorMode.LIST,
                 )
             ),
+            # Sections default to {} so their fields fall back to the defaults.
+            vol.Required(SECTION_SOURCE, default={}): section(
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_SOURCE_ENTITY,
+                            description={
+                                "suggested_value": defaults.get(CONF_SOURCE_ENTITY)
+                            },
+                        ): EntitySelector(EntitySelectorConfig(domain=SOURCE_DOMAINS)),
+                        vol.Required(
+                            CONF_SOURCE_MODE,
+                            default=defaults.get(CONF_SOURCE_MODE, SourceMode.DAILY),
+                        ): SelectSelector(
+                            SelectSelectorConfig(
+                                options=[mode.value for mode in SourceMode],
+                                translation_key=CONF_SOURCE_MODE,
+                                mode=SelectSelectorMode.LIST,
+                            )
+                        ),
+                    }
+                ),
+                {"collapsed": not defaults.get(CONF_SOURCE_ENTITY)},
+            ),
+            vol.Required(SECTION_MILESTONES, default={}): section(
+                vol.Schema(
+                    {
+                        vol.Required(
+                            CONF_MILESTONES,
+                            default=defaults.get(
+                                CONF_MILESTONES, [kind.value for kind in MilestoneType]
+                            ),
+                        ): SelectSelector(
+                            SelectSelectorConfig(
+                                options=[kind.value for kind in MilestoneType],
+                                translation_key=CONF_MILESTONES,
+                                multiple=True,
+                                mode=SelectSelectorMode.LIST,
+                            )
+                        ),
+                    }
+                ),
+                {"collapsed": True},
+            ),
         }
     )
+
+
+def _suggested(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Return the entered values for a form shown again after an error.
+
+    Cleared optional fields are missing from the input; they are set to None
+    so the form does not fall back to the old value.
+    """
+    return {
+        CONF_END_DATE: None,
+        **user_input,
+        SECTION_SOURCE: {
+            CONF_SOURCE_ENTITY: None,
+            **user_input.get(SECTION_SOURCE, {}),
+        },
+    }
 
 
 def _parse_steps(raw: Any) -> list[int] | None:
@@ -167,6 +238,16 @@ def _validate(
     elif steps != sorted(set(steps)):
         errors[CONF_STEPS] = "steps_not_ascending"
 
+    source: dict[str, Any] = user_input.get(SECTION_SOURCE, {})
+    source_entity = source.get(CONF_SOURCE_ENTITY) or None
+    if source_entity is not None:
+        registry_entry = er.async_get(hass).async_get(source_entity)
+        if registry_entry is not None and registry_entry.platform == DOMAIN:
+            errors["base"] = "source_is_challenge"
+    milestones = user_input.get(SECTION_MILESTONES, {}).get(
+        CONF_MILESTONES, [kind.value for kind in MilestoneType]
+    )
+
     options = {
         CONF_NAME: name,
         # A cleared icon picker sends an empty string.
@@ -178,6 +259,9 @@ def _validate(
         CONF_STEPS: steps,
         CONF_STREAK_RULE: user_input[CONF_STREAK_RULE],
         CONF_DEFICIT_MODE: user_input[CONF_DEFICIT_MODE],
+        CONF_SOURCE_ENTITY: source_entity,
+        CONF_SOURCE_MODE: source.get(CONF_SOURCE_MODE, SourceMode.DAILY.value),
+        CONF_MILESTONES: [kind.value for kind in MilestoneType if kind in milestones],
     }
     return errors, options
 
@@ -212,9 +296,7 @@ class DailyChallengeConfigFlow(ConfigFlow, domain=DOMAIN):
         }
         schema = _schema(self.hass, defaults)
         if user_input is not None:
-            schema = self.add_suggested_values_to_schema(
-                schema, {CONF_END_DATE: None, **user_input}
-            )
+            schema = self.add_suggested_values_to_schema(schema, _suggested(user_input))
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
     @staticmethod
@@ -251,9 +333,7 @@ class DailyChallengeOptionsFlow(OptionsFlow):
 
         schema = _schema(self.hass, {CONF_NAME: entry.title, **entry.options})
         if user_input is not None:
-            schema = self.add_suggested_values_to_schema(
-                schema, {CONF_END_DATE: None, **user_input}
-            )
+            schema = self.add_suggested_values_to_schema(schema, _suggested(user_input))
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
 
     async def _async_record_target_change(self, target: int) -> None:

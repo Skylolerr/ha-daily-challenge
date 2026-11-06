@@ -16,6 +16,21 @@
         "default": "mdi:minus"
       }
     },
+    "event": {
+      "milestone": {
+        "default": "mdi:party-popper",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "streak": "mdi:fire",
+              "best_streak": "mdi:medal",
+              "best_day": "mdi:star",
+              "total": "mdi:sigma"
+            }
+          }
+        }
+      }
+    },
     "number": {
       "today": {
         "default": "mdi:counter"

@@ -24,6 +24,30 @@
           "steps": "Fino a 3 quantità in ordine crescente. Ognuna riceve un pulsante +; la più piccola viene usata anche per il pulsante −.",
           "streak_rule": "Quando un giorno conta per la tua serie.",
           "deficit_mode": "Cosa succede quando resti indietro."
+        },
+        "sections": {
+          "source": {
+            "name": "Conteggio automatico",
+            "description": "Prendi il valore di oggi da un'altra entità, per esempio un contapassi.",
+            "data": {
+              "source_entity": "Sorgente",
+              "source_mode": "Tipo di sorgente"
+            },
+            "data_description": {
+              "source_entity": "Facoltativo. Lascia vuoto per contare a mano.",
+              "source_mode": "Valore giornaliero: la sorgente mostra la quantità di oggi e la imposta; i pulsanti non sono quindi disponibili. Contatore: la sorgente cresce sempre e ogni aumento viene aggiunto."
+            }
+          },
+          "milestone_settings": {
+            "name": "Traguardi",
+            "description": "Genera un evento quando la sfida raggiunge un traguardo.",
+            "data": {
+              "milestones": "Traguardi"
+            },
+            "data_description": {
+              "milestones": "Senza selezione non c'è alcun evento traguardo."
+            }
+          }
         }
       }
     },
@@ -35,7 +59,8 @@
       "start_in_future": "La data di inizio non può essere nel futuro.",
       "end_before_start": "La data di fine deve essere successiva alla data di inizio.",
       "invalid_steps": "Inserisci da 1 a 3 numeri interi da 1 a 100000.",
-      "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente."
+      "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente.",
+      "source_is_challenge": "Un'entità di Daily Challenge non può essere la sorgente."
     }
   },
   "options": {
@@ -63,6 +88,30 @@
           "steps": "Fino a 3 quantità in ordine crescente. Ognuna riceve un pulsante +; la più piccola viene usata anche per il pulsante −.",
           "streak_rule": "Quando un giorno conta per la tua serie.",
           "deficit_mode": "Cosa succede quando resti indietro."
+        },
+        "sections": {
+          "source": {
+            "name": "Conteggio automatico",
+            "description": "Prendi il valore di oggi da un'altra entità, per esempio un contapassi.",
+            "data": {
+              "source_entity": "Sorgente",
+              "source_mode": "Tipo di sorgente"
+            },
+            "data_description": {
+              "source_entity": "Facoltativo. Lascia vuoto per contare a mano.",
+              "source_mode": "Valore giornaliero: la sorgente mostra la quantità di oggi e la imposta; i pulsanti non sono quindi disponibili. Contatore: la sorgente cresce sempre e ogni aumento viene aggiunto."
+            }
+          },
+          "milestone_settings": {
+            "name": "Traguardi",
+            "description": "Genera un evento quando la sfida raggiunge un traguardo.",
+            "data": {
+              "milestones": "Traguardi"
+            },
+            "data_description": {
+              "milestones": "Senza selezione non c'è alcun evento traguardo."
+            }
+          }
         }
       }
     },
@@ -74,7 +123,8 @@
       "start_in_future": "La data di inizio non può essere nel futuro.",
       "end_before_start": "La data di fine deve essere successiva alla data di inizio.",
       "invalid_steps": "Inserisci da 1 a 3 numeri interi da 1 a 100000.",
-      "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente."
+      "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente.",
+      "source_is_challenge": "Un'entità di Daily Challenge non può essere la sorgente."
     }
   },
   "selector": {
@@ -88,6 +138,20 @@
       "options": {
         "display": "Mostra solo il ritardo",
         "catch_up": "Recupero: il ritardo di ieri aumenta l'obiettivo di oggi"
+      }
+    },
+    "source_mode": {
+      "options": {
+        "daily": "Valore giornaliero (ad es. passi di oggi)",
+        "counter": "Contatore che cresce sempre (ad es. contachilometri)"
+      }
+    },
+    "milestones": {
+      "options": {
+        "streak": "Traguardi della serie (7, 14, 30 … giorni)",
+        "best_streak": "Nuova serie migliore",
+        "best_day": "Nuovo giorno migliore",
+        "total": "Traguardi della quantità totale (100, 250, 500 …)"
       }
     }
   },
@@ -103,6 +167,25 @@
       },
       "subtract": {
         "name": "−{amount}"
+      }
+    },
+    "event": {
+      "milestone": {
+        "name": "Traguardo",
+        "state_attributes": {
+          "event_type": {
+            "name": "Traguardo",
+            "state": {
+              "streak": "Traguardo della serie",
+              "best_streak": "Nuova serie migliore",
+              "best_day": "Nuovo giorno migliore",
+              "total": "Traguardo della quantità totale"
+            }
+          },
+          "value": {
+            "name": "Valore"
+          }
+        }
       }
     },
     "number": {
@@ -200,6 +283,9 @@
     },
     "not_whole_number": {
       "message": "{value} non è un numero intero."
+    },
+    "today_from_source": {
+      "message": "Il valore di oggi proviene da {entity_id} e non può essere modificato a mano."
     }
   },
   "services": {

@@ -18,6 +18,12 @@ if TYPE_CHECKING:
 
 MAX_PROGRESS = 999.0
 
+# Streak lengths that count as milestones; after the last one every 500 days.
+STREAK_MILESTONES = (7, 14, 30, 50, 100, 150, 200, 250, 300, 365, 500, 750, 1000)
+STREAK_MILESTONE_INTERVAL = 500
+# Total milestones follow 1, 2.5 and 5 times a power of ten, from 100 on.
+TOTAL_MILESTONE_START = 100
+
 
 class StreakRule(StrEnum):
     """When a day counts towards the streak."""
@@ -31,6 +37,15 @@ class DeficitMode(StrEnum):
 
     DISPLAY = "display"
     CATCH_UP = "catch_up"
+
+
+class MilestoneType(StrEnum):
+    """Kinds of milestones a challenge can reach."""
+
+    STREAK = "streak"
+    BEST_STREAK = "best_streak"
+    BEST_DAY = "best_day"
+    TOTAL = "total"
 
 
 class ChallengeStatus(StrEnum):
@@ -87,6 +102,10 @@ class ChallengeStats:
     this_year: int
     current_streak: int
     best_streak: Streak
+    # Records to beat: the best run before the current one and the best
+    # value of a day other than today.
+    previous_best_streak: int = 0
+    best_day_before_today: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +212,16 @@ def _best_streak(period: list[date], fulfilled: list[bool]) -> Streak:
     return best
 
 
+def _best_streak_before(
+    period: list[date], fulfilled: list[bool], first_day: date | None
+) -> int:
+    """Return the longest run that ended before `first_day` (None: all)."""
+    if first_day is None:
+        return _best_streak(period, fulfilled).length
+    cut = period.index(first_day)
+    return _best_streak(period[:cut], fulfilled[:cut]).length
+
+
 def _current_streak(
     period: list[date],
     fulfilled: list[bool],
@@ -292,8 +321,14 @@ def calculate(
         if value > 0 and value >= best_day_value:
             best_day_value, best_day_date = value, day
 
+    best_day_before_today = max(
+        (value for day, value in zip(period, values, strict=True) if day != today),
+        default=0,
+    )
+
     week_start = today - timedelta(days=today.weekday())
     in_period = list(zip(period, values, strict=True))
+    current = _current_streak(period, fulfilled, settings, status)
 
     return ChallengeStats(
         status=status,
@@ -320,9 +355,70 @@ def calculate(
             if (day.year, day.month) == (today.year, today.month)
         ),
         this_year=sum(v for day, v in in_period if day.year == today.year),
-        current_streak=_current_streak(period, fulfilled, settings, status).length,
+        current_streak=current.length,
         best_streak=_best_streak(period, fulfilled),
+        previous_best_streak=_best_streak_before(period, fulfilled, current.start),
+        best_day_before_today=best_day_before_today,
     )
+
+
+def is_streak_milestone(length: int) -> bool:
+    """Return whether a streak of `length` days is a milestone."""
+    if length in STREAK_MILESTONES:
+        return True
+    last = STREAK_MILESTONES[-1]
+    return length > last and (length - last) % STREAK_MILESTONE_INTERVAL == 0
+
+
+def total_milestones(up_to: int) -> list[int]:
+    """Return all total milestones up to and including `up_to`, ascending."""
+    result: list[int] = []
+    power = TOTAL_MILESTONE_START
+    while power <= up_to:
+        result.extend(m for m in (power, power * 5 // 2, power * 5) if m <= up_to)
+        power *= 10
+    return result
+
+
+def reached_milestones(
+    old: ChallengeStats,
+    new: ChallengeStats,
+    enabled: set[MilestoneType],
+) -> list[tuple[MilestoneType, int]]:
+    """Return the milestones crossed by going from `old` to `new`.
+
+    Only the highest crossed milestone of each kind is returned, so a big
+    jump does not fire a burst of events. Callers only pass changes of
+    today's value.
+    """
+    reached: list[tuple[MilestoneType, int]] = []
+    if MilestoneType.STREAK in enabled:
+        crossed = [
+            length
+            for length in range(old.current_streak + 1, new.current_streak + 1)
+            if is_streak_milestone(length)
+        ]
+        if crossed:
+            reached.append((MilestoneType.STREAK, crossed[-1]))
+    record = old.previous_best_streak
+    if (
+        MilestoneType.BEST_STREAK in enabled
+        and record > 0
+        and old.current_streak <= record < new.current_streak
+    ):
+        reached.append((MilestoneType.BEST_STREAK, new.current_streak))
+    best_day = old.best_day_before_today
+    if (
+        MilestoneType.BEST_DAY in enabled
+        and best_day > 0
+        and old.value_today <= best_day < new.value_today
+    ):
+        reached.append((MilestoneType.BEST_DAY, new.value_today))
+    if MilestoneType.TOTAL in enabled:
+        crossed = [m for m in total_milestones(new.total) if m > old.total]
+        if crossed:
+            reached.append((MilestoneType.TOTAL, crossed[-1]))
+    return reached
 
 
 def build_history(  # noqa: PLR0913

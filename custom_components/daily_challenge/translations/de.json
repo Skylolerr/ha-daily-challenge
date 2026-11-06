@@ -24,6 +24,30 @@
           "steps": "Bis zu 3 Mengen in aufsteigender Reihenfolge. Jede erhält einen Plus-Button; die kleinste wird auch für den Minus-Button verwendet.",
           "streak_rule": "Wann ein Tag für deinen Streak zählt.",
           "deficit_mode": "Was passiert, wenn du in Rückstand gerätst."
+        },
+        "sections": {
+          "source": {
+            "name": "Automatisch zählen",
+            "description": "Den heutigen Wert von einer anderen Entity übernehmen, zum Beispiel von einem Schrittzähler.",
+            "data": {
+              "source_entity": "Quelle",
+              "source_mode": "Art der Quelle"
+            },
+            "data_description": {
+              "source_entity": "Optional. Leer lassen, um von Hand zu zählen.",
+              "source_mode": "Tageswert: Die Quelle zeigt die heutige Menge und setzt sie; die Buttons sind dann nicht verfügbar. Zählerstand: Die Quelle steigt immer weiter, und jede Zunahme wird addiert."
+            }
+          },
+          "milestone_settings": {
+            "name": "Meilensteine",
+            "description": "Löst ein Ereignis aus, wenn die Challenge einen Meilenstein erreicht.",
+            "data": {
+              "milestones": "Meilensteine"
+            },
+            "data_description": {
+              "milestones": "Ohne Auswahl gibt es kein Meilenstein-Ereignis."
+            }
+          }
         }
       }
     },
@@ -35,7 +59,8 @@
       "start_in_future": "Das Startdatum darf nicht in der Zukunft liegen.",
       "end_before_start": "Das Enddatum muss nach dem Startdatum liegen.",
       "invalid_steps": "Gib 1 bis 3 ganze Zahlen von 1 bis 100000 ein.",
-      "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein."
+      "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein.",
+      "source_is_challenge": "Eine Entity von Daily Challenge kann nicht die Quelle sein."
     }
   },
   "options": {
@@ -63,6 +88,30 @@
           "steps": "Bis zu 3 Mengen in aufsteigender Reihenfolge. Jede erhält einen Plus-Button; die kleinste wird auch für den Minus-Button verwendet.",
           "streak_rule": "Wann ein Tag für deinen Streak zählt.",
           "deficit_mode": "Was passiert, wenn du in Rückstand gerätst."
+        },
+        "sections": {
+          "source": {
+            "name": "Automatisch zählen",
+            "description": "Den heutigen Wert von einer anderen Entity übernehmen, zum Beispiel von einem Schrittzähler.",
+            "data": {
+              "source_entity": "Quelle",
+              "source_mode": "Art der Quelle"
+            },
+            "data_description": {
+              "source_entity": "Optional. Leer lassen, um von Hand zu zählen.",
+              "source_mode": "Tageswert: Die Quelle zeigt die heutige Menge und setzt sie; die Buttons sind dann nicht verfügbar. Zählerstand: Die Quelle steigt immer weiter, und jede Zunahme wird addiert."
+            }
+          },
+          "milestone_settings": {
+            "name": "Meilensteine",
+            "description": "Löst ein Ereignis aus, wenn die Challenge einen Meilenstein erreicht.",
+            "data": {
+              "milestones": "Meilensteine"
+            },
+            "data_description": {
+              "milestones": "Ohne Auswahl gibt es kein Meilenstein-Ereignis."
+            }
+          }
         }
       }
     },
@@ -74,7 +123,8 @@
       "start_in_future": "Das Startdatum darf nicht in der Zukunft liegen.",
       "end_before_start": "Das Enddatum muss nach dem Startdatum liegen.",
       "invalid_steps": "Gib 1 bis 3 ganze Zahlen von 1 bis 100000 ein.",
-      "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein."
+      "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein.",
+      "source_is_challenge": "Eine Entity von Daily Challenge kann nicht die Quelle sein."
     }
   },
   "selector": {
@@ -88,6 +138,20 @@
       "options": {
         "display": "Rückstand nur anzeigen",
         "catch_up": "Aufholen: der gestrige Rückstand erhöht das heutige Ziel"
+      }
+    },
+    "source_mode": {
+      "options": {
+        "daily": "Tageswert (z. B. Schritte heute)",
+        "counter": "Zählerstand, der immer weiter steigt (z. B. Kilometerzähler)"
+      }
+    },
+    "milestones": {
+      "options": {
+        "streak": "Streak-Meilensteine (7, 14, 30 … Tage)",
+        "best_streak": "Neuer bester Streak",
+        "best_day": "Neuer bester Tag",
+        "total": "Gesamtmenge (100, 250, 500 …)"
       }
     }
   },
@@ -103,6 +167,25 @@
       },
       "subtract": {
         "name": "−{amount}"
+      }
+    },
+    "event": {
+      "milestone": {
+        "name": "Meilenstein",
+        "state_attributes": {
+          "event_type": {
+            "name": "Meilenstein",
+            "state": {
+              "streak": "Streak-Meilenstein",
+              "best_streak": "Neuer bester Streak",
+              "best_day": "Neuer bester Tag",
+              "total": "Gesamtmenge erreicht"
+            }
+          },
+          "value": {
+            "name": "Wert"
+          }
+        }
       }
     },
     "number": {
@@ -200,6 +283,9 @@
     },
     "not_whole_number": {
       "message": "{value} ist keine ganze Zahl."
+    },
+    "today_from_source": {
+      "message": "Der heutige Wert kommt von {entity_id} und kann nicht von Hand geändert werden."
     }
   },
   "services": {

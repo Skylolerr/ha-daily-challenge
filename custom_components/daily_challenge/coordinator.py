@@ -2,14 +2,25 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.core import (
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    State,
+    callback,
+)
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.event import async_track_point_in_utc_time
+from homeassistant.helpers.event import (
+    async_track_point_in_utc_time,
+    async_track_state_change_event,
+)
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
@@ -17,29 +28,48 @@ from homeassistant.util import dt as dt_util
 from .calculations import (
     ChallengeSettings,
     ChallengeStats,
+    ChallengeStatus,
     DeficitMode,
     History,
+    MilestoneType,
     StreakRule,
     build_history,
     calculate,
+    reached_milestones,
 )
 from .const import (
     CONF_DAILY_TARGET,
     CONF_DEFICIT_MODE,
     CONF_END_DATE,
+    CONF_MILESTONES,
+    CONF_SOURCE_ENTITY,
+    CONF_SOURCE_MODE,
     CONF_START_DATE,
     CONF_STREAK_RULE,
+    COUNTER_RESET_SHARE,
     DOMAIN,
     LOGGER,
     MAX_DAY_VALUE,
     SAVE_DELAY,
+    STORAGE_MINOR_VERSION,
     STORAGE_VERSION,
+    SourceMode,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
 type DailyChallengeConfigEntry = ConfigEntry[ChallengeCoordinator]
+type MilestoneListener = Callable[[list[tuple[MilestoneType, int]]], None]
+
+
+class SourceData(TypedDict):
+    """Last reading of a counter source sensor."""
+
+    entity_id: str
+    last: float
+    # Fraction not yet added, e.g. 0.4 of 1.4 km.
+    carry: float
 
 
 class StoreData(TypedDict):
@@ -47,6 +77,7 @@ class StoreData(TypedDict):
 
     days: dict[str, int]
     target_history: dict[str, int]
+    source: SourceData | None
 
 
 def settings_from_options(options: Mapping[str, Any]) -> ChallengeSettings:
@@ -60,20 +91,51 @@ def settings_from_options(options: Mapping[str, Any]) -> ChallengeSettings:
     )
 
 
+def milestones_from_options(options: Mapping[str, Any]) -> list[MilestoneType]:
+    """Return the enabled milestone kinds in a fixed order (default: all)."""
+    enabled = options.get(CONF_MILESTONES)
+    if enabled is None:
+        return list(MilestoneType)
+    return [kind for kind in MilestoneType if kind.value in enabled]
+
+
+class _VersionedStore(Store[StoreData]):
+    """Store with the migrations of the challenge data."""
+
+    async def _async_migrate_func(
+        self, old_major_version: int, old_minor_version: int, old_data: Any
+    ) -> StoreData:
+        """Migrate older data; nothing is ever dropped."""
+        data = dict(old_data)
+        if old_major_version == 1 and old_minor_version < 2:
+            data.setdefault("source", None)
+        return StoreData(
+            days=data.get("days", {}),
+            target_history=data.get("target_history", {}),
+            source=data.get("source"),
+        )
+
+
 class ChallengeStore:
     """Thin wrapper around the per-challenge store file."""
 
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         """Initialize the store."""
-        self._store: Store[StoreData] = Store(
-            hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}"
+        self._store = _VersionedStore(
+            hass,
+            STORAGE_VERSION,
+            f"{DOMAIN}.{entry_id}",
+            minor_version=STORAGE_MINOR_VERSION,
         )
         self.days: dict[date, int] = {}
         self.target_history: dict[date, int] = {}
+        self.source: SourceData | None = None
 
     async def async_load(self) -> None:
         """Load and parse the stored data."""
-        data = await self._store.async_load() or StoreData(days={}, target_history={})
+        data = await self._store.async_load() or StoreData(
+            days={}, target_history={}, source=None
+        )
         self.days = {
             date.fromisoformat(day): value
             for day, value in data["days"].items()
@@ -83,6 +145,7 @@ class ChallengeStore:
             date.fromisoformat(day): target
             for day, target in data["target_history"].items()
         }
+        self.source = data.get("source")
 
     def _data_to_save(self) -> StoreData:
         return StoreData(
@@ -91,6 +154,7 @@ class ChallengeStore:
                 day.isoformat(): target
                 for day, target in sorted(self.target_history.items())
             },
+            source=self.source,
         )
 
     @callback
@@ -111,6 +175,17 @@ class ChallengeStore:
         self.target_history[day] = target
 
 
+def _reading(state: State | None) -> float | None:
+    """Return the numeric state of a source, or None if it has none."""
+    if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+        return None
+    try:
+        value = float(state.state)
+    except ValueError:
+        return None
+    return value if math.isfinite(value) else None
+
+
 class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
     """Holds the data of one challenge and pushes updates to its entities."""
 
@@ -127,6 +202,7 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         )
         self.store = ChallengeStore(hass, entry.entry_id)
         self._unsub_midnight: Callable[[], None] | None = None
+        self._milestone_listeners: list[MilestoneListener] = []
 
     @property
     def today(self) -> date:
@@ -138,6 +214,23 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         """Return the calculation settings of this challenge."""
         return settings_from_options(self.config_entry.options)
 
+    @property
+    def source_entity(self) -> str | None:
+        """Return the entity that feeds this challenge, if any."""
+        return self.config_entry.options.get(CONF_SOURCE_ENTITY) or None
+
+    @property
+    def source_mode(self) -> SourceMode:
+        """Return how the source sensor is read."""
+        return SourceMode(
+            self.config_entry.options.get(CONF_SOURCE_MODE, SourceMode.DAILY)
+        )
+
+    @property
+    def today_from_source(self) -> bool:
+        """Return whether a source sensor sets today's value by itself."""
+        return self.source_entity is not None and self.source_mode is SourceMode.DAILY
+
     async def _async_setup(self) -> None:
         """Load the stored data before the first calculation."""
         await self.store.async_load()
@@ -147,8 +240,78 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
                 int(self.config_entry.options[CONF_DAILY_TARGET]),
             )
             await self.store.async_save()
+        if self.store.source is not None and (
+            self.source_mode is not SourceMode.COUNTER
+            or self.store.source["entity_id"] != self.source_entity
+        ):
+            # Another source or mode: a later counter starts afresh.
+            self.store.source = None
+            self.store.async_delay_save()
         self._schedule_midnight()
         self.config_entry.async_on_unload(self._cancel_midnight)
+
+    @callback
+    def async_start_source(self) -> None:
+        """Follow the source sensor; called once the entities are set up."""
+        if (entity_id := self.source_entity) is None:
+            return
+        self.config_entry.async_on_unload(
+            async_track_state_change_event(
+                self.hass, [entity_id], self._async_source_changed
+            )
+        )
+        self._async_source_state(self.hass.states.get(entity_id))
+
+    @callback
+    def _async_source_changed(self, event: Event[EventStateChangedData]) -> None:
+        self._async_source_state(event.data["new_state"])
+
+    @callback
+    def _async_source_state(self, state: State | None) -> None:
+        """Turn a new reading of the source sensor into today's value."""
+        reading = _reading(state)
+        if state is None or reading is None:
+            return
+        active = self._calculate().status is ChallengeStatus.ACTIVE
+        if self.source_mode is SourceMode.DAILY:
+            value = max(0, min(MAX_DAY_VALUE, round(reading)))
+            if active and value != self.value_on(self.today):
+                self.async_set_value(value, from_source=True)
+            return
+        self._async_counter_reading(state.entity_id, reading, active=active)
+
+    @callback
+    def _async_counter_reading(
+        self, entity_id: str, reading: float, *, active: bool
+    ) -> None:
+        """Add the increase of a counter since its last reading."""
+        source = self.store.source
+        current = SourceData(entity_id=entity_id, last=reading, carry=0.0)
+        self.store.source = current
+        if source is None:
+            # First reading: only the starting point, nothing to add.
+            self.store.async_delay_save()
+            return
+        last = source["last"]
+        if reading >= last:
+            increase = reading - last
+        elif reading < last * (1 - COUNTER_RESET_SHARE):
+            # The counter was reset and counts from 0 again.
+            increase = max(0.0, reading)
+        else:
+            # A small drop, e.g. a correction: keep the higher reading.
+            self.store.source = source
+            return
+        if not active:
+            self.store.async_delay_save()
+            return
+        amount = round(increase + source["carry"], 6)
+        whole = math.floor(amount)
+        current["carry"] = round(amount - whole, 6)
+        if whole > 0:
+            self.async_add(whole, from_source=True)
+        else:
+            self.store.async_delay_save()
 
     def _schedule_midnight(self) -> None:
         """Wake up at the start of the next local day.
@@ -183,7 +346,7 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         self._schedule_midnight()
         self.async_set_updated_data(self._calculate())
 
-    def _validate_day(self, day: date) -> None:
+    def _validate_day(self, day: date, *, from_source: bool) -> None:
         """Raise if values cannot be recorded for `day`."""
         settings = self.settings
         placeholders = {
@@ -197,6 +360,9 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
             key = "date_before_start"
         elif settings.end_date is not None and day > settings.end_date:
             key = "date_after_end"
+        elif day == self.today and self.today_from_source and not from_source:
+            key = "today_from_source"
+            placeholders["entity_id"] = self.source_entity or ""
         else:
             return
         raise ServiceValidationError(
@@ -210,23 +376,49 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         return self.store.days.get(day, 0)
 
     @callback
-    def async_set_value(self, value: int, day: date | None = None) -> None:
+    def async_add_milestone_listener(
+        self, listener: MilestoneListener
+    ) -> Callable[[], None]:
+        """Call `listener` with the milestones reached by a change of today."""
+        self._milestone_listeners.append(listener)
+
+        @callback
+        def remove() -> None:
+            self._milestone_listeners.remove(listener)
+
+        return remove
+
+    @callback
+    def async_set_value(
+        self, value: int, day: date | None = None, *, from_source: bool = False
+    ) -> None:
         """Set the value of a day; 0 removes the entry."""
         day = day or self.today
-        self._validate_day(day)
+        self._validate_day(day, from_source=from_source)
         value = min(value, MAX_DAY_VALUE)
+        old = self.data
         if value > 0:
             self.store.days[day] = value
         else:
             self.store.days.pop(day, None)
         self.store.async_delay_save()
-        self.async_set_updated_data(self._calculate())
+        new = self._calculate()
+        self.async_set_updated_data(new)
+        if day == self.today and old is not None and self._milestone_listeners:
+            enabled = set(milestones_from_options(self.config_entry.options))
+            if reached := reached_milestones(old, new, enabled):
+                for listener in list(self._milestone_listeners):
+                    listener(reached)
 
     @callback
-    def async_add(self, amount: int, day: date | None = None) -> None:
+    def async_add(
+        self, amount: int, day: date | None = None, *, from_source: bool = False
+    ) -> None:
         """Add `amount` (may be negative) to a day; kept within 0 and the maximum."""
         day = day or self.today
-        self.async_set_value(max(0, self.value_on(day) + amount), day)
+        self.async_set_value(
+            max(0, self.value_on(day) + amount), day, from_source=from_source
+        )
 
     def history(self, start: date | None = None, end: date | None = None) -> History:
         """Return values, targets and fulfilment for a date range."""

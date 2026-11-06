@@ -65,7 +65,11 @@ async def test_initial_target_history(
     hass_storage: dict[str, Any],
 ) -> None:
     """The first target history entry is the start date."""
-    assert stored(hass_storage) == {"days": {}, "target_history": {START: 20}}
+    assert stored(hass_storage) == {
+        "days": {},
+        "target_history": {START: 20},
+        "source": None,
+    }
 
 
 async def test_changes_are_saved_delayed_and_on_unload(

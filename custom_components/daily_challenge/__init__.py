@@ -18,12 +18,14 @@ from .frontend import (
     async_register_static_path,
     async_unregister_card,
 )
+from .intent import async_setup_intents
 from .services import async_setup_services
 from .websocket import async_setup_websocket
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.EVENT,
     Platform.NUMBER,
     Platform.SENSOR,
 ]
@@ -34,6 +36,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up actions, WebSocket commands and the card (once per start)."""
     async_setup_services(hass)
+    async_setup_intents(hass)
     async_setup_websocket(hass)
     await async_register_static_path(hass)
     await async_register_card(hass)
@@ -67,6 +70,7 @@ async def async_setup_entry(
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    coordinator.async_start_source()
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
 

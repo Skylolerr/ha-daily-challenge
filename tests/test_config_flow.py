@@ -217,6 +217,7 @@ async def test_options_flow_target_change_while_not_loaded(
     assert hass_storage[STORE_KEY]["data"] == {
         "days": {"2026-11-02": 5},
         "target_history": {START: 20, TODAY: 25},
+        "source": None,
     }
 
 
@@ -252,3 +253,75 @@ async def test_upper_limits(hass: HomeAssistant) -> None:
         result["flow_id"], {**USER_INPUT, "steps": ["100001"]}
     )
     assert result["errors"] == {"steps": "invalid_steps"}
+
+
+async def test_source_and_milestone_sections(hass: HomeAssistant) -> None:
+    """The collapsible sections are stored as flat options."""
+    hass.states.async_set("sensor.steps", "0")
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            **USER_INPUT,
+            "source": {"source_entity": "sensor.steps", "source_mode": "counter"},
+            "milestone_settings": {"milestones": ["total", "streak"]},
+        },
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"] == make_options(
+        icon="mdi:arm-flex",
+        source_entity="sensor.steps",
+        source_mode="counter",
+        # Stored in a fixed order.
+        milestones=["streak", "total"],
+    )
+
+
+async def test_source_must_not_be_a_challenge_entity(
+    hass: HomeAssistant, loaded_entry: MockConfigEntry
+) -> None:
+    """A challenge cannot be fed by an entity of Daily Challenge."""
+    result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            **USER_INPUT,
+            "source": {
+                "source_entity": "sensor.push_ups_total",
+                "source_mode": "daily",
+            },
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "source_is_challenge"}
+
+
+async def test_cleared_source_stays_cleared_after_an_error(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """A removed source must not come back when the form is shown again."""
+    config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        config_entry,
+        options={**config_entry.options, "source_entity": "sensor.steps"},
+    )
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    source_section = next(
+        value for key, value in result["data_schema"].schema.items() if key == "source"
+    )
+    key = next(k for k in source_section.schema.schema if k == "source_entity")
+    assert key.description["suggested_value"] == "sensor.steps"
+    assert source_section.options["collapsed"] is False
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {**USER_INPUT, "steps": ["5", "1"], "source": {"source_mode": "daily"}},
+    )
+    assert result["errors"] == {"steps": "steps_not_ascending"}
+    source_section = next(
+        value for key, value in result["data_schema"].schema.items() if key == "source"
+    )
+    key = next(k for k in source_section.schema.schema if k == "source_entity")
+    assert key.description["suggested_value"] is None

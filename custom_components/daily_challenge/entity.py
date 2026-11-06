@@ -16,6 +16,8 @@ class DailyChallengeEntity(CoordinatorEntity[ChallengeCoordinator]):
     _attr_has_entity_name = True
     # Entities that change today's value only work while the challenge runs.
     _only_while_active = False
+    # Buttons are pointless while a source sensor sets today's value.
+    _blocked_by_daily_source = False
 
     def __init__(self, coordinator: ChallengeCoordinator, key: str) -> None:
         """Initialize the entity."""
@@ -31,9 +33,15 @@ class DailyChallengeEntity(CoordinatorEntity[ChallengeCoordinator]):
     @property
     def available(self) -> bool:
         """Return whether the entity can be used right now."""
-        return super().available and (
-            not self._only_while_active
-            or self.coordinator.data.status is ChallengeStatus.ACTIVE
+        return (
+            super().available
+            and (
+                not self._only_while_active
+                or self.coordinator.data.status is ChallengeStatus.ACTIVE
+            )
+            and not (
+                self._blocked_by_daily_source and self.coordinator.today_from_source
+            )
         )
 
     @property
