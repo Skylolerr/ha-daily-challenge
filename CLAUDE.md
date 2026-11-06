@@ -23,8 +23,14 @@ maintainer instead of deviating.
   Every new user-facing string (config/options flow, entity names, exceptions, actions)
   must be added to all existing translation files in the same change.
 - **Tests are mandatory.** Every feature or bug fix comes with tests
-  (`pytest-homeassistant-custom-component`, `freezegun`). Target ≥ 90 % coverage of the
+  (`freezegun` and Home Assistant's test package). Target ≥ 90 % coverage of the
   Python modules. Test calculation changes first.
+- **Test package:** Home Assistant's own `pytest-homeassistant` for HA 2026.11 and
+  newer (CI job `latest`), `pytest-homeassistant-custom-component` only for the
+  minimum version 2026.10, which has no `pytest-homeassistant` (`requirements_test.txt`,
+  CI job `minimum`). Never install both together. Tests import the helpers from
+  `tests/common.py`, which picks the installed package. When the minimum version is
+  raised to 2026.11 or newer, drop the old package.
 - **Store changes only with a migration.** Any change to the store format bumps
   `STORAGE_VERSION`/minor version and adds a migration. User data must never be lost.
 - **Card bundle is committed.** `custom_components/daily_challenge/frontend/daily-challenge-card.js`

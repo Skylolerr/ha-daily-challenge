@@ -16,13 +16,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import (
-    MockConfigEntry,
-    async_fire_time_changed,
-)
 
 from custom_components.daily_challenge.const import DOMAIN
 
+from .common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 from .conftest import START, make_options
 from .test_init import STORE_KEY, press, store_payload
 

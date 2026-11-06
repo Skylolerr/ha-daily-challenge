@@ -13,7 +13,6 @@ from homeassistant.components.lovelace.resources import ResourceStorageCollectio
 from homeassistant.const import CONF_ICON
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.daily_challenge.const import (
     CONF_DAILY_TARGET,
@@ -25,6 +24,8 @@ from custom_components.daily_challenge.const import (
     CONF_UNIT,
     DOMAIN,
 )
+
+from .common import MockConfigEntry
 
 TIME_ZONE = "Europe/Zurich"
 # A Wednesday, around noon local time.
@@ -38,6 +39,12 @@ def auto_enable_custom_integrations(
     enable_custom_integrations: None,
 ) -> None:
     """Enable loading of custom integrations in all tests."""
+
+
+@pytest.fixture
+def hass_config_dir(hass_tmp_config_dir: str) -> str:
+    """Use a temporary config directory, so tests never write into the repo."""
+    return hass_tmp_config_dir
 
 
 @pytest.fixture(autouse=True)

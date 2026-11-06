@@ -8,10 +8,10 @@ import pytest
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.daily_challenge.const import DOMAIN
 
+from .common import MockConfigEntry
 from .conftest import START, TODAY, make_options
 from .test_init import STORE_KEY, store_payload
 

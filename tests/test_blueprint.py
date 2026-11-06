@@ -11,12 +11,12 @@ from homeassistant.components.blueprint.models import Blueprint, BlueprintInputs
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 from homeassistant.util.yaml import load_yaml_dict
-from pytest_homeassistant_custom_component.common import (
+
+from .common import (
     MockConfigEntry,
     async_capture_events,
     async_fire_time_changed,
 )
-
 from .test_init import press
 
 BLUEPRINT = (

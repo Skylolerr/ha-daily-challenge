@@ -8,10 +8,10 @@ import probatio
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.daily_challenge.const import DOMAIN
 
+from .common import MockConfigEntry
 from .conftest import START, TODAY
 
 

@@ -12,14 +12,14 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import (
-    MockConfigEntry,
-    async_fire_time_changed,
-)
 
 from custom_components.daily_challenge.const import DOMAIN, SAVE_DELAY
 from custom_components.daily_challenge.coordinator import ChallengeStore
 
+from .common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 from .conftest import START, TODAY, make_options
 
 STORE_KEY = f"{DOMAIN}.push_ups"

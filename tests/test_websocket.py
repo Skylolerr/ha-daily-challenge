@@ -6,11 +6,10 @@ from typing import Any
 
 import pytest
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.daily_challenge.const import DOMAIN
 
+from .common import MockConfigEntry, WebSocketGenerator
 from .conftest import START, TODAY, make_options
 
 

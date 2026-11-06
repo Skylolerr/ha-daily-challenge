@@ -332,8 +332,9 @@ Eigene i18n-Dateien für EN, DE, FR und IT. Die Sprache folgt `hass.locale.langu
 - `quality_scale.yaml` als interne Checkliste. Ziel: Silver-Regeln vollständig, Gold-Regeln soweit sinnvoll.
 - Typisierung mit mypy (strict für eigene Module), Linting mit Ruff
 
-### Tests (`pytest-homeassistant-custom-component`, `freezegun`)
+### Tests (`freezegun` und das Testpaket von Home Assistant)
 
+- Testpaket: ab HA 2026.11 das offizielle `pytest-homeassistant` von Home Assistant (CI-Job `latest`); für die Mindestversion 2026.10, für die es dieses Paket nicht gibt, `pytest-homeassistant-custom-component` (CI-Job `minimum`). Nie beide zusammen installieren. Die Tests holen die Hilfsmittel aus `tests/common.py`; `pyproject.toml` hat die Einstellungen aus der Anleitung von `pytest-homeassistant` (`-p no:respx`, `pythonpath`). Sobald die Mindestversion 2026.11 oder neuer ist, fällt das alte Paket weg
 - `calculations.py`: Streak-Regeln, Catch-up inkl. «am Folgetag repariert», Zieländerung über `target_history`, Enddatum, leere Historie
 - Tageswechsel um Mitternacht und bei Sommerzeit-Umstellung (Europe/Zurich, März und Oktober)
 - HA-Neustart über Mitternacht
@@ -349,10 +350,10 @@ Eigene i18n-Dateien für EN, DE, FR und IT. Die Sprache folgt `hass.locale.langu
 **`validate.yml`** (Push + PR):
 - `hacs/action` mit `category: integration`, **ohne Ignores**
 - `home-assistant/actions/hassfest`
-- Ruff + mypy
+- Ruff + mypy (gegen die Mindest- und die neueste HA-Version)
 - Card: `npm ci && npm run build`, danach `git diff --exit-code` auf das Bundle
 
-**`tests.yml`:** pytest mit Coverage.
+**`tests.yml`:** pytest mit Coverage, gegen die Mindestversion **und** die neueste HA-Version (mit `pytest-homeassistant`).
 
 **`release.yml`** (bei veröffentlichtem GitHub-Release):
 - prüft Tag == `manifest.json` → `version` (Format `vX.Y.Z` bzw. `X.Y.Z` einheitlich festlegen)

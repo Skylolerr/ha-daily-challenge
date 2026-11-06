@@ -12,12 +12,11 @@ from homeassistant.components.lovelace import LovelaceData
 from homeassistant.components.lovelace.const import LOVELACE_DATA, MODE_YAML
 from homeassistant.components.lovelace.resources import ResourceYAMLCollection
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.daily_challenge.const import DOMAIN
 from custom_components.daily_challenge.frontend import card_hash
 
+from .common import ClientSessionGenerator, MockConfigEntry
 from .conftest import make_options
 
 CARD_URL = "/daily_challenge/daily-challenge-card.js"
