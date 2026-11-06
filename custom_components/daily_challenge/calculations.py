@@ -8,7 +8,7 @@ challenge settings and the current local date (`today`).
 from __future__ import annotations
 
 from bisect import bisect_right
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from enum import StrEnum
 from typing import TYPE_CHECKING
@@ -115,6 +115,8 @@ class History:
     days: dict[date, int]
     targets: dict[date, int]
     fulfilled: dict[date, bool]
+    # Unfulfilled days that can still be made up today (catch-up: yesterday).
+    rescuable: list[date] = field(default_factory=list)
 
 
 def target_on(target_history: Mapping[date, int], day: date) -> int:
@@ -435,8 +437,17 @@ def build_history(  # noqa: PLR0913
     first = max(start or settings.start_date, settings.start_date)
     last = min(end or today, _period_end(settings, today))
     in_range = [day for day in fulfilled if first <= day <= last]
+    yesterday = today - timedelta(days=1)
+    rescuable = (
+        settings.streak_rule is StreakRule.TARGET
+        and settings.deficit_mode is DeficitMode.CATCH_UP
+        and _status(settings, today) is ChallengeStatus.ACTIVE
+        and yesterday in in_range
+        and not fulfilled[yesterday]
+    )
     return History(
         days={day: days[day] for day in in_range if days.get(day, 0) > 0},
         targets={day: target_on(target_history, day) for day in in_range},
         fulfilled={day: fulfilled[day] for day in in_range},
+        rescuable=[yesterday] if rescuable else [],
     )

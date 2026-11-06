@@ -77,6 +77,7 @@ async def test_history(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "days": {START: 20},
         "targets": {START: 20, "2026-11-03": 20, TODAY: 20},
         "fulfilled": {START: True, "2026-11-03": False, TODAY: False},
+        "rescuable": [],
     }
 
     response = await send(

@@ -115,6 +115,7 @@ def history_response(
         "fulfilled": {
             day.isoformat(): value for day, value in history.fulfilled.items()
         },
+        "rescuable": [day.isoformat() for day in history.rescuable],
     }
 
 

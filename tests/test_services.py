@@ -70,6 +70,7 @@ async def test_get_history(hass: HomeAssistant) -> None:
         "days": {START: 20, "2026-11-03": 5},
         "targets": {START: 20, "2026-11-03": 20, TODAY: 20},
         "fulfilled": {START: True, "2026-11-03": False, TODAY: False},
+        "rescuable": [],
     }
 
     response = await call(hass, "get_history", start="2026-11-03", end="2026-11-03")
@@ -77,6 +78,7 @@ async def test_get_history(hass: HomeAssistant) -> None:
         "days": {"2026-11-03": 5},
         "targets": {"2026-11-03": 20},
         "fulfilled": {"2026-11-03": False},
+        "rescuable": [],
     }
 
 

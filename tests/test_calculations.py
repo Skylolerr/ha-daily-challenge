@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import Any
 
 import pytest
 
@@ -613,3 +614,35 @@ def test_build_history_empty_range() -> None:
     assert result.days == {}
     assert result.targets == {}
     assert result.fulfilled == {}
+
+
+def test_build_history_marks_a_rescuable_yesterday() -> None:
+    """In catch-up mode an unfulfilled yesterday can still be made up today."""
+    catch_up = settings(deficit_mode=DeficitMode.CATCH_UP)
+    days = {d(0): 20, d(1): 5}
+    result = build_history(days, TARGETS_20, catch_up, today=d(2))
+    assert result.fulfilled[d(1)] is False
+    assert result.rescuable == [d(1)]
+    # Out of the requested range, or once made up, it is not listed.
+    assert (
+        build_history(days, TARGETS_20, catch_up, today=d(2), end=d(0)).rescuable == []
+    )
+    made_up = build_history(days | {d(2): 35}, TARGETS_20, catch_up, today=d(2))
+    assert made_up.rescuable == []
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"deficit_mode": DeficitMode.DISPLAY},
+        {"deficit_mode": DeficitMode.CATCH_UP, "streak_rule": StreakRule.ANY},
+        {"deficit_mode": DeficitMode.CATCH_UP, "end": d(1)},
+    ],
+)
+def test_build_history_rescuable_only_in_catch_up_while_running(
+    kwargs: dict[str, Any],
+) -> None:
+    """Without catch-up, with the "any" rule or after the end nothing is open."""
+    days = {d(0): 20, d(1): 5}
+    result = build_history(days, TARGETS_20, settings(**kwargs), today=d(2))
+    assert result.rescuable == []
