@@ -450,7 +450,7 @@ Standardmässig wird eine Phase als Ganzes umgesetzt. Die Unterschritte sind nur
 - «Rückgängig» nach Button-Druck und direkter Eingabe
 - Strengere Eingaben: Kommazahlen an der `today`-Number werden mit Fehler abgelehnt statt abgeschnitten; `true`/`false` gelten in Actions nicht als Zahl
 
-**Phase 4 – v0.2.0**
+**Phase 4 – v0.2.0** – veröffentlicht 2026-11-07 als Release v0.2.0, zusammen mit §17 und §18
 - 4.a Heatmap (Wochen als Spalten, Montag oben, Intensität value/target, erfüllt/unerfüllt unterscheidbar, ausserhalb der Laufzeit grau)
   - Hinweis aus dem Review: `fulfilled` in der Historie kennt noch keinen Zustand «gestern noch rettbar» (Catch-up); für die Heatmap ergänzen. Gerundet wird mit Python-`round()` (2,25 → 2,2).
 - 4.b Tag antippen → Dialog, Wert ändern via `set_day`

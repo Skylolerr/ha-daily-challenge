@@ -11,6 +11,8 @@ and Home Assistant show when they offer the update.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-07
+
 > **Highlight:** see your days in a calendar and correct them there, let a sensor count
 > for you, celebrate milestones, talk to your challenges with Assist and see them all on
 > one card.
@@ -48,6 +50,8 @@ and Home Assistant show when they offer the update.
 
 - The data of a challenge gets a new field for the counter source; existing data is
   migrated automatically.
+
+*Tested with Home Assistant 2026.10.2 and 2026.11.0 · minimum 2026.10.0*
 
 ## [0.1.2] - 2026-11-02
 
@@ -129,7 +133,8 @@ and Home Assistant show when they offer the update.
 
 *Tested with Home Assistant 2026.10.2 · minimum 2026.10.0*
 
-[Unreleased]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Skylolerr/ha-daily-challenge/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Skylolerr/ha-daily-challenge/releases/tag/v0.1.0
