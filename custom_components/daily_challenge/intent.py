@@ -13,8 +13,10 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import intent
 
-from .const import CONF_UNIT, DOMAIN, MAX_DAY_VALUE
+from .const import CONF_PERSON, CONF_UNIT, DOMAIN, MAX_DAY_VALUE
 from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
+from .groups import is_group
+from .people import person_info, persons_of_user
 from .services import DAY_VALUE, whole_number
 
 INTENT_ADD = "DailyChallengeAdd"
@@ -33,6 +35,9 @@ class Challenge:
     name: str
     unit: str
     coordinator: ChallengeCoordinator
+    # Entity ID of the person the challenge belongs to.
+    person: str | None = None
+    person_name: str | None = None
 
 
 @callback
@@ -45,6 +50,8 @@ def async_challenges(hass: HomeAssistant, assistant: str | None) -> list[Challen
     challenges = []
     entry: DailyChallengeConfigEntry
     for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+        if is_group(entry):
+            continue
         entity_id = registry.async_get_entity_id(
             Platform.NUMBER, DOMAIN, f"{entry.entry_id}_today"
         )
@@ -52,8 +59,16 @@ def async_challenges(hass: HomeAssistant, assistant: str | None) -> list[Challen
             entity_id is None or not async_should_expose(hass, assistant, entity_id)
         ):
             continue
+        person = entry.options.get(CONF_PERSON) or None
+        info = person_info(hass, person)
         challenges.append(
-            Challenge(entry.title, str(entry.options[CONF_UNIT]), entry.runtime_data)
+            Challenge(
+                entry.title,
+                str(entry.options[CONF_UNIT]),
+                entry.runtime_data,
+                person,
+                info["name"] if info else None,
+            )
         )
     return challenges
 
@@ -86,6 +101,11 @@ class _ChallengeIntentHandler(intent.IntentHandler):
         if name is None:
             if len(challenges) == 1:
                 return challenges[0]
+            # The speaker's own challenge, if there is exactly one.
+            mine = persons_of_user(intent_obj.hass, intent_obj.context.user_id)
+            own = [challenge for challenge in challenges if challenge.person in mine]
+            if len(own) == 1:
+                return own[0]
             names = ", ".join(challenge.name for challenge in challenges)
             raise intent.IntentHandleError(
                 f"Name the challenge, one of: {names}" if names else "No challenges"

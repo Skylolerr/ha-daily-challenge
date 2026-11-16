@@ -18,7 +18,8 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_END_DATE, DOMAIN
 from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
-from .entity import DailyChallengeEntity
+from .entity import DailyChallengeEntity, GroupEntity
+from .groups import GroupCoordinator, GroupStats, group_coordinator, is_group
 
 if TYPE_CHECKING:
     from homeassistant.helpers.typing import StateType
@@ -164,6 +165,9 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the sensors."""
+    if is_group(entry):
+        _async_setup_group(hass, group_coordinator(entry), async_add_entities)
+        return
     has_end_date = bool(entry.options.get(CONF_END_DATE))
     if not has_end_date:
         # The end date was removed: drop the now meaningless sensors.
@@ -200,6 +204,149 @@ class ChallengeSensor(DailyChallengeEntity, SensorEntity):
             self._attr_native_unit_of_measurement = (
                 self.challenge_unit + description.unit_suffix
             )
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the current value."""
+        return self.entity_description.value_fn(self.coordinator.data)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return additional attributes."""
+        if self.entity_description.attrs_fn is None:
+            return None
+        return self.entity_description.attrs_fn(self.coordinator.data)
+
+
+@dataclass(frozen=True, kw_only=True)
+class GroupSensorDescription(SensorEntityDescription):
+    """Describes a sensor of a group."""
+
+    value_fn: Callable[[GroupStats], StateType]
+    attrs_fn: Callable[[GroupStats], dict[str, Any]] | None = None
+    # Only with a shared goal.
+    requires_goal: bool = False
+    # Amounts of all members together, in their shared unit.
+    uses_group_unit: bool = False
+
+
+def _names(stats: GroupStats, keys: list[str]) -> str | None:
+    names = [stats.members[key].name for key in keys if key in stats.members]
+    return ", ".join(names) if names else None
+
+
+def _ranking(stats: GroupStats) -> dict[str, Any]:
+    return {
+        "ranking": [
+            {
+                "rank": score.rank,
+                "name": stats.members[score.key].name,
+                "amount": score.amount,
+                "target": score.target,
+                "percent": score.percent,
+                "streak": score.streak,
+            }
+            for score in stats.week_ranking
+            if score.key in stats.members
+        ]
+    }
+
+
+def _winners(stats: GroupStats) -> dict[str, Any]:
+    return {
+        "week": stats.last_week.isoformat(),
+        "wins": {
+            stats.members[key].name: count
+            for key, count in stats.wins.items()
+            if key in stats.members
+        },
+    }
+
+
+GROUP_SENSORS: tuple[GroupSensorDescription, ...] = (
+    GroupSensorDescription(
+        key="leader",
+        translation_key="leader",
+        value_fn=lambda s: _names(s, s.leaders),
+        attrs_fn=_ranking,
+    ),
+    GroupSensorDescription(
+        key="group_streak",
+        translation_key="group_streak",
+        native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda s: s.streak,
+        attrs_fn=lambda s: {"best": s.best_streak},
+    ),
+    GroupSensorDescription(
+        key="last_week_winner",
+        translation_key="last_week_winner",
+        value_fn=lambda s: _names(s, s.last_week_winners),
+        attrs_fn=_winners,
+    ),
+    GroupSensorDescription(
+        key="group_total",
+        translation_key="group_total",
+        requires_goal=True,
+        uses_group_unit=True,
+        value_fn=lambda s: s.goal.total if s.goal else None,
+    ),
+    GroupSensorDescription(
+        key="group_goal_progress",
+        translation_key="group_goal_progress",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        requires_goal=True,
+        value_fn=lambda s: s.goal.progress if s.goal else None,
+    ),
+    GroupSensorDescription(
+        key="group_goal_remaining",
+        translation_key="group_goal_remaining",
+        requires_goal=True,
+        uses_group_unit=True,
+        value_fn=lambda s: s.goal.remaining if s.goal else None,
+    ),
+)
+
+
+def _async_setup_group(
+    hass: HomeAssistant,
+    coordinator: GroupCoordinator,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """Set up the sensors of a group; drop goal sensors without a goal."""
+    has_goal = coordinator.data.goal is not None
+    entry_id = coordinator.config_entry.entry_id
+    if not has_goal:
+        registry = er.async_get(hass)
+        for description in GROUP_SENSORS:
+            if description.requires_goal and (
+                entity_id := registry.async_get_entity_id(
+                    Platform.SENSOR, DOMAIN, f"{entry_id}_{description.key}"
+                )
+            ):
+                registry.async_remove(entity_id)
+    async_add_entities(
+        GroupSensor(coordinator, description)
+        for description in GROUP_SENSORS
+        if has_goal or not description.requires_goal
+    )
+
+
+class GroupSensor(GroupEntity, SensorEntity):
+    """A figure of a group."""
+
+    entity_description: GroupSensorDescription
+
+    def __init__(
+        self, coordinator: GroupCoordinator, description: GroupSensorDescription
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, description.key)
+        self.entity_description = description
+        if description.uses_group_unit:
+            self._attr_native_unit_of_measurement = coordinator.unit
 
     @property
     def native_value(self) -> StateType:

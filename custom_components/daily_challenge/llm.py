@@ -54,9 +54,15 @@ def async_get_tools(
         for handler in intent.async_get(hass)
         if handler.intent_type in LLM_INTENTS
     ]
-    names = ", ".join(f"{c.name} ({c.unit})" for c in challenges)
+    names = ", ".join(
+        f"{c.name} ({c.unit}, of {c.person_name})"
+        if c.person_name
+        else f"{c.name} ({c.unit})"
+        for c in challenges
+    )
     prompt = (
         "Daily Challenge tracks amounts the user wants to reach every day. "
-        f"The user's challenges are: {names}. Use the challenge name as it is."
+        f"The user's challenges are: {names}. Use the challenge name as it is; "
+        "without a name, the speaker's own challenge is used if there is one."
     )
     return LLMTools(tools=tools, prompt=prompt)

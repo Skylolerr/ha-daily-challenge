@@ -10,6 +10,7 @@ from custom_components.daily_challenge.diagnostics import (
 
 from .common import MockConfigEntry
 from .conftest import START, TODAY
+from .test_init import rule
 
 
 async def test_diagnostics(hass: HomeAssistant, loaded_entry: MockConfigEntry) -> None:
@@ -33,7 +34,7 @@ async def test_diagnostics(hass: HomeAssistant, loaded_entry: MockConfigEntry) -
     assert result["recorded_days"] == 2
     assert result["first_date"] == START
     assert result["last_date"] == TODAY
-    assert result["target_history"] == {START: 20}
+    assert result["target_history"] == {START: rule(20)}
     stats = result["stats"]
     assert stats["total"] == 30
     assert stats["status"] == "active"

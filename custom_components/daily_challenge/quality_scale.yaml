@@ -76,7 +76,7 @@ rules:
   docs-use-cases: done
   dynamic-devices:
     status: exempt
-    comment: Exactly one device per config entry.
+    comment: Exactly one device per config entry (a challenge or a group).
   entity-category: done
   entity-device-class:
     status: exempt
@@ -90,9 +90,7 @@ rules:
   reconfiguration-flow:
     status: exempt
     comment: Every setting can be changed in the options flow.
-  repair-issues:
-    status: exempt
-    comment: No issues that the user would need to repair.
+  repair-issues: done
   stale-devices: done
 
   # Platinum

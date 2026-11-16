@@ -1,0 +1,89 @@
+blueprint:
+  name: Daily Challenge group news
+  description: >-
+    Sends a message when someone takes the lead of a Daily Challenge group
+    ("Anna has overtaken Tom"), when the winner of last week is known, and
+    optionally when the group reaches its shared goal. In the action you can
+    use `{{ group }}`, `{{ kind }}` (lead_change, week_winner or
+    goal_reached), `{{ leader }}`, `{{ previous }}`, `{{ winners }}` and
+    `{{ message }}` (a ready-made sentence).
+  domain: automation
+  author: Skylolerr
+  source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/lead_change.yaml
+  homeassistant:
+    min_version: "2026.10.0"
+  input:
+    group_entity:
+      name: Group
+      description: The "Group" event of a Daily Challenge group.
+      selector:
+        entity:
+          filter:
+            - integration: daily_challenge
+              domain: event
+    kinds:
+      name: News
+      description: Which news to send.
+      default:
+        - lead_change
+        - week_winner
+        - goal_reached
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: New leader
+              value: lead_change
+            - label: Winner of last week
+              value: week_winner
+            - label: Shared goal reached
+              value: goal_reached
+    notify_action:
+      name: Message
+      description: >-
+        What should happen, e.g. a notification to the family's phones.
+        Defaults to a persistent notification in Home Assistant.
+      default:
+        - action: persistent_notification.create
+          data:
+            title: "{{ group }}"
+            message: "{{ message }}"
+      selector:
+        action: {}
+
+triggers:
+  # Every event changes the state of the event entity. Coming back from
+  # "unavailable" (a restart) is no news.
+  - trigger: state
+    entity_id: !input group_entity
+    not_from: unavailable
+    not_to:
+      - unavailable
+      - unknown
+
+variables:
+  group_entity: !input group_entity
+  kinds: !input kinds
+  group: >-
+    {{ device_attr(device_id(group_entity), 'name_by_user')
+       or device_attr(device_id(group_entity), 'name') }}
+  kind: "{{ trigger.to_state.attributes.event_type }}"
+  leader: "{{ trigger.to_state.attributes.leader | default('') }}"
+  previous: "{{ trigger.to_state.attributes.previous | default('') or '' }}"
+  winners: "{{ trigger.to_state.attributes.winners | default([]) | join(' and ') }}"
+  message: >-
+    {% if kind == 'lead_change' %}
+      {%- if previous %}{{ leader }} has overtaken {{ previous }}!
+      {%- else %}{{ leader }} takes the lead!{% endif %}
+    {%- elif kind == 'week_winner' %}{{ winners }} won last week!
+    {%- else %}Shared goal reached: {{ trigger.to_state.attributes.total }}
+      {{- ' of ' }}{{ trigger.to_state.attributes.goal }}!{% endif %}
+
+conditions:
+  - condition: template
+    value_template: "{{ kind in kinds }}"
+
+actions:
+  - sequence: !input notify_action
+
+mode: queued

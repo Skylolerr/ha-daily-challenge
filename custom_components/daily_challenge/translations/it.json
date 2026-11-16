@@ -2,11 +2,28 @@
   "config": {
     "step": {
       "user": {
+        "title": "Nuova sfida quotidiana",
+        "description": "Inizia da zero, usa un modello o raggruppa sfide in una classifica.",
+        "menu_options": {
+          "challenge": "Sfida personalizzata",
+          "template": "Da un modello",
+          "group": "Gruppo (classifica)"
+        }
+      },
+      "template": {
+        "title": "Scegli un modello",
+        "description": "Il modello compila il modulo successivo; lì puoi modificare tutto.",
+        "data": {
+          "template": "Modello"
+        }
+      },
+      "challenge": {
         "title": "Nuova sfida giornaliera",
         "description": "Monitora una quantità giornaliera, ad esempio 20 flessioni al giorno.",
         "data": {
           "name": "Nome",
           "icon": "Icona",
+          "person": "Persona",
           "unit": "Unità",
           "daily_target": "Obiettivo giornaliero",
           "start_date": "Data di inizio",
@@ -17,6 +34,7 @@
         },
         "data_description": {
           "name": "Deve essere unico tra le tue sfide.",
+          "person": "Facoltativo. Mostra la foto della persona e permette di inviare i promemoria al suo telefono.",
           "unit": "Scegli un suggerimento o inserisci la tua unità.",
           "daily_target": "Quantità che vuoi raggiungere ogni giorno.",
           "start_date": "Primo giorno della sfida. Non può essere nel futuro.",
@@ -26,6 +44,20 @@
           "deficit_mode": "Cosa succede quando resti indietro."
         },
         "sections": {
+          "rising_target": {
+            "name": "Obiettivo crescente",
+            "description": "Aumenta l'obiettivo giornaliero passo dopo passo, ad es. +1 ogni settimana.",
+            "data": {
+              "target_increase": "Aumento",
+              "target_increase_every": "Ogni",
+              "target_max": "Massimo"
+            },
+            "data_description": {
+              "target_increase": "Quantità aggiunta all'obiettivo giornaliero per intervallo. 0 lo disattiva.",
+              "target_increase_every": "Ogni quanto cresce l'obiettivo.",
+              "target_max": "Facoltativo. L'obiettivo non supera mai questo valore."
+            }
+          },
           "source": {
             "name": "Conteggio automatico",
             "description": "Prendi il valore di oggi da un'altra entità, per esempio un contapassi.",
@@ -49,6 +81,35 @@
             }
           }
         }
+      },
+      "group": {
+        "title": "Nuovo gruppo",
+        "description": "Metti a confronto più sfide, ad es. una per membro della famiglia. Ogni sfida mantiene il proprio obiettivo.",
+        "data": {
+          "name": "Nome",
+          "icon": "Icona",
+          "members": "Sfide",
+          "ranking": "Classifica per"
+        },
+        "data_description": {
+          "name": "Deve essere unico tra le tue sfide e i tuoi gruppi.",
+          "members": "Almeno 2 sfide, ad es. una per persona.",
+          "ranking": "La percentuale del proprio obiettivo è equa quando gli obiettivi sono diversi."
+        },
+        "sections": {
+          "goal_settings": {
+            "name": "Obiettivo comune",
+            "description": "Raccogliere una quantità insieme, ad es. 500 km in famiglia al mese.",
+            "data": {
+              "group_goal": "Obiettivo",
+              "group_goal_period": "Per"
+            },
+            "data_description": {
+              "group_goal": "Facoltativo. Tutte le sfide devono avere la stessa unità.",
+              "group_goal_period": "L'obiettivo comune ricomincia ogni settimana, mese o anno."
+            }
+          }
+        }
       }
     },
     "error": {
@@ -60,17 +121,26 @@
       "end_before_start": "La data di fine deve essere successiva alla data di inizio.",
       "invalid_steps": "Inserisci da 1 a 3 numeri interi da 1 a 100000.",
       "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente.",
-      "source_is_challenge": "Un'entità di Daily Challenge non può essere la sorgente."
+      "source_is_challenge": "Un'entità di Daily Challenge non può essere la sorgente.",
+      "invalid_increase": "L'aumento deve essere un numero intero da 0 a 100000.",
+      "invalid_target_max": "Il massimo deve essere un numero intero dall'obiettivo giornaliero a 100000.",
+      "too_few_members": "Scegli almeno 2 sfide.",
+      "invalid_group_goal": "L'obiettivo deve essere un numero intero maggiore di 0.",
+      "units_differ": "Un obiettivo comune richiede sfide con la stessa unità."
+    },
+    "abort": {
+      "not_enough_challenges": "Crea prima almeno 2 sfide."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Modifica sfida",
-        "description": "Un nuovo obiettivo giornaliero vale da oggi in poi; i giorni passati mantengono il loro obiettivo.",
+        "description": "Un obiettivo giornaliero o un aumento modificati valgono da oggi; i giorni passati mantengono il loro obiettivo.",
         "data": {
           "name": "Nome",
           "icon": "Icona",
+          "person": "Persona",
           "unit": "Unità",
           "daily_target": "Obiettivo giornaliero",
           "start_date": "Data di inizio",
@@ -81,6 +151,7 @@
         },
         "data_description": {
           "name": "Deve essere unico tra le tue sfide.",
+          "person": "Facoltativo. Mostra la foto della persona e permette di inviare i promemoria al suo telefono.",
           "unit": "Scegli un suggerimento o inserisci la tua unità.",
           "daily_target": "Quantità che vuoi raggiungere ogni giorno. Le modifiche valgono da oggi in poi.",
           "start_date": "Primo giorno della sfida. I giorni prima di una data di inizio successiva vengono ignorati ma non eliminati.",
@@ -90,6 +161,20 @@
           "deficit_mode": "Cosa succede quando resti indietro."
         },
         "sections": {
+          "rising_target": {
+            "name": "Obiettivo crescente",
+            "description": "Aumenta l'obiettivo giornaliero passo dopo passo, ad es. +1 ogni settimana.",
+            "data": {
+              "target_increase": "Aumento",
+              "target_increase_every": "Ogni",
+              "target_max": "Massimo"
+            },
+            "data_description": {
+              "target_increase": "Quantità aggiunta all'obiettivo giornaliero per intervallo. 0 lo disattiva.",
+              "target_increase_every": "Ogni quanto cresce l'obiettivo.",
+              "target_max": "Facoltativo. L'obiettivo non supera mai questo valore."
+            }
+          },
           "source": {
             "name": "Conteggio automatico",
             "description": "Prendi il valore di oggi da un'altra entità, per esempio un contapassi.",
@@ -113,6 +198,35 @@
             }
           }
         }
+      },
+      "group": {
+        "title": "Modifica gruppo",
+        "description": "Membri, classifica e obiettivo comune del gruppo.",
+        "data": {
+          "name": "Nome",
+          "icon": "Icona",
+          "members": "Sfide",
+          "ranking": "Classifica per"
+        },
+        "data_description": {
+          "name": "Deve essere unico tra le tue sfide e i tuoi gruppi.",
+          "members": "Almeno 2 sfide, ad es. una per persona.",
+          "ranking": "La percentuale del proprio obiettivo è equa quando gli obiettivi sono diversi."
+        },
+        "sections": {
+          "goal_settings": {
+            "name": "Obiettivo comune",
+            "description": "Raccogliere una quantità insieme, ad es. 500 km in famiglia al mese.",
+            "data": {
+              "group_goal": "Obiettivo",
+              "group_goal_period": "Per"
+            },
+            "data_description": {
+              "group_goal": "Facoltativo. Tutte le sfide devono avere la stessa unità.",
+              "group_goal_period": "L'obiettivo comune ricomincia ogni settimana, mese o anno."
+            }
+          }
+        }
       }
     },
     "error": {
@@ -124,7 +238,12 @@
       "end_before_start": "La data di fine deve essere successiva alla data di inizio.",
       "invalid_steps": "Inserisci da 1 a 3 numeri interi da 1 a 100000.",
       "steps_not_ascending": "Gli incrementi devono essere unici e in ordine crescente.",
-      "source_is_challenge": "Un'entità di Daily Challenge non può essere la sorgente."
+      "source_is_challenge": "Un'entità di Daily Challenge non può essere la sorgente.",
+      "invalid_increase": "L'aumento deve essere un numero intero da 0 a 100000.",
+      "invalid_target_max": "Il massimo deve essere un numero intero dall'obiettivo giornaliero a 100000.",
+      "too_few_members": "Scegli almeno 2 sfide.",
+      "invalid_group_goal": "L'obiettivo deve essere un numero intero maggiore di 0.",
+      "units_differ": "Un obiettivo comune richiede sfide con la stessa unità."
     }
   },
   "selector": {
@@ -153,12 +272,48 @@
         "best_day": "Nuovo giorno migliore",
         "total": "Traguardi della quantità totale (100, 250, 500 …)"
       }
+    },
+    "template": {
+      "options": {
+        "push_ups": "Flessioni (20 al giorno)",
+        "squats": "Squat (30 al giorno)",
+        "steps": "Passi (10.000 al giorno)",
+        "water": "Acqua (2000 ml al giorno)",
+        "reading": "Lettura (30 minuti al giorno)",
+        "meditation": "Meditazione (10 minuti al giorno)",
+        "running": "Corsa (3 km al giorno)",
+        "cycling": "Bici (10 km al giorno)"
+      }
+    },
+    "target_increase_every": {
+      "options": {
+        "day": "Giorno",
+        "week": "Settimana",
+        "month": "Mese"
+      }
+    },
+    "ranking": {
+      "options": {
+        "percent": "Percentuale del proprio obiettivo",
+        "amount": "Quantità",
+        "streak": "Serie attuale"
+      }
+    },
+    "group_goal_period": {
+      "options": {
+        "week": "Settimana",
+        "month": "Mese",
+        "year": "Anno"
+      }
     }
   },
   "entity": {
     "binary_sensor": {
       "goal_reached_today": {
         "name": "Obiettivo raggiunto oggi"
+      },
+      "all_reached_today": {
+        "name": "Tutti hanno raggiunto l'obiettivo di oggi"
       }
     },
     "button": {
@@ -184,6 +339,37 @@
           },
           "value": {
             "name": "Valore"
+          }
+        }
+      },
+      "group": {
+        "name": "Gruppo",
+        "state_attributes": {
+          "event_type": {
+            "name": "Evento",
+            "state": {
+              "lead_change": "Nuovo leader",
+              "week_winner": "Vincitore della settimana",
+              "goal_reached": "Obiettivo comune raggiunto"
+            }
+          },
+          "leader": {
+            "name": "In testa"
+          },
+          "previous": {
+            "name": "Leader precedente"
+          },
+          "winners": {
+            "name": "Vincitori"
+          },
+          "week": {
+            "name": "Settimana"
+          },
+          "total": {
+            "name": "Totale"
+          },
+          "goal": {
+            "name": "Obiettivo"
           }
         }
       }
@@ -259,6 +445,42 @@
       },
       "this_year": {
         "name": "Quest'anno"
+      },
+      "leader": {
+        "name": "In testa",
+        "state_attributes": {
+          "ranking": {
+            "name": "Classifica"
+          }
+        }
+      },
+      "group_streak": {
+        "name": "Serie del gruppo",
+        "state_attributes": {
+          "best": {
+            "name": "Migliore"
+          }
+        }
+      },
+      "last_week_winner": {
+        "name": "Vincitore della settimana scorsa",
+        "state_attributes": {
+          "week": {
+            "name": "Settimana"
+          },
+          "wins": {
+            "name": "Settimane vinte"
+          }
+        }
+      },
+      "group_total": {
+        "name": "Totale del gruppo"
+      },
+      "group_goal_progress": {
+        "name": "Progresso obiettivo comune"
+      },
+      "group_goal_remaining": {
+        "name": "Mancante all'obiettivo comune"
       }
     }
   },
@@ -286,6 +508,9 @@
     },
     "today_from_source": {
       "message": "Il valore di oggi proviene da {entity_id} e non può essere modificato a mano."
+    },
+    "is_group": {
+      "message": "{name} è un gruppo, non una sfida."
     }
   },
   "services": {
@@ -345,7 +570,7 @@
     },
     "get_status": {
       "name": "Ottieni stato",
-      "description": "Restituisce il valore di oggi, l'obiettivo, le serie e le somme di questa settimana, di questo mese e di quest'anno di una sfida.",
+      "description": "Restituisce il valore di oggi, l'obiettivo, le serie e le somme di questa settimana, di questo mese e di quest'anno di una sfida. Per un gruppo, la classifica.",
       "fields": {
         "config_entry_id": {
           "name": "Sfida",
@@ -361,7 +586,53 @@
       "streak": "Traguardo della serie raggiunto",
       "best_streak": "Nuova serie migliore",
       "best_day": "Nuovo giorno migliore",
-      "total": "Traguardo della quantità totale raggiunto"
+      "total": "Traguardo della quantità totale raggiunto",
+      "all_reached": "Tutti hanno raggiunto l'obiettivo di oggi",
+      "lead_change": "Nuovo leader",
+      "week_winner": "Vincitore della settimana",
+      "group_goal_reached": "Obiettivo comune raggiunto"
+    }
+  },
+  "issues": {
+    "source_missing": {
+      "title": "Manca la fonte di {name}",
+      "fix_flow": {
+        "step": {
+          "source": {
+            "title": "Fonte di {name}",
+            "description": "La sfida {name} conta automaticamente da {entity_id}, ma questa entità non esiste più. Scegli un'altra fonte o disattiva il conteggio automatico.",
+            "data": {
+              "source_entity": "Fonte"
+            }
+          }
+        },
+        "abort": {
+          "entry_removed": "La sfida non esiste più."
+        },
+        "error": {
+          "source_is_challenge": "Un'entità di Daily Challenge non può essere la fonte."
+        }
+      }
+    },
+    "source_unavailable": {
+      "title": "La fonte di {name} non fornisce valori",
+      "fix_flow": {
+        "step": {
+          "source": {
+            "title": "Fonte di {name}",
+            "description": "La sfida {name} conta automaticamente da {entity_id}, ma la fonte non è disponibile da almeno 12 ore. Scegli un'altra fonte o disattiva il conteggio automatico. Se la fonte torna, questo avviso scompare da solo.",
+            "data": {
+              "source_entity": "Fonte"
+            }
+          }
+        },
+        "abort": {
+          "entry_removed": "La sfida non esiste più."
+        },
+        "error": {
+          "source_is_challenge": "Un'entità di Daily Challenge non può essere la fonte."
+        }
+      }
     }
   }
 }

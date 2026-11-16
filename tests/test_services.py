@@ -67,6 +67,9 @@ async def test_get_status(hass: HomeAssistant) -> None:
     await call(hass, "set", value=12)
     assert await call(hass, "get_status") == {
         "name": "Push-ups",
+        "person": None,
+        "person_name": None,
+        "notify_services": [],
         "unit": "repetitions",
         "status": "active",
         "today_from_source": False,

@@ -1,0 +1,147 @@
+blueprint:
+  name: Daily Challenge pace reminder
+  description: >-
+    Reminds you only when you fall behind the day's plan. Every full hour
+    within a time window (default 08:00–21:00) the blueprint compares today's
+    amount with the share of today's target that should be done by now, e.g.
+    at 14:30 about half of it. You get a reminder when you are more than the
+    tolerance (default 25 %) behind; after a reminder it waits a few hours
+    before the next one. In the action you can use `{{ challenge }}`,
+    `{{ done }}`, `{{ target }}`, `{{ expected }}`, `{{ remaining }}`,
+    `{{ unit }}` and `{{ message }}` (a ready-made sentence). Nothing is sent
+    while the challenge is not running or once today's goal is reached.
+  domain: automation
+  author: Skylolerr
+  source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/pace.yaml
+  homeassistant:
+    min_version: "2026.10.0"
+  input:
+    today_entity:
+      name: Challenge
+      description: The "Today" entity of the challenge.
+      selector:
+        entity:
+          filter:
+            - integration: daily_challenge
+              domain: number
+    window_start:
+      name: From
+      description: Start of the day's plan.
+      default: "08:00:00"
+      selector:
+        time: {}
+    window_end:
+      name: Until
+      description: By this time today's target should be reached.
+      default: "21:00:00"
+      selector:
+        time: {}
+    tolerance:
+      name: Tolerance
+      description: How far behind the plan you may be before a reminder.
+      default: 25
+      selector:
+        number:
+          min: 0
+          max: 90
+          step: 5
+          unit_of_measurement: "%"
+    pause_hours:
+      name: Pause after a reminder
+      description: Hours without another reminder.
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 12
+          unit_of_measurement: h
+    notify_person:
+      name: Send to the person's phones
+      description: >-
+        Also send the message to the mobile app of the person assigned to the
+        challenge.
+      default: false
+      selector:
+        boolean: {}
+    notify_action:
+      name: Reminder
+      description: >-
+        What should happen, e.g. a notification to your phone. Defaults to a
+        persistent notification in Home Assistant.
+      default:
+        - action: persistent_notification.create
+          data:
+            title: "{{ challenge }}"
+            message: "{{ message }}"
+      selector:
+        action: {}
+
+triggers:
+  - trigger: time_pattern
+    minutes: 0
+
+variables:
+  today_entity: !input today_entity
+  window_start: !input window_start
+  window_end: !input window_end
+  tolerance: !input tolerance
+  pause_hours: !input pause_hours
+  notify_person: !input notify_person
+  challenge_entities: "{{ device_entities(device_id(today_entity)) }}"
+  challenge: >-
+    {{ device_attr(device_id(today_entity), 'name_by_user')
+       or device_attr(device_id(today_entity), 'name') }}
+  done: "{{ states(today_entity) | int(0) }}"
+  unit: "{{ state_attr(today_entity, 'unit_of_measurement') or '' }}"
+  # Today's target is the sensor that carries the "deficit" attribute.
+  target: >-
+    {{ expand(challenge_entities) | selectattr('attributes.deficit', 'defined')
+       | map(attribute='state') | map('int', 0) | first | default(0) }}
+  # "off" only while the challenge runs and today's goal is open.
+  goal_open: >-
+    {{ expand(challenge_entities) | selectattr('domain', 'eq', 'binary_sensor')
+       | map(attribute='state') | first | default('') == 'off' }}
+  remaining: "{{ [target | int - done | int, 0] | max }}"
+  # Share of the time window that has passed (0 to 1).
+  share: >-
+    {% set start = today_at(window_start) %}
+    {% set length = (today_at(window_end) - start).total_seconds() %}
+    {{ ([[(now() - start).total_seconds() / length, 0] | max, 1] | min)
+       if length > 0 else 1 }}
+  expected: "{{ (target | int * share | float) | round(0, 'ceil') | int }}"
+  message: >-
+    {{ done }} of {{ target }} {{ unit }} so far; about {{ expected }} would
+    be on track. Still {{ remaining }} {{ unit }} to go today.
+
+conditions:
+  - condition: time
+    after: !input window_start
+    before: !input window_end
+  - condition: template
+    value_template: >-
+      {{ goal_open and done | int < expected | int * (1 - tolerance | float / 100) }}
+  # The automation only counts as triggered when it reminds, so this is the
+  # time of the last reminder.
+  - condition: template
+    value_template: >-
+      {{ this.attributes.last_triggered is none
+         or now() - this.attributes.last_triggered
+            >= timedelta(hours=pause_hours | float) }}
+
+actions:
+  - sequence: !input notify_action
+  - if: "{{ notify_person }}"
+    then:
+      - action: daily_challenge.get_status
+        data:
+          config_entry_id: "{{ config_entry_id(today_entity) }}"
+        response_variable: status
+      - repeat:
+          for_each: "{{ status.notify_services }}"
+          sequence:
+            - action: "notify.{{ repeat.item }}"
+              data:
+                title: "{{ challenge }}"
+                message: "{{ message }}"
+
+mode: single

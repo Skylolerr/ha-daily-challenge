@@ -19,11 +19,15 @@ from custom_components.daily_challenge.const import (
     CONF_DEFICIT_MODE,
     CONF_END_DATE,
     CONF_MILESTONES,
+    CONF_PERSON,
     CONF_SOURCE_ENTITY,
     CONF_SOURCE_MODE,
     CONF_START_DATE,
     CONF_STEPS,
     CONF_STREAK_RULE,
+    CONF_TARGET_INCREASE,
+    CONF_TARGET_INCREASE_EVERY,
+    CONF_TARGET_MAX,
     CONF_UNIT,
     DOMAIN,
 )
@@ -86,6 +90,10 @@ def make_options(**overrides: Any) -> dict[str, Any]:
         CONF_SOURCE_ENTITY: None,
         CONF_SOURCE_MODE: "daily",
         CONF_MILESTONES: ["streak", "best_streak", "best_day", "total"],
+        CONF_PERSON: None,
+        CONF_TARGET_INCREASE: 0,
+        CONF_TARGET_INCREASE_EVERY: "week",
+        CONF_TARGET_MAX: None,
     } | overrides
 
 

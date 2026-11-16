@@ -228,3 +228,59 @@ async def test_llm_tools_only_for_assist(hass: HomeAssistant) -> None:
     context = llm_context()
     context.assistant = ""
     assert async_get_tools(hass, context, llm.LLM_API_ASSIST) is None
+
+
+async def test_speakers_own_challenge_without_a_name(hass: HomeAssistant) -> None:
+    """Without a name, the challenge of the speaking person is used."""
+    hass.states.async_set(
+        "person.anna", "home", {"friendly_name": "Anna", "user_id": "user-anna"}
+    )
+    hass.states.async_set(
+        "person.tom", "home", {"friendly_name": "Tom", "user_id": "user-tom"}
+    )
+    for entry_id, person in (("anna", "person.anna"), ("tom", "person.tom")):
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title=f"Push-ups {person[7:]}",
+            unique_id=entry_id,
+            entry_id=entry_id,
+            data={},
+            options=make_options(person=person),
+        )
+        entry.add_to_hass(hass)
+        assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    response = await intent.async_handle(
+        hass,
+        "test",
+        INTENT_ADD,
+        {"amount": {"value": 7}},
+        context=Context(user_id="user-tom"),
+    )
+    assert response.speech_slots["challenge"] == "Push-ups tom"
+    assert hass.states.get("number.push_ups_tom_today").state == "7"
+    # A name still wins; an unknown speaker has to name one.
+    await intent.async_handle(
+        hass,
+        "test",
+        INTENT_ADD,
+        {"amount": {"value": 2}, "challenge": {"value": "Push-ups anna"}},
+        context=Context(user_id="user-tom"),
+    )
+    assert hass.states.get("number.push_ups_anna_today").state == "2"
+    with pytest.raises(intent.IntentHandleError, match="Name the challenge"):
+        await intent.async_handle(
+            hass,
+            "test",
+            INTENT_STATUS,
+            {},
+            context=Context(user_id="someone"),
+        )
+
+    assert await async_setup_component(hass, "llm", {})
+    async_expose_entity(
+        hass, ASSISTANT, "number.push_ups_anna_today", should_expose=True
+    )
+    api = await llm.async_get_api(hass, llm.LLM_API_ASSIST, llm_context())
+    assert "Push-ups anna (repetitions, of Anna)" in api.api_prompt

@@ -6,6 +6,12 @@
         "state": {
           "on": "mdi:trophy"
         }
+      },
+      "all_reached_today": {
+        "default": "mdi:account-group-outline",
+        "state": {
+          "on": "mdi:account-group"
+        }
       }
     },
     "button": {
@@ -26,6 +32,18 @@
               "best_streak": "mdi:medal",
               "best_day": "mdi:star",
               "total": "mdi:sigma"
+            }
+          }
+        }
+      },
+      "group": {
+        "default": "mdi:podium",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "lead_change": "mdi:podium-gold",
+              "week_winner": "mdi:trophy-award",
+              "goal_reached": "mdi:flag-checkered"
             }
           }
         }
@@ -81,6 +99,24 @@
       },
       "this_year": {
         "default": "mdi:calendar"
+      },
+      "leader": {
+        "default": "mdi:podium-gold"
+      },
+      "group_streak": {
+        "default": "mdi:fire"
+      },
+      "last_week_winner": {
+        "default": "mdi:trophy-award"
+      },
+      "group_total": {
+        "default": "mdi:sigma"
+      },
+      "group_goal_progress": {
+        "default": "mdi:progress-check"
+      },
+      "group_goal_remaining": {
+        "default": "mdi:flag-checkered"
       }
     }
   },

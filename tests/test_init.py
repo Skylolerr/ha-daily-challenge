@@ -30,6 +30,11 @@ def stored(hass_storage: dict[str, Any]) -> dict[str, Any]:
     return hass_storage[STORE_KEY]["data"]
 
 
+def rule(target: int) -> dict[str, Any]:
+    """Return a stored daily target without a rise."""
+    return {"target": target, "increase": 0, "every": "week", "max": None}
+
+
 def store_payload(days: dict[str, int], targets: dict[str, int]) -> dict[str, Any]:
     """Return a raw store file content."""
     return {
@@ -67,7 +72,7 @@ async def test_initial_target_history(
     """The first target history entry is the start date."""
     assert stored(hass_storage) == {
         "days": {},
-        "target_history": {START: 20},
+        "target_history": {START: rule(20)},
         "source": None,
     }
 

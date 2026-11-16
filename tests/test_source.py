@@ -14,7 +14,7 @@ from custom_components.daily_challenge.const import DOMAIN, SAVE_DELAY
 
 from .common import MockConfigEntry, WebSocketGenerator, async_fire_time_changed
 from .conftest import START, TODAY, make_options
-from .test_init import STORE_KEY, press
+from .test_init import STORE_KEY, press, rule
 
 SOURCE = "sensor.steps"
 TODAY_ENTITY = "number.push_ups_today"
@@ -358,10 +358,10 @@ async def test_old_store_is_migrated(
     await hass.async_block_till_done()
     await press(hass, "button.push_ups_add_5")
     data = await saved(hass, freezer, hass_storage)
-    assert hass_storage[STORE_KEY]["minor_version"] == 2
+    assert hass_storage[STORE_KEY]["minor_version"] == 3
     assert data == {
         "days": {START: 15, TODAY: 5},
-        "target_history": {START: 20},
+        "target_history": {START: rule(20)},
         "source": None,
     }
 

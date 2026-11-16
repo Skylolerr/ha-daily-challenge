@@ -21,6 +21,14 @@ blueprint:
           filter:
             - integration: daily_challenge
               domain: event
+    notify_person:
+      name: Send to the person's phones
+      description: >-
+        Also send the message to the mobile app of the person assigned to the
+        challenge.
+      default: false
+      selector:
+        boolean: {}
     notify_action:
       name: Congratulation
       description: >-
@@ -51,6 +59,7 @@ variables:
        or device_attr(device_id(milestone_entity), 'name') }}
   kind: "{{ trigger.to_state.attributes.event_type }}"
   value: "{{ trigger.to_state.attributes.value }}"
+  notify_person: !input notify_person
 
 actions:
   # The unit through the action: the "Today" entity may be disabled.
@@ -66,6 +75,13 @@ actions:
         {%- elif kind == 'best_day' %}New best day: {{ value }} {{ unit }}!
         {%- else %}{{ value }} {{ unit }} in total!{% endif %}
   - sequence: !input notify_action
+  - repeat:
+      for_each: "{{ status.notify_services if notify_person else [] }}"
+      sequence:
+        - action: "notify.{{ repeat.item }}"
+          data:
+            title: "{{ challenge }}"
+            message: "{{ message }}"
 
 # Several milestones can be reached at once; each gets its own run.
 mode: queued

@@ -17,6 +17,7 @@ from homeassistant.core import (
     callback,
 )
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
     async_track_state_change_event,
@@ -31,11 +32,14 @@ from .calculations import (
     ChallengeStatus,
     DeficitMode,
     History,
+    Interval,
     MilestoneType,
     StreakRule,
+    TargetRule,
     build_history,
     calculate,
     reached_milestones,
+    target_on,
 )
 from .const import (
     CONF_DAILY_TARGET,
@@ -46,6 +50,9 @@ from .const import (
     CONF_SOURCE_MODE,
     CONF_START_DATE,
     CONF_STREAK_RULE,
+    CONF_TARGET_INCREASE,
+    CONF_TARGET_INCREASE_EVERY,
+    CONF_TARGET_MAX,
     COUNTER_RESET_SHARE,
     DOMAIN,
     LOGGER,
@@ -55,11 +62,15 @@ from .const import (
     STORAGE_VERSION,
     SourceMode,
 )
+from .source_health import SourceHealth, async_delete_issues
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
 type DailyChallengeConfigEntry = ConfigEntry[ChallengeCoordinator]
+
+# Sent with the entry ID whenever the figures of a challenge change.
+SIGNAL_CHALLENGE_UPDATED = f"{DOMAIN}_challenge_updated"
 type MilestoneListener = Callable[[list[tuple[MilestoneType, int]]], None]
 
 
@@ -75,12 +86,60 @@ class SourceData(TypedDict):
     reset_from: NotRequired[float]
 
 
+class TargetRuleData(TypedDict):
+    """A stored daily target, optionally rising over time."""
+
+    target: int
+    increase: int
+    every: str
+    max: int | None
+
+
 class StoreData(TypedDict):
     """Persisted data of one challenge."""
 
     days: dict[str, int]
-    target_history: dict[str, int]
+    target_history: dict[str, TargetRuleData]
     source: SourceData | None
+
+
+def rule_from_options(
+    options: Mapping[str, Any], target: int | None = None
+) -> TargetRule:
+    """Build the target rule of the options (with another starting target)."""
+    start = int(options[CONF_DAILY_TARGET]) if target is None else target
+    increase = int(options.get(CONF_TARGET_INCREASE) or 0)
+    if increase <= 0:
+        return TargetRule(start)
+    maximum = options.get(CONF_TARGET_MAX)
+    return TargetRule(
+        target=start,
+        increase=increase,
+        every=Interval(options.get(CONF_TARGET_INCREASE_EVERY) or Interval.WEEK),
+        maximum=int(maximum) if maximum else None,
+    )
+
+
+def _rule_from_data(data: TargetRuleData | int) -> TargetRule:
+    if isinstance(data, int):
+        return TargetRule(data)
+    maximum = data.get("max")
+    return TargetRule(
+        target=int(data["target"]),
+        increase=int(data.get("increase") or 0),
+        every=Interval(data.get("every") or Interval.WEEK),
+        maximum=int(maximum) if maximum is not None else None,
+    )
+
+
+def rule_to_data(rule: TargetRule) -> TargetRuleData:
+    """Return a target rule in its stored form."""
+    return TargetRuleData(
+        target=rule.target,
+        increase=rule.increase,
+        every=rule.every.value,
+        max=rule.maximum,
+    )
 
 
 def settings_from_options(options: Mapping[str, Any]) -> ChallengeSettings:
@@ -112,6 +171,11 @@ class _VersionedStore(Store[StoreData]):
         data = dict(old_data)
         if old_major_version == 1 and old_minor_version < 2:
             data.setdefault("source", None)
+        if old_major_version == 1 and old_minor_version < 3:
+            data["target_history"] = {
+                day: rule_to_data(_rule_from_data(target))
+                for day, target in data.get("target_history", {}).items()
+            }
         return StoreData(
             days=data.get("days", {}),
             target_history=data.get("target_history", {}),
@@ -131,7 +195,7 @@ class ChallengeStore:
             minor_version=STORAGE_MINOR_VERSION,
         )
         self.days: dict[date, int] = {}
-        self.target_history: dict[date, int] = {}
+        self.target_history: dict[date, TargetRule] = {}
         self.source: SourceData | None = None
 
     async def async_load(self) -> None:
@@ -145,7 +209,7 @@ class ChallengeStore:
             if value > 0
         }
         self.target_history = {
-            date.fromisoformat(day): target
+            date.fromisoformat(day): _rule_from_data(target)
             for day, target in data["target_history"].items()
         }
         self.source = data.get("source")
@@ -154,8 +218,8 @@ class ChallengeStore:
         return StoreData(
             days={day.isoformat(): value for day, value in sorted(self.days.items())},
             target_history={
-                day.isoformat(): target
-                for day, target in sorted(self.target_history.items())
+                day.isoformat(): rule_to_data(rule)
+                for day, rule in sorted(self.target_history.items())
             },
             source=self.source,
         )
@@ -173,9 +237,13 @@ class ChallengeStore:
         """Delete the store file."""
         await self._store.async_remove()
 
-    def set_target(self, day: date, target: int) -> None:
+    def set_target(self, day: date, rule: TargetRule) -> None:
         """Record a daily target valid from `day` on."""
-        self.target_history[day] = target
+        self.target_history[day] = rule
+
+    def target_on(self, day: date) -> int:
+        """Return the daily target of `day`."""
+        return target_on(self.target_history, day)
 
 
 def _reading(state: State | None) -> float | None:
@@ -206,6 +274,7 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         self.store = ChallengeStore(hass, entry.entry_id)
         self._unsub_midnight: Callable[[], None] | None = None
         self._unsub_source: Callable[[], None] | None = None
+        self._source_health: SourceHealth | None = None
         self._milestone_listeners: list[MilestoneListener] = []
         # The day the figures in `data` were calculated for.
         self._calculated_for: date | None = None
@@ -242,8 +311,7 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         await self.store.async_load()
         if not self.store.target_history:
             self.store.set_target(
-                self.settings.start_date,
-                int(self.config_entry.options[CONF_DAILY_TARGET]),
+                self.settings.start_date, rule_from_options(self.config_entry.options)
             )
             await self.store.async_save()
         if self.store.source is not None and (
@@ -260,10 +328,13 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
     def async_start_source(self) -> None:
         """Follow the source sensor; called once the entities are set up."""
         if (entity_id := self.source_entity) is None:
+            async_delete_issues(self.hass, self.config_entry.entry_id)
             return
         self._unsub_source = async_track_state_change_event(
             self.hass, [entity_id], self._async_source_changed
         )
+        self._source_health = SourceHealth(self.hass, self.config_entry, entity_id)
+        self._source_health.async_start()
         self.config_entry.async_on_unload(self.async_stop_source)
         self._async_source_state(self.hass.states.get(entity_id))
 
@@ -273,9 +344,14 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         if self._unsub_source is not None:
             self._unsub_source()
             self._unsub_source = None
+        if self._source_health is not None:
+            self._source_health.async_stop()
+            self._source_health = None
 
     @callback
     def _async_source_changed(self, event: Event[EventStateChangedData]) -> None:
+        if self._source_health is not None:
+            self._source_health.async_update(event.data["new_state"])
         self._async_source_state(event.data["new_state"])
 
     @callback
@@ -387,6 +463,14 @@ class ChallengeCoordinator(DataUpdateCoordinator[ChallengeStats]):
         if self._unsub_midnight is not None:
             self._unsub_midnight()
             self._unsub_midnight = None
+
+    @callback
+    def async_update_listeners(self) -> None:
+        """Update the entities and tell groups about the change."""
+        super().async_update_listeners()
+        async_dispatcher_send(
+            self.hass, SIGNAL_CHALLENGE_UPDATED, self.config_entry.entry_id
+        )
 
     async def _async_update_data(self) -> ChallengeStats:
         """Recalculate all figures for the current date."""

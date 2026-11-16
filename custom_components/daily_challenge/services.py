@@ -24,6 +24,7 @@ from .const import (
     ATTR_END,
     ATTR_START,
     ATTR_VALUE,
+    CONF_PERSON,
     CONF_UNIT,
     DOMAIN,
     MAX_DAY_VALUE,
@@ -33,6 +34,13 @@ from .const import (
     SERVICE_SET,
 )
 from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
+from .groups import (
+    group_coordinator,
+    group_status_response,
+    is_group,
+    raise_if_group,
+)
+from .people import notify_services, person_info
 
 
 def whole_number(value: Any) -> int:
@@ -93,6 +101,7 @@ def get_coordinator(hass: HomeAssistant, entry_id: str) -> ChallengeCoordinator:
             translation_key="entry_not_loaded",
             translation_placeholders={"name": entry.title},
         )
+    raise_if_group(entry)
     return entry.runtime_data
 
 
@@ -126,8 +135,14 @@ def status_response(coordinator: ChallengeCoordinator) -> dict[str, Any]:
     """Return the current figures of a challenge, independent of entity IDs."""
     stats = coordinator.data
     entry = coordinator.config_entry
+    person_id = entry.options.get(CONF_PERSON)
+    person = person_info(coordinator.hass, person_id)
     return {
         "name": entry.title,
+        "person": person_id,
+        "person_name": person["name"] if person else None,
+        # Mobile app services of the person's phones, for notifications.
+        "notify_services": notify_services(coordinator.hass, person_id),
         "unit": entry.options[CONF_UNIT],
         "status": stats.status.value,
         # Today's value comes from a source sensor and cannot be added to.
@@ -174,7 +189,18 @@ def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, SERVICE_SET, async_set, schema=SET_SCHEMA)
 
     async def async_get_status(call: ServiceCall) -> ServiceResponse:
-        return status_response(get_coordinator(hass, call.data[ATTR_CONFIG_ENTRY_ID]))
+        entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if is_group(entry) and entry is not None:
+            # Same checks as for a challenge: known and loaded.
+            if entry.state is not ConfigEntryState.LOADED:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="entry_not_loaded",
+                    translation_placeholders={"name": entry.title},
+                )
+            return group_status_response(group_coordinator(entry))
+        return status_response(get_coordinator(hass, entry_id))
 
     hass.services.async_register(
         DOMAIN,

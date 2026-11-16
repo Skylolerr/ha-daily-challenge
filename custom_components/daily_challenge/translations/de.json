@@ -3,10 +3,27 @@
     "step": {
       "user": {
         "title": "Neue tägliche Challenge",
+        "description": "Neu beginnen, eine Vorlage nutzen oder Challenges zu einer Rangliste zusammenfassen.",
+        "menu_options": {
+          "challenge": "Eigene Challenge",
+          "template": "Aus Vorlage",
+          "group": "Gruppe (Rangliste)"
+        }
+      },
+      "template": {
+        "title": "Vorlage wählen",
+        "description": "Die Vorlage füllt das nächste Formular aus; dort lässt sich alles ändern.",
+        "data": {
+          "template": "Vorlage"
+        }
+      },
+      "challenge": {
+        "title": "Neue tägliche Challenge",
         "description": "Verfolge eine tägliche Menge, zum Beispiel 20 Liegestütze pro Tag.",
         "data": {
           "name": "Name",
           "icon": "Symbol",
+          "person": "Person",
           "unit": "Einheit",
           "daily_target": "Tagesziel",
           "start_date": "Startdatum",
@@ -17,6 +34,7 @@
         },
         "data_description": {
           "name": "Muss unter deinen Challenges eindeutig sein.",
+          "person": "Optional. Zeigt das Bild der Person und erlaubt Erinnerungen auf ihr Handy.",
           "unit": "Wähle einen Vorschlag oder gib eine eigene Einheit ein.",
           "daily_target": "Menge, die du jeden Tag erreichen willst.",
           "start_date": "Erster Tag der Challenge. Darf nicht in der Zukunft liegen.",
@@ -26,6 +44,20 @@
           "deficit_mode": "Was passiert, wenn du in Rückstand gerätst."
         },
         "sections": {
+          "rising_target": {
+            "name": "Steigendes Ziel",
+            "description": "Das Tagesziel Schritt für Schritt erhöhen, z. B. jede Woche +1.",
+            "data": {
+              "target_increase": "Erhöhung",
+              "target_increase_every": "Alle",
+              "target_max": "Maximum"
+            },
+            "data_description": {
+              "target_increase": "Menge, um die das Tagesziel pro Intervall steigt. 0 schaltet es aus.",
+              "target_increase_every": "Wie oft das Ziel steigt.",
+              "target_max": "Optional. Höher steigt das Ziel nie."
+            }
+          },
           "source": {
             "name": "Automatisch zählen",
             "description": "Den heutigen Wert von einer anderen Entity übernehmen, zum Beispiel von einem Schrittzähler.",
@@ -49,6 +81,35 @@
             }
           }
         }
+      },
+      "group": {
+        "title": "Neue Gruppe",
+        "description": "Mehrere Challenges gegeneinander antreten lassen, z. B. eine pro Familienmitglied. Jede Challenge behält ihr eigenes Ziel.",
+        "data": {
+          "name": "Name",
+          "icon": "Icon",
+          "members": "Challenges",
+          "ranking": "Rangliste nach"
+        },
+        "data_description": {
+          "name": "Muss unter deinen Challenges und Gruppen eindeutig sein.",
+          "members": "Mindestens 2 Challenges, z. B. eine pro Person.",
+          "ranking": "Prozent des eigenen Ziels ist fair, wenn die Ziele verschieden sind."
+        },
+        "sections": {
+          "goal_settings": {
+            "name": "Gemeinsames Ziel",
+            "description": "Gemeinsam eine Menge sammeln, z. B. 500 km als Familie pro Monat.",
+            "data": {
+              "group_goal": "Ziel",
+              "group_goal_period": "Pro"
+            },
+            "data_description": {
+              "group_goal": "Optional. Alle Challenges brauchen dieselbe Einheit.",
+              "group_goal_period": "Das gemeinsame Ziel beginnt jede Woche, jeden Monat oder jedes Jahr neu."
+            }
+          }
+        }
       }
     },
     "error": {
@@ -60,17 +121,26 @@
       "end_before_start": "Das Enddatum muss nach dem Startdatum liegen.",
       "invalid_steps": "Gib 1 bis 3 ganze Zahlen von 1 bis 100000 ein.",
       "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein.",
-      "source_is_challenge": "Eine Entity von Daily Challenge kann nicht die Quelle sein."
+      "source_is_challenge": "Eine Entity von Daily Challenge kann nicht die Quelle sein.",
+      "invalid_increase": "Die Erhöhung muss eine ganze Zahl von 0 bis 100000 sein.",
+      "invalid_target_max": "Das Maximum muss eine ganze Zahl vom Tagesziel bis 100000 sein.",
+      "too_few_members": "Wähle mindestens 2 Challenges.",
+      "invalid_group_goal": "Das Ziel muss eine ganze Zahl über 0 sein.",
+      "units_differ": "Ein gemeinsames Ziel braucht Challenges mit derselben Einheit."
+    },
+    "abort": {
+      "not_enough_challenges": "Lege zuerst mindestens 2 Challenges an."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Challenge bearbeiten",
-        "description": "Ein geändertes Tagesziel gilt ab heute; vergangene Tage behalten ihr Ziel.",
+        "description": "Ein geändertes Tagesziel oder eine geänderte Steigerung gilt ab heute; vergangene Tage behalten ihr Ziel.",
         "data": {
           "name": "Name",
           "icon": "Symbol",
+          "person": "Person",
           "unit": "Einheit",
           "daily_target": "Tagesziel",
           "start_date": "Startdatum",
@@ -81,6 +151,7 @@
         },
         "data_description": {
           "name": "Muss unter deinen Challenges eindeutig sein.",
+          "person": "Optional. Zeigt das Bild der Person und erlaubt Erinnerungen auf ihr Handy.",
           "unit": "Wähle einen Vorschlag oder gib eine eigene Einheit ein.",
           "daily_target": "Menge, die du jeden Tag erreichen willst. Änderungen gelten ab heute.",
           "start_date": "Erster Tag der Challenge. Tage vor einem späteren Startdatum werden ignoriert, aber nicht gelöscht.",
@@ -90,6 +161,20 @@
           "deficit_mode": "Was passiert, wenn du in Rückstand gerätst."
         },
         "sections": {
+          "rising_target": {
+            "name": "Steigendes Ziel",
+            "description": "Das Tagesziel Schritt für Schritt erhöhen, z. B. jede Woche +1.",
+            "data": {
+              "target_increase": "Erhöhung",
+              "target_increase_every": "Alle",
+              "target_max": "Maximum"
+            },
+            "data_description": {
+              "target_increase": "Menge, um die das Tagesziel pro Intervall steigt. 0 schaltet es aus.",
+              "target_increase_every": "Wie oft das Ziel steigt.",
+              "target_max": "Optional. Höher steigt das Ziel nie."
+            }
+          },
           "source": {
             "name": "Automatisch zählen",
             "description": "Den heutigen Wert von einer anderen Entity übernehmen, zum Beispiel von einem Schrittzähler.",
@@ -113,6 +198,35 @@
             }
           }
         }
+      },
+      "group": {
+        "title": "Gruppe bearbeiten",
+        "description": "Mitglieder, Rangliste und gemeinsames Ziel der Gruppe.",
+        "data": {
+          "name": "Name",
+          "icon": "Icon",
+          "members": "Challenges",
+          "ranking": "Rangliste nach"
+        },
+        "data_description": {
+          "name": "Muss unter deinen Challenges und Gruppen eindeutig sein.",
+          "members": "Mindestens 2 Challenges, z. B. eine pro Person.",
+          "ranking": "Prozent des eigenen Ziels ist fair, wenn die Ziele verschieden sind."
+        },
+        "sections": {
+          "goal_settings": {
+            "name": "Gemeinsames Ziel",
+            "description": "Gemeinsam eine Menge sammeln, z. B. 500 km als Familie pro Monat.",
+            "data": {
+              "group_goal": "Ziel",
+              "group_goal_period": "Pro"
+            },
+            "data_description": {
+              "group_goal": "Optional. Alle Challenges brauchen dieselbe Einheit.",
+              "group_goal_period": "Das gemeinsame Ziel beginnt jede Woche, jeden Monat oder jedes Jahr neu."
+            }
+          }
+        }
       }
     },
     "error": {
@@ -124,7 +238,12 @@
       "end_before_start": "Das Enddatum muss nach dem Startdatum liegen.",
       "invalid_steps": "Gib 1 bis 3 ganze Zahlen von 1 bis 100000 ein.",
       "steps_not_ascending": "Die Schritte müssen eindeutig und aufsteigend sein.",
-      "source_is_challenge": "Eine Entity von Daily Challenge kann nicht die Quelle sein."
+      "source_is_challenge": "Eine Entity von Daily Challenge kann nicht die Quelle sein.",
+      "invalid_increase": "Die Erhöhung muss eine ganze Zahl von 0 bis 100000 sein.",
+      "invalid_target_max": "Das Maximum muss eine ganze Zahl vom Tagesziel bis 100000 sein.",
+      "too_few_members": "Wähle mindestens 2 Challenges.",
+      "invalid_group_goal": "Das Ziel muss eine ganze Zahl über 0 sein.",
+      "units_differ": "Ein gemeinsames Ziel braucht Challenges mit derselben Einheit."
     }
   },
   "selector": {
@@ -153,12 +272,48 @@
         "best_day": "Neuer bester Tag",
         "total": "Gesamtmenge (100, 250, 500 …)"
       }
+    },
+    "template": {
+      "options": {
+        "push_ups": "Liegestütze (20 pro Tag)",
+        "squats": "Kniebeugen (30 pro Tag)",
+        "steps": "Schritte (10'000 pro Tag)",
+        "water": "Wasser (2000 ml pro Tag)",
+        "reading": "Lesen (30 Minuten pro Tag)",
+        "meditation": "Meditation (10 Minuten pro Tag)",
+        "running": "Laufen (3 km pro Tag)",
+        "cycling": "Radfahren (10 km pro Tag)"
+      }
+    },
+    "target_increase_every": {
+      "options": {
+        "day": "Tag",
+        "week": "Woche",
+        "month": "Monat"
+      }
+    },
+    "ranking": {
+      "options": {
+        "percent": "Prozent des eigenen Ziels",
+        "amount": "Menge",
+        "streak": "Aktueller Streak"
+      }
+    },
+    "group_goal_period": {
+      "options": {
+        "week": "Woche",
+        "month": "Monat",
+        "year": "Jahr"
+      }
     }
   },
   "entity": {
     "binary_sensor": {
       "goal_reached_today": {
         "name": "Tagesziel erreicht"
+      },
+      "all_reached_today": {
+        "name": "Alle haben das Tagesziel erreicht"
       }
     },
     "button": {
@@ -184,6 +339,37 @@
           },
           "value": {
             "name": "Wert"
+          }
+        }
+      },
+      "group": {
+        "name": "Gruppe",
+        "state_attributes": {
+          "event_type": {
+            "name": "Ereignis",
+            "state": {
+              "lead_change": "Neue Führung",
+              "week_winner": "Wochensieger",
+              "goal_reached": "Gemeinsames Ziel erreicht"
+            }
+          },
+          "leader": {
+            "name": "Führung"
+          },
+          "previous": {
+            "name": "Bisherige Führung"
+          },
+          "winners": {
+            "name": "Sieger"
+          },
+          "week": {
+            "name": "Woche"
+          },
+          "total": {
+            "name": "Total"
+          },
+          "goal": {
+            "name": "Ziel"
           }
         }
       }
@@ -259,6 +445,42 @@
       },
       "this_year": {
         "name": "Dieses Jahr"
+      },
+      "leader": {
+        "name": "Führung",
+        "state_attributes": {
+          "ranking": {
+            "name": "Rangliste"
+          }
+        }
+      },
+      "group_streak": {
+        "name": "Gruppen-Streak",
+        "state_attributes": {
+          "best": {
+            "name": "Bester"
+          }
+        }
+      },
+      "last_week_winner": {
+        "name": "Sieger letzte Woche",
+        "state_attributes": {
+          "week": {
+            "name": "Woche"
+          },
+          "wins": {
+            "name": "Gewonnene Wochen"
+          }
+        }
+      },
+      "group_total": {
+        "name": "Gruppen-Total"
+      },
+      "group_goal_progress": {
+        "name": "Fortschritt gemeinsames Ziel"
+      },
+      "group_goal_remaining": {
+        "name": "Rest gemeinsames Ziel"
       }
     }
   },
@@ -286,6 +508,9 @@
     },
     "today_from_source": {
       "message": "Der heutige Wert kommt von {entity_id} und kann nicht von Hand geändert werden."
+    },
+    "is_group": {
+      "message": "{name} ist eine Gruppe, keine Challenge."
     }
   },
   "services": {
@@ -345,7 +570,7 @@
     },
     "get_status": {
       "name": "Status abrufen",
-      "description": "Liefert den heutigen Wert, das Ziel, die Streaks und die Summen dieser Woche, dieses Monats und dieses Jahres einer Challenge.",
+      "description": "Liefert den heutigen Wert, das Ziel, die Streaks und die Summen dieser Woche, dieses Monats und dieses Jahres einer Challenge. Bei einer Gruppe die Rangliste.",
       "fields": {
         "config_entry_id": {
           "name": "Challenge",
@@ -361,7 +586,53 @@
       "streak": "Streak-Meilenstein erreicht",
       "best_streak": "Neuer bester Streak",
       "best_day": "Neuer bester Tag",
-      "total": "Gesamtmenge erreicht"
+      "total": "Gesamtmenge erreicht",
+      "all_reached": "Alle haben das Tagesziel erreicht",
+      "lead_change": "Neue Führung",
+      "week_winner": "Wochensieger",
+      "group_goal_reached": "Gemeinsames Ziel erreicht"
+    }
+  },
+  "issues": {
+    "source_missing": {
+      "title": "Quelle von {name} fehlt",
+      "fix_flow": {
+        "step": {
+          "source": {
+            "title": "Quelle von {name}",
+            "description": "Die Challenge {name} zählt automatisch über {entity_id}, aber diese Entity gibt es nicht mehr. Wähle eine andere Quelle oder schalte das automatische Zählen aus.",
+            "data": {
+              "source_entity": "Quelle"
+            }
+          }
+        },
+        "abort": {
+          "entry_removed": "Die Challenge gibt es nicht mehr."
+        },
+        "error": {
+          "source_is_challenge": "Eine Entity von Daily Challenge kann nicht die Quelle sein."
+        }
+      }
+    },
+    "source_unavailable": {
+      "title": "Quelle von {name} liefert keinen Wert",
+      "fix_flow": {
+        "step": {
+          "source": {
+            "title": "Quelle von {name}",
+            "description": "Die Challenge {name} zählt automatisch über {entity_id}, aber die Quelle ist seit mindestens 12 Stunden nicht verfügbar. Wähle eine andere Quelle oder schalte das automatische Zählen aus. Kommt die Quelle zurück, verschwindet dieser Hinweis von selbst.",
+            "data": {
+              "source_entity": "Quelle"
+            }
+          }
+        },
+        "abort": {
+          "entry_removed": "Die Challenge gibt es nicht mehr."
+        },
+        "error": {
+          "source_is_challenge": "Eine Entity von Daily Challenge kann nicht die Quelle sein."
+        }
+      }
     }
   }
 }

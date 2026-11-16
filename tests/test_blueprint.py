@@ -91,7 +91,9 @@ def test_blueprint_is_valid() -> None:
     """The blueprint passes HA's schema and has sensible defaults."""
     config = automation_config({"goal_entity": GOAL})
     assert config["triggers"] == [{"trigger": "time", "at": "20:00:00"}]
-    assert config["actions"][0]["action"] == "persistent_notification.create"
+    assert config["actions"][0]["sequence"][0]["action"] == (
+        "persistent_notification.create"
+    )
 
 
 async def test_reminds_when_goal_is_open(

@@ -29,7 +29,7 @@ async def test_list(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -> 
         domain=DOMAIN,
         title="Squats",
         entry_id="squats",
-        options=make_options(icon="mdi:human", unit="reps"),
+        options=make_options(icon="mdi:human", unit="reps", person="person.anna"),
     ).add_to_hass(hass)
 
     response = await send(hass_ws_client, hass, type="daily_challenge/list")
@@ -39,6 +39,7 @@ async def test_list(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -> 
     assert push_ups["name"] == "Push-ups"
     assert push_ups["icon"] == "mdi:arm-flex"
     assert push_ups["unit"] == "repetitions"
+    assert push_ups["person"] is None
     entities = push_ups["entities"]
     assert entities["today"] == "number.push_ups_today"
     assert entities["total"] == "sensor.push_ups_total"
@@ -55,6 +56,7 @@ async def test_list(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -> 
         "name": "Squats",
         "icon": "mdi:human",
         "unit": "reps",
+        "person": "person.anna",
         "today_from_source": False,
         "entities": {},
     }

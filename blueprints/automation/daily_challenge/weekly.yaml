@@ -48,6 +48,14 @@ blueprint:
       default: "20:00:00"
       selector:
         time: {}
+    notify_person:
+      name: Send to the person's phones
+      description: >-
+        Also send the message to the mobile app of the person assigned to the
+        challenge.
+      default: false
+      selector:
+        boolean: {}
     notify_action:
       name: Summary
       description: >-
@@ -71,6 +79,7 @@ conditions:
 
 variables:
   today_entity: !input today_entity
+  notify_person: !input notify_person
 
 actions:
   - action: daily_challenge.get_status
@@ -94,5 +103,12 @@ actions:
         {{ fulfilled }} of {{ days }} days. Streak: {{ streak }}
         {{ 'day' if streak | int == 1 else 'days' }}.
   - sequence: !input notify_action
+  - repeat:
+      for_each: "{{ status.notify_services if notify_person else [] }}"
+      sequence:
+        - action: "notify.{{ repeat.item }}"
+          data:
+            title: "{{ challenge }}"
+            message: "{{ message }}"
 
 mode: single

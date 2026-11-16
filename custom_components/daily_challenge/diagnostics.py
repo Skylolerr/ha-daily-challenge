@@ -9,7 +9,8 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 
-from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry
+from .coordinator import ChallengeCoordinator, DailyChallengeConfigEntry, rule_to_data
+from .groups import group_coordinator, group_status_response, is_group
 
 
 def _serialize(value: Any) -> Any:
@@ -30,6 +31,11 @@ async def async_get_config_entry_diagnostics(
     if entry.state is not ConfigEntryState.LOADED or coordinator is None:
         # Disabled or failed to set up: there is no data to show.
         return {"options": dict(entry.options), "state": entry.state.value}
+    if is_group(entry):
+        return {
+            "options": dict(entry.options),
+            "group": group_status_response(group_coordinator(entry)),
+        }
     days = sorted(coordinator.store.days)
     return {
         "options": dict(entry.options),
@@ -38,8 +44,8 @@ async def async_get_config_entry_diagnostics(
         "first_date": days[0].isoformat() if days else None,
         "last_date": days[-1].isoformat() if days else None,
         "target_history": {
-            day.isoformat(): target
-            for day, target in sorted(coordinator.store.target_history.items())
+            day.isoformat(): rule_to_data(rule)
+            for day, rule in sorted(coordinator.store.target_history.items())
         },
         "stats": _serialize(asdict(coordinator.data)),
     }

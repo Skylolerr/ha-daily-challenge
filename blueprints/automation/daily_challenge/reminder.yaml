@@ -4,8 +4,8 @@ blueprint:
     Reminds you at a chosen time when today's goal of a Daily Challenge is not
     reached yet. In the notification you can use the variables
     `{{ challenge }}` (name), `{{ done }}` (today's amount),
-    `{{ target }}` (today's target), `{{ remaining }}` (still to do) and
-    `{{ unit }}`.
+    `{{ target }}` (today's target), `{{ remaining }}` (still to do),
+    `{{ unit }}` and `{{ message }}` (a ready-made sentence).
   domain: automation
   author: Skylolerr
   source_url: https://github.com/Skylolerr/ha-daily-challenge/blob/main/blueprints/automation/daily_challenge/reminder.yaml
@@ -26,6 +26,14 @@ blueprint:
       default: "20:00:00"
       selector:
         time: {}
+    notify_person:
+      name: Send to the person's phones
+      description: >-
+        Also send the message to the mobile app of the person assigned to the
+        challenge.
+      default: false
+      selector:
+        boolean: {}
     notify_action:
       name: Reminder
       description: >-
@@ -35,7 +43,7 @@ blueprint:
         - action: persistent_notification.create
           data:
             title: "{{ challenge }}"
-            message: "Still {{ remaining }} {{ unit }} to go today."
+            message: "{{ message }}"
       selector:
         action: {}
 
@@ -67,7 +75,23 @@ variables:
     {{ expand(challenge_entities) | selectattr('attributes.deficit', 'defined')
        | map(attribute='state') | map('int', 0) | first | default(0) }}
   remaining: "{{ [target | int - done | int, 0] | max }}"
+  message: "Still {{ remaining }} {{ unit }} to go today."
+  notify_person: !input notify_person
 
-actions: !input notify_action
+actions:
+  - sequence: !input notify_action
+  - if: "{{ notify_person }}"
+    then:
+      - action: daily_challenge.get_status
+        data:
+          config_entry_id: "{{ config_entry_id(goal_entity) }}"
+        response_variable: status
+      - repeat:
+          for_each: "{{ status.notify_services if notify_person else [] }}"
+          sequence:
+            - action: "notify.{{ repeat.item }}"
+              data:
+                title: "{{ challenge }}"
+                message: "{{ message }}"
 
 mode: single

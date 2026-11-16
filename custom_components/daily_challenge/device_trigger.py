@@ -1,4 +1,4 @@
-"""Device triggers: today's goal reached and milestones."""
+"""Device triggers: goals and milestones of challenges, events of groups."""
 
 from __future__ import annotations
 
@@ -33,7 +33,31 @@ from .const import DOMAIN
 TRIGGER_GOAL_REACHED = "goal_reached"
 TRIGGER_MILESTONE = "milestone"
 KINDS = [kind.value for kind in MilestoneType]
-TRIGGER_TYPES = [TRIGGER_GOAL_REACHED, TRIGGER_MILESTONE, *KINDS]
+# Groups: everybody reached today's goal, and the events of the group.
+TRIGGER_ALL_REACHED = "all_reached"
+TRIGGER_LEAD_CHANGE = "lead_change"
+TRIGGER_WEEK_WINNER = "week_winner"
+TRIGGER_GROUP_GOAL = "group_goal_reached"
+# Device trigger type of a group event -> event type of the group entity.
+GROUP_EVENT_TRIGGERS = {
+    TRIGGER_LEAD_CHANGE: "lead_change",
+    TRIGGER_WEEK_WINNER: "week_winner",
+    TRIGGER_GROUP_GOAL: "goal_reached",
+}
+TRIGGER_TYPES = [
+    TRIGGER_GOAL_REACHED,
+    TRIGGER_MILESTONE,
+    *KINDS,
+    TRIGGER_ALL_REACHED,
+    *GROUP_EVENT_TRIGGERS,
+]
+# Trigger type -> key of the entity it watches.
+BINARY_TRIGGERS = {
+    TRIGGER_GOAL_REACHED: "goal_reached_today",
+    TRIGGER_ALL_REACHED: "all_reached_today",
+}
+# Attributes of an event entity that are no data of the event.
+NOT_EVENT_DATA = {"event_type", "event_types", "friendly_name", "icon"}
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES)}
@@ -69,6 +93,15 @@ async def async_get_triggers(
         triggers.append({**base, CONF_TYPE: TRIGGER_MILESTONE})
         enabled = (milestone.capabilities or {}).get("event_types", [])
         triggers.extend({**base, CONF_TYPE: kind} for kind in KINDS if kind in enabled)
+    if _entity(hass, device_id, "all_reached_today"):
+        triggers.append({**base, CONF_TYPE: TRIGGER_ALL_REACHED})
+    if group := _entity(hass, device_id, "group"):
+        enabled = (group.capabilities or {}).get("event_types", [])
+        triggers.extend(
+            {**base, CONF_TYPE: trigger}
+            for trigger, kind in GROUP_EVENT_TRIGGERS.items()
+            if kind in enabled
+        )
     return triggers
 
 
@@ -80,9 +113,20 @@ async def async_attach_trigger(
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     trigger_type: str = config[CONF_TYPE]
-    goal = trigger_type == TRIGGER_GOAL_REACHED
+    goal = trigger_type in BINARY_TRIGGERS
     device_id: str = config[CONF_DEVICE_ID]
-    key = "goal_reached_today" if goal else "milestone"
+    if goal:
+        key = BINARY_TRIGGERS[trigger_type]
+    elif trigger_type in GROUP_EVENT_TRIGGERS:
+        key = "group"
+    else:
+        key = "milestone"
+    # The event type this trigger wants (None: every milestone).
+    wanted = (
+        GROUP_EVENT_TRIGGERS.get(trigger_type, trigger_type)
+        if trigger_type != TRIGGER_MILESTONE
+        else None
+    )
     trigger_data = trigger_info["trigger_data"]
     job = HassJob(action)
 
@@ -93,6 +137,7 @@ async def async_attach_trigger(
             return
         kind: str | None = None
         value = None
+        data: dict[str, object] = {}
         if goal:
             # Off to on only: coming back from "unavailable" is no new goal.
             if old.state != STATE_OFF or new.state != STATE_ON:
@@ -106,9 +151,14 @@ async def async_attach_trigger(
             ):
                 return
             kind = new.attributes.get("event_type")
-            if trigger_type not in (TRIGGER_MILESTONE, kind):
+            if wanted is not None and kind != wanted:
                 return
             value = new.attributes.get("value")
+            data = {
+                name: attr
+                for name, attr in new.attributes.items()
+                if name not in NOT_EVENT_DATA
+            }
         hass.async_run_hass_job(
             job,
             {
@@ -120,6 +170,7 @@ async def async_attach_trigger(
                     "to_state": new,
                     "kind": kind,
                     "value": value,
+                    "data": data,
                     "description": f"{DOMAIN} {trigger_type} of {new.entity_id}",
                 }
             },
