@@ -23,6 +23,7 @@ const SCHEMA: FormSchema[] = [
     },
   },
   { name: "show_buttons", selector: { boolean: {} } },
+  { name: "only_mine", selector: { boolean: {} } },
 ];
 
 /** Visual editor of the overview card. */
@@ -50,6 +51,7 @@ export class DailyChallengeOverviewCardEditor extends LitElement {
     delete config.title;
     delete config.entities;
     delete config.show_buttons;
+    delete config.only_mine;
     const title = typeof value.title === "string" ? value.title.trim() : "";
     if (title) {
       config.title = title;
@@ -63,6 +65,10 @@ export class DailyChallengeOverviewCardEditor extends LitElement {
     // Only hidden buttons are written; shown is the default.
     if (value.show_buttons === false) {
       config.show_buttons = false;
+    }
+    // Only "mine" is written; all is the default.
+    if (value.only_mine === true) {
+      config.only_mine = true;
     }
     if (JSON.stringify(config) === JSON.stringify(this._config)) {
       return;
@@ -85,6 +91,7 @@ export class DailyChallengeOverviewCardEditor extends LitElement {
       title: this._config.title ?? "",
       entities: this._config.entities ?? [],
       show_buttons: this._config.show_buttons !== false,
+      only_mine: this._config.only_mine === true,
     };
     return html`<ha-form
       .hass=${this.hass}

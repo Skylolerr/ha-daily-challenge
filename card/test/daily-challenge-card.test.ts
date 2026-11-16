@@ -1696,3 +1696,50 @@ describe("celebration", () => {
     expect(root(card).querySelector(".celebration-message")).toBeNull();
   });
 });
+
+describe("person", () => {
+  const ANNA: ChallengeInfo = { ...CHALLENGE, person: "person.anna" };
+
+  function annaState(name: string, picture?: string): HassEntity {
+    return {
+      entity_id: "person.anna",
+      state: "home",
+      attributes: { friendly_name: name, ...(picture ? { entity_picture: picture } : {}) },
+    };
+  }
+
+  it("shows no avatar without a person", async () => {
+    const card = await createCard();
+    expect(root(card).querySelector(".header .avatar")).toBeNull();
+  });
+
+  it("shows the person's picture next to the name", async () => {
+    const hass = makeHass({}, [ANNA]);
+    hass.states["person.anna"] = annaState("Anna Muster", "/api/image/anna.jpg");
+    const card = await createCard(hass);
+    const avatar = root(card).querySelector(".header .avatar");
+    expect(avatar?.getAttribute("aria-label")).toBe("Anna Muster");
+    expect(avatar?.querySelector("img")?.getAttribute("src")).toBe("/api/image/anna.jpg");
+    expect(avatar?.nextElementSibling?.classList.contains("name")).toBe(true);
+  });
+
+  it("falls back to initials and follows changes of the person", async () => {
+    const hass = makeHass({}, [ANNA]);
+    hass.states["person.anna"] = annaState("Anna Muster");
+    const card = await createCard(hass);
+    expect(text(root(card).querySelector(".header .avatar"))).toBe("AM");
+
+    card.hass = {
+      ...card.hass!,
+      states: { ...card.hass!.states, "person.anna": annaState("Anna", "/api/image/a.jpg") },
+    };
+    await settle(card);
+    const avatar = root(card).querySelector(".header .avatar");
+    expect(avatar?.querySelector("img")?.getAttribute("src")).toBe("/api/image/a.jpg");
+  });
+
+  it("shows no avatar for a person that does not exist", async () => {
+    const card = await createCard(makeHass({}, [ANNA]));
+    expect(root(card).querySelector(".header .avatar")).toBeNull();
+  });
+});

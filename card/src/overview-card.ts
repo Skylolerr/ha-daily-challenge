@@ -1,5 +1,6 @@
 import { css, html, LitElement, nothing, type PropertyValues } from "lit";
 
+import { avatarStyles, renderAvatar } from "./avatar";
 import { errorMessage, formatNumber, localize } from "./localize";
 import { OVERVIEW_EDITOR_TYPE } from "./overview-editor";
 import type { ChallengeInfo, ChallengeList, HomeAssistant } from "./types";
@@ -15,6 +16,8 @@ export interface OverviewCardConfig {
   /** `today` numbers of the challenges to show; all when empty. */
   entities?: string[];
   show_buttons?: boolean;
+  /** Only challenges whose person belongs to the logged-in user. */
+  only_mine?: boolean;
 }
 
 /** All challenges, or a chosen few, with one compact row each. */
@@ -89,8 +92,8 @@ export class DailyChallengeOverviewCard extends LitElement {
     }
   }
 
-  /** The challenges to show, in the configured order. */
-  private _visible(): ChallengeInfo[] {
+  /** The chosen challenges, in the configured order. */
+  private _chosen(): ChallengeInfo[] {
     const challenges = this._challenges ?? [];
     const wanted = this._config?.entities ?? [];
     if (wanted.length === 0) {
@@ -101,6 +104,30 @@ export class DailyChallengeOverviewCard extends LitElement {
         challenges.find((challenge) => challenge.entities.today === entityId),
       )
       .filter((challenge): challenge is ChallengeInfo => challenge !== undefined);
+  }
+
+  /** The challenges to show: the chosen ones, with only_mine just the user's. */
+  private _visible(): ChallengeInfo[] {
+    const chosen = this._chosen();
+    if (!this._config?.only_mine) {
+      return chosen;
+    }
+    const userId = this.hass?.user?.id;
+    return chosen.filter((challenge) => {
+      const person = challenge.person ? this.hass?.states[challenge.person] : undefined;
+      return userId !== undefined && person?.attributes.user_id === userId;
+    });
+  }
+
+  /** Why no challenge is shown. */
+  private _emptyMessage(): string {
+    if (!this._challenges?.length) {
+      return localize(this.hass, "no_challenges");
+    }
+    if (this._config?.entities?.length && !this._chosen().length) {
+      return localize(this.hass, "overview_missing");
+    }
+    return localize(this.hass, "overview_none_mine");
   }
 
   private _state(challenge: ChallengeInfo, key: string): string | undefined {
@@ -177,14 +204,7 @@ export class DailyChallengeOverviewCard extends LitElement {
       <div class="rows">
         ${challenges.length
           ? challenges.map((challenge) => this._renderRow(challenge))
-          : html`<div class="empty">
-              ${localize(
-                this.hass,
-                this._challenges.length && this._config.entities?.length
-                  ? "overview_missing"
-                  : "no_challenges",
-              )}
-            </div>`}
+          : html`<div class="empty">${this._emptyMessage()}</div>`}
       </div>
     </ha-card>`;
   }
@@ -223,7 +243,10 @@ export class DailyChallengeOverviewCard extends LitElement {
     >
       <ha-icon .icon=${challenge.icon}></ha-icon>
       <div class="main">
-        <div class="name">${challenge.name}</div>
+        <div class="name-line">
+          ${renderAvatar(hass, challenge.person)}
+          <span class="name">${challenge.name}</span>
+        </div>
         <div class="bar" aria-hidden="true">
           <div
             class="fill ${reached ? "reached" : ""}"
@@ -253,7 +276,9 @@ export class DailyChallengeOverviewCard extends LitElement {
     </div>`;
   }
 
-  static override styles = css`
+  static override styles = [
+    avatarStyles,
+    css`
     ha-card {
       display: block;
       padding-bottom: 8px;
@@ -290,7 +315,15 @@ export class DailyChallengeOverviewCard extends LitElement {
       flex: 1;
       min-width: 0;
     }
+    .name-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      --dc-avatar-size: 20px;
+    }
     .name {
+      min-width: 0;
       font-weight: 500;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -350,7 +383,8 @@ export class DailyChallengeOverviewCard extends LitElement {
       padding: 8px;
       color: var(--secondary-text-color);
     }
-  `;
+  `,
+  ];
 }
 
 if (!customElements.get(OVERVIEW_TYPE)) {

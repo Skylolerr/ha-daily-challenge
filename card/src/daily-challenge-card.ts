@@ -1,8 +1,10 @@
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 
+import { avatarStyles, renderAvatar } from "./avatar";
 import { EDITOR_TYPE } from "./editor";
 import { addDays, buildHeatmap, cellOpacity, type HeatmapCell } from "./heatmap";
-// The overview card ships in the same bundle.
+// The overview and leaderboard cards ship in the same bundle.
+import "./leaderboard-card";
 import "./overview-card";
 import { errorMessage, formatDate, formatDelta, formatNumber, localize } from "./localize";
 import type {
@@ -182,9 +184,12 @@ export class DailyChallengeCard extends LitElement {
     if (!old || !hass || old.entities !== hass.entities || old.locale !== hass.locale) {
       return true;
     }
-    return Object.values(this._challenge.entities).some(
-      (entityId) => old.states[entityId] !== hass.states[entityId],
-    );
+    const watched = Object.values(this._challenge.entities);
+    // The person's picture and name are shown in the header.
+    if (this._challenge.person) {
+      watched.push(this._challenge.person);
+    }
+    return watched.some((entityId) => old.states[entityId] !== hass.states[entityId]);
   }
 
   protected override willUpdate(_changed: PropertyValues): void {
@@ -543,6 +548,7 @@ export class DailyChallengeCard extends LitElement {
     const best = streak("best_streak");
     return html`<div class="header">
       <ha-icon .icon=${challenge.icon}></ha-icon>
+      ${renderAvatar(this.hass, challenge.person)}
       <span class="name">${challenge.name}</span>
       ${this._show("show_streak")
         ? html`<span class="streak" title=${localize(this.hass, "current_streak")}>
@@ -1235,7 +1241,9 @@ export class DailyChallengeCard extends LitElement {
     </div>`;
   }
 
-  static override styles = css`
+  static override styles = [
+    avatarStyles,
+    css`
     ha-card {
       display: block;
       padding: 16px;
@@ -1607,7 +1615,8 @@ export class DailyChallengeCard extends LitElement {
       background: var(--primary-color);
       color: var(--text-primary-color, #fff);
     }
-  `;
+  `,
+  ];
 }
 
 if (!customElements.get(CARD_TYPE)) {

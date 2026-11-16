@@ -40,6 +40,23 @@ function entity(entity_id: string, state: string): HassEntity {
   };
 }
 
+function person(
+  entity_id: string,
+  name: string,
+  picture?: string,
+  userId?: string,
+): HassEntity {
+  return {
+    entity_id,
+    state: "home",
+    attributes: {
+      friendly_name: name,
+      ...(picture ? { entity_picture: picture } : {}),
+      ...(userId ? { user_id: userId } : {}),
+    },
+  };
+}
+
 function states(item: ChallengeInfo, overrides: Record<string, string> = {}) {
   const values: Record<string, string> = {
     today: "15",
@@ -248,6 +265,70 @@ describe("overview card", () => {
     expect(root(card).querySelector("ha-card")).not.toBeNull();
   });
 
+  it("shows the person's picture or initials next to the name", async () => {
+    const anna = challenge("anna", "Push-ups", { person: "person.anna" });
+    const tom = challenge("tom", "Squats", { person: "person.tom" });
+    const hass = makeHass([anna, tom, SQUATS]);
+    hass.states["person.anna"] = person("person.anna", "Anna Muster", "/api/image/anna.jpg");
+    hass.states["person.tom"] = person("person.tom", "Tom");
+    const card = await createCard(hass);
+    const avatars = rows(card).map((row) => row.querySelector(".avatar"));
+    expect(avatars[0]?.getAttribute("aria-label")).toBe("Anna Muster");
+    expect(avatars[0]?.querySelector("img")?.getAttribute("src")).toBe("/api/image/anna.jpg");
+    expect(text(avatars[1])).toBe("T");
+    expect(avatars[1]?.querySelector("img")).toBeNull();
+    expect(avatars[2]).toBeNull();
+  });
+
+  it("shows only the user's challenges with only_mine", async () => {
+    const anna = challenge("anna", "Anna's push-ups", { person: "person.anna" });
+    const tom = challenge("tom", "Tom's push-ups", { person: "person.tom" });
+    const hass = makeHass([anna, tom, SQUATS]);
+    hass.states["person.anna"] = person("person.anna", "Anna", undefined, "user-anna");
+    hass.states["person.tom"] = person("person.tom", "Tom", undefined, "user-tom");
+    hass.user = { id: "user-anna" };
+    const card = await createCard(hass, { only_mine: true });
+    expect(rows(card).map((row) => text(row.querySelector(".name")))).toEqual([
+      "Anna's push-ups",
+    ]);
+    expect(card.getCardSize()).toBe(1);
+
+    // Combined with chosen challenges.
+    const chosen = await createCard(hass, {
+      only_mine: true,
+      entities: ["number.tom_today", "number.anna_today"],
+    });
+    expect(rows(chosen).map((row) => text(row.querySelector(".name")))).toEqual([
+      "Anna's push-ups",
+    ]);
+  });
+
+  it("says so when no challenge belongs to the user", async () => {
+    const anna = challenge("anna", "Anna's push-ups", { person: "person.anna" });
+    const hass = makeHass([anna, SQUATS]);
+    hass.states["person.anna"] = person("person.anna", "Anna", undefined, "user-anna");
+    hass.user = { id: "someone-else" };
+    const card = await createCard(hass, { only_mine: true });
+    expect(rows(card)).toEqual([]);
+    expect(text(root(card).querySelector(".empty"))).toBe(
+      "No challenge is assigned to you yet.",
+    );
+
+    // Without a known user nothing is "mine" either.
+    delete hass.user;
+    const unknown = await createCard(hass, { only_mine: true });
+    expect(rows(unknown)).toEqual([]);
+
+    // Chosen challenges that are gone are reported first.
+    const gone = await createCard(hass, {
+      only_mine: true,
+      entities: ["number.removed_today"],
+    });
+    expect(text(root(gone).querySelector(".empty"))).toBe(
+      "None of the chosen challenges exists any more.",
+    );
+  });
+
   it("renders nothing without hass", async () => {
     const card = document.createElement(OVERVIEW_TYPE);
     card.setConfig({ type: "x" });
@@ -288,7 +369,9 @@ describe("overview editor", () => {
       title: "Mine",
       entities: [],
       show_buttons: false,
+      only_mine: false,
     });
+    expect(form(editor).computeLabel({ name: "only_mine" })).toBe("Only my challenges");
     expect(form(editor).computeLabel({ name: "entities" })).toBe(
       "Challenges (empty: all)",
     );
@@ -321,6 +404,8 @@ describe("overview editor", () => {
     send({ title: " Mine ", entities: ["number.squats_today"], show_buttons: false });
     send({ title: " Mine ", entities: ["number.squats_today"], show_buttons: false });
     send({ title: "", entities: [], show_buttons: true });
+    send({ title: "", entities: [], show_buttons: true, only_mine: true });
+    send({ title: "", entities: [], show_buttons: true, only_mine: false });
     expect(changes).toEqual([
       {
         type: `custom:${OVERVIEW_TYPE}`,
@@ -328,6 +413,8 @@ describe("overview editor", () => {
         entities: ["number.squats_today"],
         show_buttons: false,
       },
+      { type: `custom:${OVERVIEW_TYPE}` },
+      { type: `custom:${OVERVIEW_TYPE}`, only_mine: true },
       { type: `custom:${OVERVIEW_TYPE}` },
     ]);
   });
