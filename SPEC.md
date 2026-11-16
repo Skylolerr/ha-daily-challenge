@@ -553,7 +553,7 @@ Vom Maintainer am 2026-11-06 für dasselbe Release wie §17 und Phase 4 beauftra
 
 ---
 
-## 19. Gruppen, Personen und weitere Erweiterungen (beauftragt 2026-11-16, Release offen)
+## 19. Gruppen, Personen und weitere Erweiterungen (beauftragt 2026-11-16, veröffentlicht 2026-11-16 als v0.3.0)
 
 Vom Maintainer am 2026-11-16 beauftragt. Die Entscheide unten sind fix. In welches Release sie kommen, entscheidet der Maintainer.
 
