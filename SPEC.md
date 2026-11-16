@@ -550,3 +550,58 @@ Vom Maintainer am 2026-11-06 für dasselbe Release wie §17 und Phase 4 beauftra
 - `device_trigger.py` mit den Typen `goal_reached` (Tagesziel heute erreicht: `goal_reached_today` wechselt von `off` auf `on`) und `milestone` (jeder Meilenstein) sowie je einem Typ pro aktivierter Meilenstein-Art (`streak`, `best_streak`, `best_day`, `total`). Ohne Meilenstein-Entity gibt es nur `goal_reached`.
 - Die Entities werden über ihre `unique_id` gefunden, nicht über die Entity-ID. Trigger-Variablen: `kind`, `value` (bei Meilensteinen) und `description`.
 - Übersetzungen der Trigger-Typen in EN, DE, FR, IT.
+
+---
+
+## 19. Gruppen, Personen und weitere Erweiterungen (beauftragt 2026-11-16, Release offen)
+
+Vom Maintainer am 2026-11-16 beauftragt. Die Entscheide unten sind fix. In welches Release sie kommen, entscheidet der Maintainer.
+
+### 19.1 Vorlagen beim Anlegen
+
+- Der erste Schritt im Config Flow ist ein Menü: «Eigene Challenge», «Aus Vorlage», «Gruppe» (§19.6).
+- «Aus Vorlage» zeigt eine Auswahl; danach folgt das normale Formular, vorausgefüllt mit Name, Icon, Einheit, Tagesziel und Schritten der Vorlage. Alles bleibt änderbar.
+- Vorlagen (Name und Einheit in der Systemsprache EN/DE/FR/IT): Liegestütze (20 Wiederholungen, 1/5/10), Kniebeugen (30, 5/10/20), Schritte (10 000 Schritte, 500/1000/2000), Wasser (2000 ml, 250/330/500), Lesen (30 Minuten, 5/10/15), Meditation (10 Minuten, 1/5/10), Laufen (3 km, 1/2/5), Velo (10 km, 5/10/20).
+
+### 19.2 Steigendes Tagesziel
+
+- Neue Optionen pro Challenge in einem einklappbaren Abschnitt «Steigendes Ziel»: `target_increase` (ganze Zahl ≥ 0, Default 0 = aus), `target_increase_every` (`day` / `week` / `month`, Default `week`), `target_max` (optional, Obergrenze).
+- Das Ziel eines Tages ist das Grundziel des gültigen `target_history`-Eintrags plus `target_increase` × Anzahl voller Intervalle seit dessen Gültigkeitsbeginn, höchstens `target_max`. Ein Monat ist voll, wenn derselbe Tag im Folgemonat erreicht ist (31. → Monatsende).
+- Wie bisher gilt jede Änderung **ab heute**, vergangene Ziele bleiben unverändert: Ändert sich das Tagesziel oder die Steigerung, wird ein neuer Eintrag ab heute geschrieben. Ändert sich nur die Steigerung, ist sein Grundziel das bisher heute gültige Ziel, damit es keinen Sprung gibt.
+- **Store:** Minor-Version 3. Die Einträge in `target_history` werden zu `{"target": …, "increase": …, "every": …, "max": …}`. Die Migration wandelt jede bisherige Zahl in `{"target": n, "increase": 0, "every": "week", "max": null}` um; es geht nichts verloren.
+
+### 19.3 Erinnerung nach Tempo
+
+- Neuer Blueprint `blueprints/automation/daily_challenge/pace.yaml`. Der bestehende `reminder.yaml` bleibt unverändert.
+- Eingaben: Challenge (Gerät), Zeitfenster (Default 08:00–21:00), Toleranz in % (Default 25), Mindestabstand zwischen zwei Erinnerungen in Stunden (Default 3), «an die zugeordnete Person senden» (§19.5) und eine frei wählbare Aktion.
+- Geprüft wird jede volle Stunde im Zeitfenster. Erwartet ist der Anteil des effektiven Tagesziels, der dem verstrichenen Anteil des Zeitfensters entspricht. Erinnert wird, wenn die Challenge läuft, das Ziel noch offen ist und der heutige Wert unter «erwartet × (1 − Toleranz)» liegt. Variablen: `challenge`, `done`, `target`, `expected`, `remaining`, `unit`.
+
+### 19.4 Reparatur-Hinweise
+
+- Fehlt die Quell-Entity einer Challenge (weder Zustand noch Registry-Eintrag, geprüft nach dem Start von HA), oder ist sie seit mindestens 12 Stunden `unavailable`/`unknown`, erstellt die Integration einen Hinweis unter Einstellungen → Reparaturen (`source_missing` bzw. `source_unavailable`).
+- Der Hinweis ist reparierbar: ein Formular wählt eine neue Quell-Entity oder schaltet das automatische Zählen aus. Danach lädt die Challenge neu. Kommt die Quelle zurück, verschwindet der Hinweis von selbst; ebenso, wenn die Challenge gelöscht wird.
+
+### 19.5 Challenge einer Person zuordnen
+
+- Neue Option `person` (optional, Entity-Selector auf `person`).
+- **Bild und Name:** Die Card und die Übersichts-Card zeigen das Bild der Person (Fallback: Initialen) neben dem Namen; die Rangliste zeigt Bild und Namen der Person (Fallback: Name der Challenge).
+- **«Nur meine»:** Option `only_mine` der Übersichts-Card (Default `false`, Schalter im Editor) zeigt nur Challenges, deren Person dem angemeldeten Benutzer gehört (`user_id` der Person).
+- **Assist:** Ohne Challenge-Namen gilt die Challenge der sprechenden Person, wenn diese genau eine freigegebene Challenge hat. Ein genannter Name hat immer Vorrang.
+- **Benachrichtigung:** `get_status` liefert zusätzlich `person`, `person_name` und `notify_services` (die Mobile-App-Benachrichtigungsdienste der Geräte der Person, ermittelt über ihre `device_tracker` und die Geräte-Registry, nur vorhandene Dienste). Die Blueprints für Erinnerung, Tempo, Meilensteine und Wochenrückblick erhalten die Eingabe «an die zugeordnete Person senden» (Default aus). Die bestehende frei wählbare Aktion bleibt.
+
+### 19.6 Gruppen-Challenge mit Rangliste
+
+- Entscheid: **Gruppe aus Challenges.** Jede Person hat ihre eigene Challenge mit eigenem Ziel; eine Gruppe fasst mehrere Challenges zusammen. Bestehende Challenges und Daten bleiben unverändert.
+- Eine Gruppe ist ein eigener Config Entry derselben Integration (Menüpunkt «Gruppe», `data: {"kind": "group"}`), mit eigenem Gerät. Optionen: `name`, `icon`, `members` (mindestens 2 Challenges), `ranking` (`percent` / `amount` / `streak`, Default `percent`), gemeinsames Ziel (optional, Abschnitt): `group_goal` (Menge) und `group_goal_period` (`week` / `month` / `year`).
+- Die Gruppe hat keinen eigenen Store; alles wird aus den Daten der Mitglieder berechnet (reine Funktionen in `calculations.py`). Nicht geladene Mitglieder fehlen in der Rangliste. Wird eine Challenge gelöscht, wird sie aus allen Gruppen entfernt.
+- **Rangliste:** Sortiert nach `ranking` über einen Zeitraum `today` / `week` / `month` / `total`. `percent` = Wert ÷ Ziel des Zeitraums × 100, `amount` = Menge, `streak` = aktueller Streak. Gleichstand teilt den Rang. In der Card sind Kennzahl und Zeitraum wählbar.
+- **Gemeinsames Ziel:** Summe aller Mitglieder im laufenden Zeitraum gegen `group_goal`. Nur erlaubt, wenn alle Mitglieder dieselbe Einheit haben (Fehler `units_differ`).
+- **Gruppen-Streak:** aufeinanderfolgende Tage, an denen **alle** Mitglieder ihr Tagesziel erreicht haben (eigene Regel jeder Challenge); ein noch offener heutiger Tag bricht ihn nicht.
+- **Führungswechsel:** Event-Typ `lead_change` mit `leader` und `previous`, ausgelöst, wenn eine Änderung von heute die alleinige Führung der laufenden Woche (nach `ranking`) wechselt. Nicht beim Start, nicht um Mitternacht.
+- **Wochensieger:** Für jede abgeschlossene Woche seit dem Erstellen der Gruppe die Führenden nach `ranking` (Gleichstand: alle). Berechnet aus den Daten, kein Speicher. Event-Typ `week_winner` am Montag um Mitternacht.
+- Weitere Event-Typen: `goal_reached` (gemeinsames Ziel im Zeitraum erreicht). Alle über eine Event-Entity `group` und als Geräte-Auslöser der Gruppe.
+- **Entities der Gruppe:** sensor `leader` (Name, Attribute: Rangliste), sensor `group_streak` (d, Attribut `best`), binary_sensor `all_reached_today`, sensor `last_week_winner` (Attribut `wins` pro Mitglied), bei gemeinsamem Ziel sensor `group_total`, `group_goal_progress` (%) und `group_goal_remaining`.
+- **Card** `custom:daily-challenge-leaderboard-card` mit visuellem Editor: `group` (Pflicht), `period` (Default `week`), `ranking` (Default aus der Gruppe), `show_goal` (Default `true`). Zeigt Rang, Bild/Name, Wert und Fortschrittsbalken, darunter gemeinsames Ziel und Gruppen-Streak. WebSocket `daily_challenge/ranking`.
+- Blueprint `blueprints/automation/daily_challenge/lead_change.yaml`: Nachricht «Anna hat Tom überholt».
+- Gruppen werden von `add`, `set`, `get_history`, `set_day`, Assist und der Challenge-Card nicht angenommen (übersetzter Fehler `is_group`). `get_status` liefert für eine Gruppe die Rangliste der Woche.
+- Übersetzungen aller neuen Texte EN, DE, FR, IT.

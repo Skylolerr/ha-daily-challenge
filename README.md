@@ -72,7 +72,14 @@ as your step counter count for you.
 - **Milestones** – an event when the streak reaches 7, 14, 30 … days, for a new best
   streak, a new best day or a total of 100, 250, 500 …, with a blueprint that
   congratulates you. You choose which kinds count.
-- **Reminder blueprint** – a notification at 20:00 while today's goal is still open.
+- **Reminder blueprints** – a notification at 20:00 while today's goal is still open,
+  or only when you fall behind the day's plan; optionally straight to the phone of the
+  person the challenge belongs to.
+- **Family and group challenges** – rank several challenges in a leaderboard (fair with
+  different targets), with a shared goal, a group streak, week winners and news when
+  someone takes the lead.
+- **Templates** for common challenges, and a **rising target** that grows step by step,
+  e.g. +1 push-up every week.
 - **Confetti** in the card when today's goal or a milestone is reached, and a **weekly
   summary** blueprint.
 
@@ -93,8 +100,9 @@ as your step counter count for you.
 1. **HACS:** open HACS, search for **Daily Challenge** and download it, or click *Open
    this repository in HACS* above. Then restart Home Assistant.
 2. **Set up:** click *Set up Daily Challenge* above, or Settings → Devices & services →
-   **Add integration** → **Daily Challenge**. Each challenge is its own entry; add the
-   integration again for another challenge.
+   **Add integration** → **Daily Challenge**. Start with your own challenge, from a
+   template (push-ups, steps, water, reading …) or create a **group** of challenges.
+   Each challenge is its own entry; add the integration again for another one.
 3. **Add the card:** *Edit dashboard* → *Add card* → **Daily Challenge**.
 
 Requires Home Assistant **2026.10.0** or newer.
@@ -115,6 +123,7 @@ Set when you add a challenge; all of them can be changed later via **Configure**
 |---|---|---|
 | Name | – | Unique name of the challenge, also the device name. |
 | Icon | `mdi:trophy` | Shown in the card and on the "Today" entity. |
+| Person | – | Optional. The person the challenge belongs to: the cards show their picture, Assist knows "my" challenge, and reminders can go to their phone. |
 | Unit | repetitions | Pick a suggestion (repetitions, minutes, km, pages, glasses) or type your own. |
 | Daily target | 20 | Whole number above 0. A new target applies from today on; past days keep theirs. |
 | Start date | today | Cannot be in the future. Moved later, the days before it are ignored but not deleted. |
@@ -122,6 +131,7 @@ Set when you add a challenge; all of them can be changed later via **Configure**
 | Steps | 1, 5, 10 | Up to 3 amounts in ascending order. Each gets a **+** button; the smallest one is also used for **−**. |
 | Streak rule | Daily target reached | When a day counts towards the streak: *daily target reached* or *any amount above 0*. |
 | Deficit handling | Only show the deficit | *Only show the deficit*, or *Catch up*: yesterday's deficit raises today's target. |
+| Rising target → Increase / Every / Maximum | 0 (off) / week / – | Raises the daily target by the increase every day, week or month, up to the optional maximum. Like a changed target, a changed rise applies from today on. |
 | Automatic counting → Source | – | Optional sensor, number, input number or counter that feeds the challenge. |
 | Automatic counting → Source type | Daily value | *Daily value*: the source shows today's amount (e.g. steps today) and sets it; the buttons are not available then. *Counter*: the source keeps rising (e.g. an odometer) and every increase is added; the buttons stay. |
 | Milestones | all | Which milestones fire the milestone event: streak milestones, new best streak, new best day, total milestones. None: no milestone event. |
@@ -137,6 +147,10 @@ reading, it was a glitch (e.g. 0 while a device restarts) and only the rise coun
 if it rises from the low reading, the counter was reset and counts from 0. What was added
 while Home Assistant was off counts on the day it sees it again. Changing the source or
 its type starts the counter afresh.
+
+If the source disappears or has had no value for 12 hours, Home Assistant shows a
+**repair** under *Settings → System → Repairs*: pick another source there or switch
+automatic counting off. The repair goes away by itself once the source is back.
 
 <details>
 <summary>The setup form</summary>
@@ -199,6 +213,23 @@ entities:                       # optional, the "Today" entities; empty shows al
   - number.push_ups_today
   - number.steps_today
 show_buttons: true              # the + button of the smallest step
+only_mine: false                # only the challenges of the person logged in
+```
+
+### Leaderboard card
+
+The ranking of a group (see [Groups](#groups-and-leaderboard)) with pictures, a
+progress bar per person, the shared goal and the group streak. Switch between today,
+this week, this month and all time, and between percent of the own target, amount and
+streak right in the card. Add it as **Daily Challenge leaderboard** or in YAML:
+
+```yaml
+type: custom:daily-challenge-leaderboard-card
+group: 01JC…                    # the group, picked in the editor
+period: week                    # today, week, month or total
+ranking: percent                # optional: percent, amount or streak
+show_goal: true                 # shared goal and group streak
+title: Family                   # optional
 ```
 
 ## Entities
@@ -342,13 +373,43 @@ Home Assistant. In your own action you can use `{{ challenge }}`, `{{ kind }}`,
 `{{ value }}`, `{{ unit }}` and `{{ message }}`, a ready-made sentence such as
 *"7 days in a row!"*.
 
+## Groups and leaderboard
+
+A group ranks several challenges against each other – typically one per family member,
+each with its own target (a child 10 push-ups, a parent 30). Add the integration again
+and choose **Group**, then pick at least two challenges.
+
+- **Ranking** by *percent of the own target* (fair with different targets), *amount* or
+  *current streak*. The **Leader** sensor shows who leads this week; its `ranking`
+  attribute has everybody's figures.
+- **Shared goal** (optional): collect an amount together per week, month or year, e.g.
+  500 km as a family. All challenges need the same unit. Sensors *Group total*,
+  *Shared goal progress* and *Shared goal remaining*.
+- **Group streak**: days on which everybody reached their daily target, plus the best
+  one. *Everyone reached today's goal* is on once all have done it today.
+- **Week winners**: *Last week's winner* and, in its `wins` attribute, how many weeks
+  each one has won since the group was created.
+- **Events** (*Group* event entity and device triggers): *New leader*, *Week winner*
+  (Monday at midnight) and *Shared goal reached*.
+
+Groups have no data of their own; everything comes from the challenges, so they can
+be added, changed and removed any time. A deleted challenge leaves its groups.
+
+[![Open your Home Assistant instance and import the group news blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FSkylolerr%2Fha-daily-challenge%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fdaily_challenge%2Flead_change.yaml)
+
+The **group news** blueprint sends *"Anna has overtaken Tom!"*, the winner of last
+week and the reached shared goal. You can use `{{ group }}`, `{{ kind }}`,
+`{{ leader }}`, `{{ previous }}`, `{{ winners }}` and `{{ message }}`.
+
 ## Device triggers
 
 In the automation editor, pick the challenge as device (*Add trigger → Device*) to react
 to **Today's goal reached**, **Milestone reached** or one kind of milestone (*Streak
 milestone reached*, *New best streak*, *New best day*, *Total milestone reached*). The
 trigger offers `trigger.kind` and `trigger.value` for milestones. Kinds that are switched
-off in the options of the challenge are not offered.
+off in the options of the challenge are not offered. A group offers *Everyone reached
+today's goal*, *New leader*, *Week winner* and *Shared goal reached*, with the event's
+details in `trigger.data` (e.g. `trigger.data.leader`).
 
 ## Quick add with a button or NFC tag
 
@@ -404,7 +465,21 @@ The blueprint reminds you at a chosen time (default 20:00) when today's goal of 
 challenge is not reached yet. Pick the challenge's "Goal reached today" sensor, the time
 and what should happen – by default a notification in Home Assistant. In your own
 notification you can use `{{ challenge }}`, `{{ done }}`, `{{ target }}`,
-`{{ remaining }}` and `{{ unit }}`, e.g. *"Still {{ remaining }} {{ unit }} to go today"*.
+`{{ remaining }}`, `{{ unit }}` and `{{ message }}`, e.g. *"Still {{ remaining }}
+{{ unit }} to go today"*. With *Send to the person's phones* the message also goes to
+the mobile app of the person the challenge belongs to (this option is in the
+milestone and weekly blueprints too).
+
+### Pace reminder
+
+[![Open your Home Assistant instance and import the pace reminder blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FSkylolerr%2Fha-daily-challenge%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fdaily_challenge%2Fpace.yaml)
+
+Reminds you only when you fall behind. Every full hour within a time window (default
+08:00–21:00) it compares today's amount with what should be done by now – at 14:30
+about half of today's target. When you are more than the tolerance (default 25 %)
+behind, you get a reminder; then it pauses for a few hours (default 3). Variables:
+`{{ challenge }}`, `{{ done }}`, `{{ target }}`, `{{ expected }}`, `{{ remaining }}`,
+`{{ unit }}` and `{{ message }}`.
 
 <details>
 <summary>The same as a plain YAML automation</summary>

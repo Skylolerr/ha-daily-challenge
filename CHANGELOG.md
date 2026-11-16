@@ -11,6 +11,38 @@ and Home Assistant show when they offer the update.
 
 ## [Unreleased]
 
+> **Highlight:** challenge your family – a leaderboard with a shared goal, a group
+> streak and week winners – and let your target grow step by step.
+
+### ✨ Added
+
+- **Groups and leaderboard:** a new *Group* ranks several challenges, e.g. one per
+  family member, by percent of the own target, amount or streak. With an optional
+  shared goal per week, month or year, a group streak, week winners, the events *New
+  leader*, *Week winner* and *Shared goal reached* (also as device triggers) and the new
+  `custom:daily-challenge-leaderboard-card`. A new blueprint sends group news such as
+  "Anna has overtaken Tom!".
+- **Persons:** assign a challenge to a person. The cards show their picture, the
+  overview card can show only your own challenges (`only_mine`), Assist uses your own
+  challenge when you name none, and the reminder, pace, milestone and weekly blueprints
+  can send to the person's phone. `get_status` returns `person`, `person_name` and
+  `notify_services`.
+- **Templates** when adding a challenge: push-ups, squats, steps, water, reading,
+  meditation, running and cycling.
+- **Rising target:** the daily target grows by an amount every day, week or month, up
+  to an optional maximum. Past days keep their target.
+- **Pace reminder blueprint:** reminds you only when you fall behind the day's plan.
+- **Repairs:** a missing source, or one without a value for 12 hours, shows up under
+  *Repairs*, where you can pick another one or switch automatic counting off.
+
+### 🔄 Changed
+
+- Adding the integration starts with a choice: own challenge, template or group.
+- The stored daily targets get fields for the rising target; existing data is migrated
+  automatically.
+- `daily_challenge/list` (WebSocket) returns the groups separately; the actions `add`,
+  `set` and `get_history` refuse a group.
+
 ## [0.2.0] - 2026-11-07
 
 > **Highlight:** see your days in a calendar and correct them there, let a sensor count
